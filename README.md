@@ -35,7 +35,7 @@ See `Proposed-structure-hackathon.pdf` for the project architecture, proposed im
 
 ## Team Introduction Video
 
-Add the YouTube link here after publishing the video.
+https://youtu.be/oKoHllmyCMQ
 
 ## Project Status
 
