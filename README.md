@@ -25,7 +25,7 @@ The project combines historical routing analysis, cautious baseline promotion, e
 
 ## Project Proposal
 
-See `Proposed-structure-hackathon.pdf` for the project architecture, proposed implementation, evaluation plan, and references.
+See 'HORA Q — Explainable BGP Anomaly Monitor (AIORI-3 Proposal).pdf'
 
 ## Team
 
