@@ -29,6 +29,8 @@ export const App: React.FC = () => {
     rpkiTarget,
     setRpkiTarget,
     evidence,
+    sidebarOpen,
+    setSidebarOpen,
   } = useHoraqStore();
 
   const [modalEvidence, setModalEvidence] = useState<EvidenceItem | null>(null);
@@ -75,9 +77,17 @@ export const App: React.FC = () => {
       <Header />
 
       {/* Main App Body: Sidebar + Active Canvas */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile backdrop */}
+        {sidebarOpen && (
+          <div
+            className="fixed inset-0 top-14 z-30 bg-black/60 backdrop-blur-xs md:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-bg-app p-8 transition-colors">
+        <main className="flex-1 overflow-y-auto bg-bg-app p-4 sm:p-6 md:p-8 transition-colors">
           {activeTab === "overview" && <OverviewView />}
           {activeTab === "alerts" && <AlertsView />}
           {activeTab === "routes" && <RoutesView />}

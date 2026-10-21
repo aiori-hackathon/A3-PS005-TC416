@@ -27,6 +27,7 @@ interface HoraqState {
   selectedEvidence: EvidenceItem | null;
   rpkiTarget: { prefix: string; asn: string } | null;
   notification: { message: string; type: "success" | "error" | "info" } | null;
+  sidebarOpen: boolean;
 
   setTheme: (theme: "dark" | "light" | "system") => void;
   setActiveTab: (tab: NavTab) => void;
@@ -36,6 +37,8 @@ interface HoraqState {
   setSelectedEvidence: (evidence: EvidenceItem | null) => void;
   setRpkiTarget: (target: { prefix: string; asn: string } | null) => void;
   showNotification: (message: string, type?: "success" | "error" | "info") => void;
+  toggleSidebar: () => void;
+  setSidebarOpen: (open: boolean) => void;
 
   fetchAllData: () => Promise<void>;
   updateAlertStatus: (alertId: string, status: "ACTIVE" | "ACKNOWLEDGED" | "RESOLVED") => Promise<void>;
@@ -89,13 +92,14 @@ export const useHoraqStore = create<HoraqState>((set, get) => ({
   selectedEvidence: null,
   rpkiTarget: null,
   notification: null,
+  sidebarOpen: false,
 
   setTheme: (theme) => {
     applyTheme(theme);
     set({ theme });
   },
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  setActiveTab: (tab) => set({ activeTab: tab, sidebarOpen: false }),
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
@@ -106,6 +110,10 @@ export const useHoraqStore = create<HoraqState>((set, get) => ({
   setSelectedEvidence: (evidence) => set({ selectedEvidence: evidence }),
 
   setRpkiTarget: (rpkiTarget) => set({ rpkiTarget }),
+
+  toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+
+  setSidebarOpen: (sidebarOpen) => set({ sidebarOpen }),
 
   showNotification: (message, type = "info") => {
     set({ notification: { message, type } });

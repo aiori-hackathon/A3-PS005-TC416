@@ -12,7 +12,7 @@ import {
 import { useHoraqStore, NavTab } from "../../stores/useHoraqStore";
 
 export const Sidebar: React.FC = () => {
-  const { activeTab, setActiveTab, alerts } = useHoraqStore();
+  const { activeTab, setActiveTab, alerts, sidebarOpen } = useHoraqStore();
 
   const activeAlertsCount = alerts.filter((a) => a.status === "ACTIVE").length;
 
@@ -35,7 +35,13 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="w-56 bg-bg-sidebar border-r border-border-sub flex flex-col justify-between p-3 select-none shrink-0 h-[calc(100vh-3.5rem)] transition-colors">
+    <aside
+      className={`w-56 bg-bg-sidebar border-r border-border-sub flex flex-col justify-between p-3 select-none shrink-0 h-[calc(100vh-3.5rem)] transition-all duration-200 z-40 ${
+        sidebarOpen
+          ? "fixed top-14 left-0 bottom-0 shadow-2xl md:relative md:top-0"
+          : "hidden md:flex"
+      }`}
+    >
       {/* Top Navigation */}
       <div className="space-y-6">
         <div className="space-y-1">

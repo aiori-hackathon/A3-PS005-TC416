@@ -1,9 +1,16 @@
 import React, { useState } from "react";
-import { Shield, RefreshCw } from "lucide-react";
+import { Shield, RefreshCw, ArrowRight } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 
 export const OverviewView: React.FC = () => {
-  const { overview, alerts, routes, runScenarioAction, seedDemoDataAction } = useHoraqStore();
+  const {
+    overview,
+    alerts,
+    routes,
+    runScenarioAction,
+    seedDemoDataAction,
+    setActiveTab,
+  } = useHoraqStore();
 
   const [isScanning, setIsScanning] = useState(false);
 
@@ -35,7 +42,7 @@ export const OverviewView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
       {/* Top Section: Hero + Stats */}
       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
         {/* Left Hero Card */}
@@ -50,6 +57,15 @@ export const OverviewView: React.FC = () => {
             </p>
           </div>
           <div className="pt-1 flex flex-wrap items-center gap-2">
+            {blockedCount > 0 && (
+              <button
+                onClick={() => setActiveTab("alerts")}
+                className="px-3.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
+              >
+                <span>Review {blockedCount} Anomalies</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={handleScan}
               disabled={isScanning || !!scenarioRunning}
@@ -165,8 +181,8 @@ export const OverviewView: React.FC = () => {
         <h3 className="text-sm font-semibold text-text-main">Live activity</h3>
 
         <div className="card-panel overflow-hidden">
-          {/* Table Header */}
-          <div className="grid grid-cols-12 text-[11px] text-text-dim font-medium uppercase tracking-wider px-4 py-2.5 border-b border-border-card">
+          {/* Table Header (hidden on mobile, visible on sm+) */}
+          <div className="hidden sm:grid grid-cols-12 text-[11px] text-text-dim font-medium uppercase tracking-wider px-4 py-2.5 border-b border-border-card">
             <span className="col-span-2">Time</span>
             <span className="col-span-2">Prefix</span>
             <span className="col-span-2">Origin ASN</span>
@@ -174,8 +190,8 @@ export const OverviewView: React.FC = () => {
             <span className="col-span-2 text-right">Decision</span>
           </div>
 
-          {/* Table Rows */}
-          <div className="divide-y divide-border-item">
+          {/* Desktop Table Rows */}
+          <div className="hidden sm:block divide-y divide-border-item">
             {displayEvents.length === 0 ? (
               <div className="px-4 py-8 text-center text-xs text-text-sub">
                 No recent security incidents recorded — continuous baseline monitoring active.
@@ -214,6 +230,55 @@ export const OverviewView: React.FC = () => {
                         {decisionLabel}
                       </span>
                     </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Mobile Stacked Card View */}
+          <div className="sm:hidden divide-y divide-border-item">
+            {displayEvents.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-text-sub">
+                No recent security incidents recorded — continuous baseline monitoring active.
+              </div>
+            ) : (
+              displayEvents.map((evt) => {
+                const isBlock = evt.severity === "HIGH" || evt.status === "ACTIVE";
+                const isReview = evt.status === "ACKNOWLEDGED";
+                const timeStr = evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now";
+                const targetPrefix = evt.prefix;
+                const originAsn = evt.observed_asn;
+                const explanation = evt.explanation || evt.title;
+                const decisionLabel = isBlock ? "Block" : isReview ? "Review" : "Allow";
+
+                return (
+                  <div
+                    key={evt.id}
+                    className={`p-3.5 space-y-1.5 transition-colors duration-150 ${
+                      isBlock ? "bg-status-red-bg/30" : "hover:bg-bg-hover-row"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-xs font-semibold text-text-main">{targetPrefix}</span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          isBlock
+                            ? "bg-red-500/10 text-red-400 border border-red-500/20"
+                            : isReview
+                            ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                            : "bg-status-green-bg text-status-green border border-green-800/40"
+                        }`}
+                      >
+                        {decisionLabel}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-text-dim font-mono">
+                      <span>Origin: {originAsn}</span>
+                      <span>•</span>
+                      <span>{timeStr}</span>
+                    </div>
+                    <p className="text-xs text-text-sub leading-relaxed">{explanation}</p>
                   </div>
                 );
               })
