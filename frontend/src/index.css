@@ -3,69 +3,80 @@
 @tailwind utilities;
 
 :root {
+  /* Light Theme - Clean High-Contrast Administrative Theme */
   --bg-app: #f8fafc;
   --bg-header: #ffffff;
   --bg-sidebar: #f1f5f9;
   --bg-card: #ffffff;
+  --bg-raised: #f8fafc;
   --border-card: #e2e8f0;
-  --border-sub: #e2e8f0;
+  --border-sub: #cbd5e1;
   --border-item: #f1f5f9;
   --bg-input: #ffffff;
   --bg-btn: #ffffff;
   --bg-nav-active: #e2e8f0;
   --bg-nav-hover: #e8edf2;
   --text-main: #0f172a;
-  --text-sub: #64748b;
-  --text-dim: #94a3b8;
+  --text-sub: #475569;
+  --text-dim: #64748b;
   --bg-hover-row: #f8fafc;
-  --bg-block-row: #fef2f2;
-  --border-block-row: rgba(239, 68, 68, 0.2);
-  --badge-green-bg: #ecfdf5;
-  --badge-green-text: #059669;
-  --badge-green-border: #a7f3d0;
-  --badge-amber-bg: #fffbeb;
-  --badge-amber-text: #d97706;
-  --badge-amber-border: #fde68a;
-  --badge-idle-bg: #e2e8f0;
-  --badge-idle-text: #64748b;
+  --bg-block-row: rgba(239, 68, 68, 0.08);
+  --border-block-row: rgba(239, 68, 68, 0.25);
   --brand-blue: #0284c7;
+
+  /* Semantic Alert Tokens */
+  --status-red: #dc2626;
+  --status-red-bg: rgba(220, 38, 38, 0.08);
+  --status-red-border: rgba(220, 38, 38, 0.25);
+  --status-amber: #d97706;
+  --status-amber-bg: rgba(217, 119, 6, 0.08);
+  --status-amber-border: rgba(217, 119, 6, 0.25);
+  --status-green: #059669;
+  --status-green-bg: rgba(5, 150, 105, 0.08);
+  --status-green-border: rgba(5, 150, 105, 0.25);
 }
 
 html.dark {
-  --bg-app: #121214;
-  --bg-header: #121214;
-  --bg-sidebar: #0e0e10;
-  --bg-card: #161618;
-  --border-card: #26262a;
-  --border-sub: #26262a;
-  --border-item: #202024;
-  --bg-input: #18181b;
-  --bg-btn: #18181b;
-  --bg-nav-active: #2c2c30;
-  --bg-nav-hover: #1a1a1d;
-  --text-main: #ffffff;
-  --text-sub: #8e8e93;
-  --text-dim: #5a5a60;
-  --bg-hover-row: #1c1c20;
-  --bg-block-row: #2a1316;
-  --border-block-row: rgba(153, 27, 27, 0.3);
-  --badge-green-bg: #0f2e1b;
-  --badge-green-text: #22c55e;
-  --badge-green-border: #1a4a2c;
-  --badge-amber-bg: #38240d;
-  --badge-amber-text: #f59e0b;
-  --badge-amber-border: #543614;
-  --badge-idle-bg: #222226;
-  --badge-idle-text: #8e8e93;
+  /* Dark Theme - Restrained High-Contrast Obsidian & Charcoal Foundation */
+  --bg-app: #0b0d10;
+  --bg-header: #0b0d10;
+  --bg-sidebar: #0e1217;
+  --bg-card: #12161b;
+  --bg-raised: #171b21;
+  --border-card: #22272f;
+  --border-sub: #1e232b;
+  --border-item: #181d24;
+  --bg-input: #12161b;
+  --bg-btn: #171b21;
+  --bg-nav-active: #1d232c;
+  --bg-nav-hover: #151a21;
+  --text-main: #f1f5f9;
+  --text-sub: #94a3b8;
+  --text-dim: #64748b;
+  --bg-hover-row: #161b22;
+  --bg-block-row: rgba(239, 68, 68, 0.12);
+  --border-block-row: rgba(239, 68, 68, 0.3);
   --brand-blue: #38bdf8;
+
+  /* Semantic Alert Tokens */
+  --status-red: #ef4444;
+  --status-red-bg: rgba(239, 68, 68, 0.12);
+  --status-red-border: rgba(239, 68, 68, 0.3);
+  --status-amber: #f59e0b;
+  --status-amber-bg: rgba(245, 158, 11, 0.12);
+  --status-amber-border: rgba(245, 158, 11, 0.3);
+  --status-green: #10b981;
+  --status-green-bg: rgba(16, 185, 129, 0.12);
+  --status-green-border: rgba(16, 185, 129, 0.3);
 }
 
 @layer base {
   body {
     background-color: var(--bg-app);
     color: var(--text-main);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     user-select: none;
     overflow: hidden;
   }
@@ -77,10 +88,17 @@ html.dark {
   ::-webkit-scrollbar-thumb:hover { background: var(--border-sub); }
 }
 
+/* Card panel base style without neon glows or heavy shadows */
 .card-panel {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+.card-raised {
+  background-color: var(--bg-raised);
+  border: 1px solid var(--border-card);
+  border-radius: 0.5rem;
 }
 
 @layer utilities {
@@ -88,24 +106,34 @@ html.dark {
   .bg-bg-header, .bg-header { background-color: var(--bg-header) !important; }
   .bg-bg-sidebar, .bg-sidebar { background-color: var(--bg-sidebar) !important; }
   .bg-bg-card, .bg-card { background-color: var(--bg-card) !important; }
+  .bg-bg-raised { background-color: var(--bg-raised) !important; }
   .bg-bg-input, .bg-input { background-color: var(--bg-input) !important; }
   .bg-bg-btn, .bg-btn { background-color: var(--bg-btn) !important; }
   .bg-bg-nav-active, .bg-nav-active { background-color: var(--bg-nav-active) !important; }
   .bg-bg-nav-hover { background-color: var(--bg-nav-hover) !important; }
   .hover\:bg-bg-nav-hover:hover { background-color: var(--bg-nav-hover) !important; }
   .hover\:bg-bg-hover-row:hover { background-color: var(--bg-hover-row) !important; }
-  .bg-status-red-bg { background-color: var(--bg-block-row) !important; }
-  .bg-status-green-bg { background-color: var(--badge-green-bg) !important; }
-  .bg-status-amber-bg { background-color: var(--badge-amber-bg) !important; }
 
+  /* Semantic background utilities */
+  .bg-status-red-bg { background-color: var(--status-red-bg) !important; }
+  .bg-status-green-bg { background-color: var(--status-green-bg) !important; }
+  .bg-status-amber-bg { background-color: var(--status-amber-bg) !important; }
+
+  /* Border utilities */
   .border-border-card, .border-card { border-color: var(--border-card) !important; }
   .border-border-sub, .border-sub { border-color: var(--border-sub) !important; }
   .border-border-item, .border-item { border-color: var(--border-item) !important; }
   .border-border-block { border-color: var(--border-block-row) !important; }
+  .border-status-red { border-color: var(--status-red-border) !important; }
+  .border-status-amber { border-color: var(--status-amber-border) !important; }
+  .border-status-green { border-color: var(--status-green-border) !important; }
 
+  /* Typography utilities */
   .text-text-main, .text-main { color: var(--text-main) !important; }
   .text-text-sub, .text-sub { color: var(--text-sub) !important; }
   .text-text-dim, .text-dim { color: var(--text-dim) !important; }
-  .text-status-green { color: var(--badge-green-text) !important; }
-  .text-status-amber { color: var(--badge-amber-text) !important; }
+  .text-brand-blue { color: var(--brand-blue) !important; }
+  .text-status-red { color: var(--status-red) !important; }
+  .text-status-green { color: var(--status-green) !important; }
+  .text-status-amber { color: var(--status-amber) !important; }
 }

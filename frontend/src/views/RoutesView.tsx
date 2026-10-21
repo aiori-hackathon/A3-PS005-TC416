@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Globe, Search, SearchCheck, CheckCircle2, Sparkles, X } from "lucide-react";
+import { Search, ShieldCheck, X, Sparkles, Clock, Globe } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
+import { RouteBaseline } from "../types";
 
 export const RoutesView: React.FC = () => {
-  const { routes, setRpkiTarget, searchQuery, setSearchQuery, seedDemoDataAction } = useHoraqStore();
+  const { routes, setRpkiTarget, searchQuery, setSearchQuery, seedDemoDataAction, setActiveTab } = useHoraqStore();
   const [localSearch, setLocalSearch] = useState("");
 
   const activeFilter = localSearch || searchQuery;
@@ -17,27 +18,32 @@ export const RoutesView: React.FC = () => {
     );
   });
 
+  const handleValidateWithRpki = (route: RouteBaseline) => {
+    setRpkiTarget({ prefix: route.prefix, asn: route.origin_asn });
+    setActiveTab("rpki");
+  };
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+    <div className="max-w-5xl mx-auto space-y-6">
+      {/* 1. Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border-card">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-text-main tracking-tight">
-              Tracked Route Baselines
-            </h2>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/10 text-brand-blue border border-sky-500/20">
-              {routes.length} Active Baselines
+            <h1 className="text-lg font-bold text-text-main tracking-tight">
+              Route baselines
+            </h1>
+            <span className="px-2 py-0.2 rounded text-[11px] font-semibold bg-bg-card border border-border-card text-brand-blue font-mono">
+              {routes.length} Active
             </span>
           </div>
           <p className="text-xs text-text-sub mt-0.5">
-            Cryptographically bounded IP prefixes with confirmed legitimate origin-AS assignments.
+            Reference origin assignments against which incoming BGP announcements are evaluated.
           </p>
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub w-64 relative">
-          <Search className="w-3.5 h-3.5 text-text-sub shrink-0" />
+        <div className="flex items-center gap-2 px-2.5 py-1.5 rounded bg-bg-input border border-border-card text-xs text-text-sub w-full sm:w-64 relative">
+          <Search className="w-3.5 h-3.5 text-text-dim shrink-0" />
           <input
             type="text"
             placeholder="Filter prefix or ASN..."
@@ -46,7 +52,7 @@ export const RoutesView: React.FC = () => {
               setLocalSearch(e.target.value);
               setSearchQuery(e.target.value);
             }}
-            className="bg-transparent border-none outline-none text-xs text-text-main w-full placeholder:text-text-dim pr-4"
+            className="bg-transparent border-none outline-none text-xs text-text-main w-full placeholder:text-text-dim pr-5 font-normal"
           />
           {activeFilter && (
             <button
@@ -62,69 +68,84 @@ export const RoutesView: React.FC = () => {
         </div>
       </div>
 
+      {/* Explanatory Policy Notice */}
+      <div className="p-3 rounded bg-bg-card border border-border-card text-xs text-text-sub flex items-start gap-2.5">
+        <Globe className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <span className="font-semibold text-text-main">Non-Poisoning Baseline Guarantee</span>
+          <p className="text-[11px] text-text-sub leading-relaxed">
+            Baselines represent known initial observations or operator-seeded reference routes. When an origin-AS change or subprefix is observed, HORA-Q raises an alert while strictly preserving the reference baseline in storage, preventing automated attack poisoning.
+          </p>
+        </div>
+      </div>
+
       {/* Routes Table */}
       <div className="card-panel overflow-hidden">
         {/* Table Header */}
-        <div className="grid grid-cols-12 text-xs text-text-dim font-medium px-4 py-2.5 border-b border-border-card">
-          <span className="col-span-4">Prefix (CIDR)</span>
-          <span className="col-span-2">Origin ASN</span>
-          <span className="col-span-2">Observations</span>
-          <span className="col-span-2">First Seen</span>
-          <span className="col-span-2 text-right">RPKI Check</span>
+        <div className="grid grid-cols-12 text-xs text-text-dim font-medium px-4 py-2.5 border-b border-border-card bg-bg-raised">
+          <span className="col-span-4 sm:col-span-4">Prefix (CIDR)</span>
+          <span className="col-span-3 sm:col-span-2">Reference origin</span>
+          <span className="hidden sm:inline-block sm:col-span-2">Observations</span>
+          <span className="col-span-3 sm:col-span-2">First seen</span>
+          <span className="col-span-2 sm:col-span-2 text-right">RPKI status</span>
         </div>
 
-        {/* Table Rows */}
+        {/* Table Body */}
         <div className="divide-y divide-border-item">
           {filteredRoutes.length === 0 ? (
-            <div className="px-4 py-10 text-center space-y-3">
+            <div className="p-8 text-center space-y-3">
               <p className="text-xs text-text-sub">
-                No matching route baselines found.
+                No matching route baselines in local storage.
               </p>
               <button
                 onClick={() => seedDemoDataAction()}
-                className="px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-brand-blue text-xs font-semibold hover:bg-sky-500/20 transition-colors inline-flex items-center gap-1.5"
+                className="px-3 py-1.5 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-brand-blue text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Seed Benchmark Baselines</span>
+                <span>Seed benchmark baselines</span>
               </button>
             </div>
           ) : (
             filteredRoutes.map((route) => {
               const firstSeenStr = route.first_seen
                 ? new Date(route.first_seen).toLocaleDateString()
-                : "Unknown";
+                : "Initial";
 
               return (
                 <div
                   key={route.prefix}
                   className="grid grid-cols-12 items-center px-4 py-3 text-xs hover:bg-bg-hover-row transition-colors"
                 >
-                  <span className="col-span-4 font-mono font-semibold text-text-main flex items-center gap-2">
-                    <Globe className="w-3.5 h-3.5 text-brand-blue shrink-0" />
-                    <span>{route.prefix}</span>
+                  {/* Prefix */}
+                  <span className="col-span-4 sm:col-span-4 font-mono font-medium text-text-main text-xs">
+                    {route.prefix}
                   </span>
-                  <span className="col-span-2 font-mono font-bold text-brand-blue">
+
+                  {/* Reference Origin */}
+                  <span className="col-span-3 sm:col-span-2 font-mono text-status-green font-semibold text-xs">
                     {route.origin_asn}
                   </span>
-                  <span className="col-span-2 text-text-sub font-mono text-[11px]">
-                    {route.observation_count.toLocaleString()} msgs
+
+                  {/* Observations Count */}
+                  <span className="hidden sm:inline-block sm:col-span-2 text-text-sub font-mono text-xs">
+                    {route.observation_count} updates
                   </span>
-                  <span className="col-span-2 text-text-dim text-[11px]">
-                    {firstSeenStr}
+
+                  {/* First Seen */}
+                  <span className="col-span-3 sm:col-span-2 text-text-dim text-[11px] flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-text-dim shrink-0" />
+                    <span>{firstSeenStr}</span>
                   </span>
-                  <div className="col-span-2 text-right">
+
+                  {/* RPKI Check Action */}
+                  <div className="col-span-2 sm:col-span-2 text-right">
                     <button
-                      onClick={() =>
-                        setRpkiTarget({
-                          prefix: route.prefix,
-                          asn: route.origin_asn,
-                        })
-                      }
-                      className="px-3 py-1 rounded-md bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-semibold transition-colors inline-flex items-center gap-1.5"
-                      title="Validate with RPKI"
+                      onClick={() => handleValidateWithRpki(route)}
+                      className="px-2 py-1 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-[11px] text-text-sub hover:text-text-main inline-flex items-center gap-1 transition-colors cursor-pointer"
+                      title="Validate prefix and origin ASN against RIPEstat ROA database"
                     >
-                      <SearchCheck className="w-3 h-3 text-brand-blue" />
-                      <span>Validate</span>
+                      <ShieldCheck className="w-3 h-3 text-brand-blue" />
+                      <span>Check</span>
                     </button>
                   </div>
                 </div>
