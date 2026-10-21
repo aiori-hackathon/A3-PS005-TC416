@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Bell, User, MoreHorizontal, Sun, Moon, Laptop, Shield } from "lucide-react";
+import { Search, Bell, Sun, Moon, Laptop, Shield } from "lucide-react";
 import { useHoraqStore } from "../../stores/useHoraqStore";
 
 export const Header: React.FC = () => {
@@ -75,15 +75,6 @@ export const Header: React.FC = () => {
           {activeAlerts > 0 && (
             <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-[#ef4444] rounded-full"></span>
           )}
-        </button>
-
-        {/* User Profile */}
-        <button className="w-7 h-7 rounded-full bg-bg-btn border border-border-card flex items-center justify-center text-text-sub hover:text-text-main transition-colors">
-          <User className="w-3.5 h-3.5" />
-        </button>
-
-        <button className="text-text-sub hover:text-text-main transition-colors px-1">
-          <MoreHorizontal className="w-4 h-4" />
         </button>
       </div>
     </header>
