@@ -249,8 +249,18 @@ export const AlertsView: React.FC = () => {
                         </span>
                       </div>
 
+                      {/* Plain English Translation for Evaluators & Non-Technical Reviewers */}
+                      <div className="mt-1.5 px-2.5 py-1.5 rounded bg-amber-500/5 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed flex items-start gap-1.5">
+                        <span className="font-bold text-amber-400 shrink-0 mt-0.5">Summary:</span>
+                        <span>
+                          {evt.kind === "ORIGIN_CHANGE"
+                            ? `Foreign network (${evt.observed_asn}) is broadcasting your IP prefix (${evt.prefix}). Internet traffic meant for ${evt.baseline_asn || "your network"} is at risk of interception.`
+                            : `Unauthorized network (${evt.observed_asn}) announced a narrower slice (${evt.prefix}) inside your parent IP block. Internet routers will redirect your traffic to the attacker due to Longest Prefix Match.`}
+                        </span>
+                      </div>
+
                       {/* Technical Details Box (Exact inficy-gateway styling) */}
-                      <div className="mt-2 text-[11px] font-mono bg-bg-app p-2 rounded-md border border-border-card text-text-sub max-w-2xl overflow-x-auto leading-relaxed">
+                      <div className="mt-1.5 text-[11px] font-mono bg-bg-app p-2 rounded-md border border-border-card text-text-sub max-w-2xl overflow-x-auto leading-relaxed">
                         {evt.explanation}
                       </div>
                     </div>

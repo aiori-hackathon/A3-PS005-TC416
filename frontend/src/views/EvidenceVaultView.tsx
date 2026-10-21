@@ -41,6 +41,17 @@ export const EvidenceVaultView: React.FC = () => {
         </button>
       </div>
 
+      {/* Friendly Explanation Banner for Evaluators */}
+      <div className="card-panel p-3.5 bg-bg-card border-brand-blue/30 text-xs text-text-sub flex items-start gap-3">
+        <Lock className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <div className="font-semibold text-text-main">Tamper-Proof Forensic Audit Trail</div>
+          <p className="text-[11px] leading-relaxed">
+            Every incident in this ledger is permanently sealed with an RFC 8785 canonical SHA-256 cryptographic hash. If an attacker or malicious administrator attempts to modify any past incident in the database, the cryptographic hash fails validation instantly.
+          </p>
+        </div>
+      </div>
+
       {/* Audit Log Table */}
       <div className="card-panel overflow-hidden">
         <div className="grid grid-cols-12 text-xs text-text-dim font-medium px-4 py-2.5 border-b border-border-card">

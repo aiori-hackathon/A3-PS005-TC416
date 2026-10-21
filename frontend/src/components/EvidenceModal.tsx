@@ -168,6 +168,13 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs select-text">
+          {/* Plain English Guide Banner */}
+          <div className="p-3 rounded-lg bg-bg-app border border-brand-blue/30 text-[11px] text-text-sub flex items-center justify-between gap-3">
+            <div>
+              <span className="font-bold text-text-main">💡 Interactive Tamper Test:</span> Click the <span className="font-semibold text-text-main">"Simulate Tampering"</span> button below to mutate incident values, then click <span className="font-semibold text-text-main">"Verify Hash"</span> to see cryptographic verification catch the tampering in real time.
+            </div>
+          </div>
+
           {/* Chain of Custody Pipeline */}
           <div className="p-3 rounded-lg bg-bg-app border border-border-card">
             <span className="text-[10px] text-text-dim font-semibold uppercase tracking-wider block mb-2">
