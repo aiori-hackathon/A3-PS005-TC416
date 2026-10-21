@@ -8,8 +8,6 @@ import {
   XCircle,
   HelpCircle,
   Info,
-  Layers,
-  ArrowRight,
   ShieldCheck,
 } from "lucide-react";
 import { api } from "../api";
@@ -57,25 +55,25 @@ export const RPKIInspectorView: React.FC = () => {
     switch (status) {
       case "VALID":
         return {
-          badgeClass: "badge-success",
+          badgeClass: "bg-status-green-bg text-status-green border-green-800/40",
           icon: CheckCircle2,
           text: "VALID (Cryptographically Authorized ROA Matches Origin)",
         };
       case "INVALID":
         return {
-          badgeClass: "badge-error",
+          badgeClass: "bg-status-red-bg text-red-400 border-red-800/40",
           icon: XCircle,
           text: "INVALID (Origin ASN Conflict or Exceeded Max Length)",
         };
       case "UNKNOWN":
         return {
-          badgeClass: "badge-amber",
+          badgeClass: "bg-status-amber-bg text-status-amber border-amber-800/40",
           icon: HelpCircle,
           text: "UNKNOWN (No Covering ROA in Trust Anchors)",
         };
       default:
         return {
-          badgeClass: "badge-idle",
+          badgeClass: "bg-bg-btn text-text-sub border-border-card",
           icon: AlertCircle,
           text: "UNAVAILABLE (RPKI Provider Offline or Request Timed Out)",
         };
@@ -83,14 +81,14 @@ export const RPKIInspectorView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
+    <div className="max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2.5">
-          <h2 className="text-lg font-bold text-text-main tracking-tight">
-            RPKI Origin Validator & ROA Inspector
+        <div className="flex items-center gap-2">
+          <h2 className="text-base font-bold text-text-main tracking-tight">
+            RPKI Origin Validator
           </h2>
-          <span className="badge badge-idle font-mono text-[11px]">
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-bg-btn text-text-sub border border-border-card">
             RFC 6483 / RFC 6811
           </span>
         </div>
@@ -101,9 +99,7 @@ export const RPKIInspectorView: React.FC = () => {
 
       {/* Quick Presets */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-[11px] text-text-dim font-semibold uppercase tracking-wider mr-1">
-          Benchmark Targets:
-        </span>
+        <span className="text-xs text-text-dim">Benchmark targets:</span>
         {presets.map((item) => (
           <button
             key={item.label}
@@ -112,7 +108,7 @@ export const RPKIInspectorView: React.FC = () => {
               setAsn(item.asn);
               handleValidate(item.prefix, item.asn);
             }}
-            className="btn btn-secondary text-xs px-2.5 py-1"
+            className="px-3 py-1 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-xs font-semibold text-text-main transition-colors cursor-pointer"
           >
             {item.label}
           </button>
@@ -120,7 +116,7 @@ export const RPKIInspectorView: React.FC = () => {
       </div>
 
       {/* Query Form */}
-      <div className="card-panel p-5 space-y-4 border-border-card">
+      <div className="card-panel p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-semibold text-text-main flex items-center gap-1.5">
@@ -132,7 +128,7 @@ export const RPKIInspectorView: React.FC = () => {
               value={prefix}
               onChange={(e) => setPrefix(e.target.value)}
               placeholder="e.g. 1.1.1.0/24 or 198.51.100.0/24"
-              className="w-full px-3 py-2 rounded-xl bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-brand-blue font-mono transition-colors shadow-xs"
+              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-text-dim font-mono transition-colors"
             />
           </div>
 
@@ -146,7 +142,7 @@ export const RPKIInspectorView: React.FC = () => {
               value={asn}
               onChange={(e) => setAsn(e.target.value)}
               placeholder="e.g. AS13335 or 13335"
-              className="w-full px-3 py-2 rounded-xl bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-brand-blue font-mono transition-colors shadow-xs"
+              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-text-dim font-mono transition-colors"
             />
           </div>
         </div>
@@ -158,9 +154,9 @@ export const RPKIInspectorView: React.FC = () => {
           <button
             onClick={() => handleValidate()}
             disabled={loading || !prefix || !asn}
-            className="btn btn-primary text-xs px-5"
+            className="px-4 py-2 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-xs font-semibold text-text-main flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
           >
-            <SearchCheck className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <SearchCheck className={`w-3.5 h-3.5 ${loading ? "animate-spin text-brand-blue" : ""}`} />
             <span>{loading ? "Validating ROA..." : "Validate Origin"}</span>
           </button>
         </div>
@@ -168,7 +164,7 @@ export const RPKIInspectorView: React.FC = () => {
 
       {/* Error Banner */}
       {error && (
-        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
+        <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
@@ -176,11 +172,11 @@ export const RPKIInspectorView: React.FC = () => {
 
       {/* Validation Result Box */}
       {result && (
-        <div className="card-panel p-5 space-y-5 animate-slideUp border-border-card">
+        <div className="card-panel p-5 space-y-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="space-y-1">
-              <span className="text-[11px] text-text-dim font-semibold uppercase tracking-wider block">
-                RPKI Validation Decision
+              <span className="text-xs text-text-dim font-medium block">
+                Validation Decision
               </span>
               <div className="flex items-center gap-2">
                 {(() => {
@@ -188,7 +184,7 @@ export const RPKIInspectorView: React.FC = () => {
                   const Icon = badge.icon;
                   return (
                     <div
-                      className={`badge ${badge.badgeClass} text-xs py-1 px-3 flex items-center gap-1.5`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center gap-1.5 ${badge.badgeClass}`}
                     >
                       <Icon className="w-4 h-4" />
                       <span>{result.status}</span>
@@ -205,7 +201,7 @@ export const RPKIInspectorView: React.FC = () => {
           </div>
 
           {/* Plain explanation */}
-          <div className="p-3.5 rounded-xl bg-bg-app border border-border-card flex items-start gap-2.5">
+          <div className="p-3.5 rounded-lg bg-bg-app border border-border-card flex items-start gap-2.5">
             <Info className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
             <div className="text-xs text-text-sub space-y-1">
               <span className="font-semibold text-text-main block">
@@ -228,11 +224,11 @@ export const RPKIInspectorView: React.FC = () => {
             </div>
 
             {result.validating_roas.length === 0 ? (
-              <div className="p-4 rounded-xl bg-bg-app border border-border-card text-center text-xs text-text-dim">
+              <div className="p-4 rounded-lg bg-bg-app border border-border-card text-center text-xs text-text-dim">
                 No matching ROAs discovered in public RIR repositories.
               </div>
             ) : (
-              <div className="border border-border-card rounded-xl overflow-hidden">
+              <div className="border border-border-card rounded-lg overflow-hidden">
                 <table className="w-full text-left text-xs font-mono">
                   <thead className="bg-bg-app text-text-dim text-[11px] uppercase tracking-wider select-none border-b border-border-card">
                     <tr>
@@ -252,8 +248,10 @@ export const RPKIInspectorView: React.FC = () => {
                         <td className="py-2.5 px-3 text-text-sub">/{roa.max_length}</td>
                         <td className="py-2.5 px-3">
                           <span
-                            className={`badge text-[10px] py-0 px-2 ${
-                              roa.validity === "valid" ? "badge-success" : "badge-error"
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                              roa.validity === "valid"
+                                ? "bg-status-green-bg text-status-green border-green-800/40"
+                                : "bg-status-red-bg text-red-400 border-red-800/40"
                             }`}
                           >
                             {roa.validity.toUpperCase()}

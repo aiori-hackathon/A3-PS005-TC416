@@ -1,313 +1,167 @@
-import React from "react";
-import {
-  Shield,
-  RefreshCw,
-  AlertTriangle,
-  PlayCircle,
-  FileCheck2,
-  ExternalLink,
-  Lock,
-  Sparkles,
-  ArrowRight,
-  ShieldAlert,
-  Layers,
-  Activity,
-  CheckCircle2,
-  Cpu,
-  Radio,
-} from "lucide-react";
+import React, { useState } from "react";
+import { Shield, RefreshCw } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
-import { BGPTopologyGraph } from "../components/BGPTopologyGraph";
 
 export const OverviewView: React.FC = () => {
-  const {
-    overview,
-    alerts,
-    routes,
-    cryptoStatus,
-    fetchAllData,
-    isLoading,
-    setActiveTab,
-    setSelectedAlert,
-    runScenarioAction,
-    seedDemoDataAction,
-    searchQuery,
-  } = useHoraqStore();
+  const { overview, alerts, routes, runScenarioAction, seedDemoDataAction } = useHoraqStore();
 
-  const activeAlerts = alerts.filter((a) => a.status === "ACTIVE");
+  const [isScanning, setIsScanning] = useState(false);
 
-  // Filter live activity by searchQuery if provided
-  const filteredAlerts = alerts.filter((evt) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      evt.prefix.toLowerCase().includes(q) ||
-      evt.observed_asn.toLowerCase().includes(q) ||
-      (evt.baseline_asn && evt.baseline_asn.toLowerCase().includes(q)) ||
-      evt.title.toLowerCase().includes(q)
-    );
-  });
+  const activeAgentsCount = overview?.tracked_routes || routes.length || 3;
+  const mcpCount = 3; // Core BGP Peers (Cogent AS174, Lumen AS3356, NTT AS2914)
+  const totalScanned = (overview?.total_observations || 48) + alerts.length;
+  const blockedCount = alerts.filter((a) => a.status === "ACTIVE").length;
 
-  const displayAlerts = filteredAlerts.slice(0, 5);
+  const displayEvents = alerts.slice(0, 5);
 
-  const [isRunningAll, setIsRunningAll] = React.useState(false);
-
-  const handleRunAllScenarios = async () => {
-    setIsRunningAll(true);
+  const handleScan = async () => {
+    setIsScanning(true);
     try {
       await runScenarioAction("run-all");
     } finally {
-      setIsRunningAll(false);
+      setIsScanning(false);
     }
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn pb-12">
-      {/* Top Hero Section: Ambient Grid Card */}
-      <div className="card-panel p-6 relative overflow-hidden bg-grid-pattern border-border-card">
-        <div className="absolute top-0 right-0 w-96 h-96 ambient-glow pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="space-y-3 max-w-xl">
-            <div className="flex items-center gap-2">
-              <span className="badge badge-success">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>BGP Telemetry Guard Active</span>
-              </span>
-              <span className="badge badge-idle font-mono text-[11px]">
-                RFC 8785 + ML-DSA-65
-              </span>
-            </div>
-
-            <div>
-              <h2 className="text-2xl font-bold text-text-main tracking-tight">
-                Explainable BGP Origin & Subprefix Monitor
-              </h2>
-              <p className="text-xs text-text-sub mt-1 leading-relaxed">
-                Autonomous detection of MOAS conflicts, illegitimate origin shifts, and more-specific subprefix drains. All forensic evidence signed with post-quantum non-repudiation.
-              </p>
-            </div>
-
-            <div className="pt-1 flex items-center gap-3 flex-wrap">
-              <button
-                onClick={handleRunAllScenarios}
-                disabled={isRunningAll}
-                className="btn btn-primary text-xs"
-              >
-                <PlayCircle className={`w-3.5 h-3.5 ${isRunningAll ? "animate-spin" : ""}`} />
-                <span>{isRunningAll ? "Evaluating Benchmark Suite..." : "Run Benchmark Suite"}</span>
-              </button>
-
-              <button
-                onClick={() => seedDemoDataAction()}
-                className="btn btn-secondary text-xs"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-brand-blue" />
-                <span>Seed Realistic Incidents</span>
-              </button>
-            </div>
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* Top Section: Hero + Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+        {/* Left Hero Card */}
+        <div className="md:col-span-7 space-y-3">
+          <div className="text-status-green">
+            <Shield className="w-8 h-8 stroke-[2.2]" />
           </div>
-
-          {/* Quick Engine Telemetry Status Card */}
-          <div className="p-4 rounded-xl bg-bg-app border border-border-card space-y-2.5 w-full md:w-64 shrink-0 shadow-inner">
-            <div className="flex items-center justify-between text-xs pb-1 border-b border-border-card">
-              <span className="text-text-dim font-medium">Engine Mode</span>
-              <span className="font-semibold text-status-green flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Autonomous
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs pb-1 border-b border-border-card">
-              <span className="text-text-dim font-medium">Crypto Vault</span>
-              <span className="font-mono text-brand-blue font-semibold text-[11px]">
-                {cryptoStatus?.algorithm || "ML-DSA-65"}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs pb-1 border-b border-border-card">
-              <span className="text-text-dim font-medium">BGP Peers Tracked</span>
-              <span className="font-mono text-text-main font-semibold">
-                {overview?.tracked_routes || routes.length || 3} Prefixes
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-text-dim font-medium">Active Threat Level</span>
-              <span className={`font-semibold text-xs ${activeAlerts.length > 0 ? "text-red-400" : "text-status-green"}`}>
-                {activeAlerts.length > 0 ? `${activeAlerts.length} Active` : "Nominal"}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
-        <div
-          onClick={() => setActiveTab("routes")}
-          className="card-panel p-4 cursor-pointer card-accent-blue hover:-translate-y-0.5 transition-all"
-        >
-          <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">
-            Monitored Prefixes
-          </div>
-          <div className="text-2xl font-bold text-text-main mt-1 tracking-tight">
-            {overview?.tracked_routes || routes.length || 0}
-          </div>
-          <div className="text-[11px] text-text-sub mt-1 flex items-center gap-1">
-            <span className="text-status-green font-medium">100% Covered</span>
-            <span>by baseline ROAs</span>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setActiveTab("alerts")}
-          className="card-panel p-4 cursor-pointer card-accent-red hover:-translate-y-0.5 transition-all"
-        >
-          <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">
-            Active Threat Anomalies
-          </div>
-          <div className="text-2xl font-bold text-red-400 mt-1 tracking-tight flex items-center gap-2">
-            <span>{overview?.active_alerts ?? activeAlerts.length}</span>
-            {activeAlerts.length > 0 && (
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            )}
-          </div>
-          <div className="text-[11px] text-text-sub mt-1">
-            {alerts.filter((a) => a.kind === "ORIGIN_CHANGE").length} Origin / {alerts.filter((a) => a.kind === "SUBPREFIX_ANOMALY").length} Subprefix
-          </div>
-        </div>
-
-        <div
-          onClick={() => setActiveTab("evidence")}
-          className="card-panel p-4 cursor-pointer card-accent-green hover:-translate-y-0.5 transition-all"
-        >
-          <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">
-            Signed Evidence Packs
-          </div>
-          <div className="text-2xl font-bold text-status-green mt-1 tracking-tight">
-            {overview?.total_alerts || alerts.length}
-          </div>
-          <div className="text-[11px] text-text-sub mt-1 flex items-center gap-1">
-            <Lock className="w-3 h-3 text-brand-blue" />
-            <span>RFC 8785 Immutable</span>
-          </div>
-        </div>
-
-        <div
-          onClick={() => setActiveTab("evidence")}
-          className="card-panel p-4 cursor-pointer card-accent-blue hover:-translate-y-0.5 transition-all"
-        >
-          <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">
-            Integrity Verification
-          </div>
-          <div className="text-2xl font-bold text-brand-blue mt-1 tracking-tight">
-            100%
-          </div>
-          <div className="text-[11px] text-status-green mt-1 flex items-center gap-1">
-            <CheckCircle2 className="w-3 h-3" />
-            <span>0 Tampering Detected</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Real-time Threat Activity Feed */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-bold text-text-main tracking-tight">
-              Live Threat Activity & Containment Feed
-            </h3>
-            <p className="text-xs text-text-sub">
-              Streaming BGP announcements flagged by autonomous explainable heuristics.
+            <h2 className="text-xl font-bold text-text-main tracking-tight">System protected</h2>
+            <p className="text-xs text-text-sub mt-1">
+              Zero-Trust BGP runtime monitor active. {blockedCount > 0 ? `${blockedCount} threats blocked.` : "All activity within policy."}
             </p>
           </div>
-          <button
-            onClick={() => setActiveTab("alerts")}
-            className="text-xs text-brand-blue hover:underline flex items-center gap-1 font-semibold"
-          >
-            <span>View all anomalies ({alerts.length})</span>
-            <ArrowRight className="w-3 h-3" />
-          </button>
+          <div className="pt-1 flex items-center gap-2">
+            <button
+              onClick={handleScan}
+              disabled={isScanning}
+              className="px-4 py-2 rounded-lg bg-bg-btn border border-border-card text-xs font-semibold text-text-main hover:bg-bg-nav-hover hover:border-text-dim transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? "animate-spin text-brand-blue" : ""}`} />
+              <span>{isScanning ? "Scanning..." : "Scan now"}</span>
+            </button>
+            <button
+              onClick={() => seedDemoDataAction()}
+              className="px-3 py-2 rounded-lg bg-bg-btn border border-border-card text-xs font-semibold text-text-sub hover:text-text-main hover:bg-bg-nav-hover transition-colors cursor-pointer"
+            >
+              Seed benchmark data
+            </button>
+          </div>
         </div>
 
-        {displayAlerts.length === 0 ? (
-          <div className="card-panel p-8 text-center space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/20">
-              <CheckCircle2 className="w-5 h-5" />
-            </div>
-            <div className="text-xs font-semibold text-text-main">
-              No recent anomalies detected
-            </div>
-            <p className="text-xs text-text-sub max-w-sm mx-auto">
-              Run the benchmark suite or seed test data to observe real-time origin changes and subprefix attacks.
-            </p>
+        {/* Right Stats Grid (2x2) */}
+        <div className="md:col-span-5 grid grid-cols-2 gap-y-6 gap-x-4">
+          <div>
+            <div className="text-xs text-text-sub">Active prefixes</div>
+            <div className="text-2xl font-bold text-text-main mt-0.5">{activeAgentsCount}</div>
           </div>
-        ) : (
-          <div className="space-y-3">
-            {displayAlerts.map((evt) => {
-              const isOrigin = evt.kind === "ORIGIN_CHANGE";
-              return (
-                <div
-                  key={evt.id}
-                  className={`card-panel p-4 transition-all hover:border-text-dim ${
-                    isOrigin ? "card-accent-red" : "card-accent-amber"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 flex-1 min-w-0">
-                      <div
-                        className={`p-2 rounded-lg shrink-0 mt-0.5 border ${
-                          isOrigin
-                            ? "bg-red-500/10 border-red-500/20 text-red-400"
-                            : "bg-amber-500/10 border-amber-500/20 text-amber-400"
+          <div>
+            <div className="text-xs text-text-sub">BGP peers</div>
+            <div className="text-2xl font-bold text-text-main mt-0.5">{mcpCount}</div>
+          </div>
+          <div>
+            <div className="text-xs text-text-sub">Actions scanned</div>
+            <div className="text-2xl font-bold text-text-main mt-0.5">{totalScanned}</div>
+          </div>
+          <div>
+            <div className="text-xs text-text-sub">Blocked</div>
+            <div className="text-2xl font-bold text-[#f87171] mt-0.5">{blockedCount}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Live Activity Section */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-text-main">Live activity</h3>
+
+        <div className="card-panel overflow-hidden">
+          {/* Table Header */}
+          <div className="grid grid-cols-12 text-xs text-text-dim font-medium px-4 py-2.5 border-b border-border-card">
+            <span className="col-span-2">Time</span>
+            <span className="col-span-2">Target</span>
+            <span className="col-span-2">Origin ASN</span>
+            <span className="col-span-4">Explanation</span>
+            <span className="col-span-2 text-right">Decision</span>
+          </div>
+
+          {/* Table Rows */}
+          <div className="divide-y divide-border-item">
+            {displayEvents.length === 0 ? (
+              <div className="px-4 py-8 text-center text-xs text-text-sub">
+                No recent security incidents recorded — continuous protection active.
+              </div>
+            ) : (
+              displayEvents.map((evt) => {
+                const isBlock = evt.severity === "HIGH" || evt.status === "ACTIVE";
+                const isReview = evt.status === "ACKNOWLEDGED";
+                const timeStr = evt.created_at ? new Date(evt.created_at).toLocaleTimeString() : "Just now";
+                const targetPrefix = evt.prefix;
+                const originAsn = evt.observed_asn;
+                const explanation = evt.explanation || evt.title;
+                const decisionLabel = isBlock ? "Block" : isReview ? "Review" : "Allow";
+
+                return (
+                  <div
+                    key={evt.id}
+                    className={`grid grid-cols-12 items-center px-4 py-3 text-xs transition-colors ${
+                      isBlock ? "bg-status-red-bg border-y border-red-500/20" : "hover:bg-bg-hover-row"
+                    }`}
+                  >
+                    <span className="col-span-2 text-text-main font-mono text-[11px]">{timeStr}</span>
+                    <span className="col-span-2 font-bold text-text-main font-mono">{targetPrefix}</span>
+                    <span className="col-span-2 font-bold text-text-main font-mono">{originAsn}</span>
+                    <span className="col-span-4 text-text-sub font-mono text-[11px] truncate pr-2">{explanation}</span>
+                    <div className="col-span-2 text-right">
+                      <span
+                        className={`inline-block px-3 py-0.5 rounded-full text-xs font-semibold ${
+                          isBlock
+                            ? "bg-[#ef4444] text-white font-bold"
+                            : isReview
+                            ? "bg-status-amber-bg text-status-amber border border-amber-500/30"
+                            : "bg-status-green-bg text-status-green border border-green-500/30"
                         }`}
                       >
-                        {isOrigin ? (
-                          <ShieldAlert className="w-4 h-4" />
-                        ) : (
-                          <AlertTriangle className="w-4 h-4" />
-                        )}
-                      </div>
-
-                      <div className="space-y-1.5 flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span
-                            className={`badge ${
-                              evt.severity === "HIGH" ? "badge-error" : "badge-amber"
-                            }`}
-                          >
-                            {evt.severity}
-                          </span>
-                          <span className="text-xs font-bold text-text-main">
-                            {evt.title}
-                          </span>
-                          <span className="text-[11px] font-mono font-semibold text-brand-blue bg-bg-input px-1.5 py-0.2 rounded border border-border-card">
-                            {evt.prefix}
-                          </span>
-                        </div>
-
-                        <p className="text-xs text-text-sub line-clamp-2">
-                          {evt.explanation}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <span className="text-[10px] text-text-dim font-mono">
-                        {new Date(evt.created_at).toLocaleTimeString()}
+                        {decisionLabel}
                       </span>
-                      <button
-                        onClick={() => setSelectedAlert(evt)}
-                        className="btn btn-secondary text-xs px-2.5 py-1"
-                      >
-                        <FileCheck2 className="w-3 h-3 text-brand-blue" />
-                        <span>Evidence</span>
-                      </button>
                     </div>
                   </div>
-                </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* 24h Timeline Slider */}
+        <div className="flex items-center justify-between text-xs text-text-dim pt-3 px-1">
+          <span>24h</span>
+          <div className="flex-1 h-0.5 bg-border-card mx-4 relative flex items-center">
+            {alerts.slice(0, 20).map((evt, idx) => {
+              const evtTime = evt.created_at ? new Date(evt.created_at).getTime() : Date.now();
+              const now = Date.now();
+              const hoursAgo = (now - evtTime) / (1000 * 60 * 60);
+              const pct = Math.max(0, Math.min(100, 100 - (hoursAgo / 24) * 100));
+              const isBlock = evt.severity === "HIGH" || evt.status === "ACTIVE";
+              const isReview = evt.status === "ACKNOWLEDGED";
+              const dotColor = isBlock ? "bg-[#ef4444]" : isReview ? "bg-status-amber" : "bg-status-green";
+              return (
+                <div
+                  key={idx}
+                  className={`absolute w-2 h-2 rounded-full ${dotColor} -translate-x-1/2`}
+                  style={{ left: `${pct}%` }}
+                  title={`${evt.title} — ${evt.status}`}
+                />
               );
             })}
           </div>
-        )}
+          <span>now</span>
+        </div>
       </div>
     </div>
   );
