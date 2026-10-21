@@ -54,13 +54,13 @@ export const AlertsView: React.FC = () => {
   };
 
   const handleBlockResource = (event: AlertItem) => {
-    setActionNotice(`Origin route ${event.prefix} from ${event.observed_asn} filtered & blocked at edge`);
+    setActionNotice(`Suppression policy recorded: ${event.prefix} from ${event.observed_asn}`);
     updateAlertStatus(event.id, "ACKNOWLEDGED");
     setTimeout(() => setActionNotice(null), 3500);
   };
 
   const handleAllowException = (event: AlertItem) => {
-    setActionNotice(`Granted origin exception for '${event.observed_asn}' on ${event.prefix}`);
+    setActionNotice(`Origin exception authorized: ${event.observed_asn} for ${event.prefix}`);
     updateAlertStatus(event.id, "RESOLVED");
     setTimeout(() => setActionNotice(null), 3500);
   };
@@ -83,13 +83,13 @@ export const AlertsView: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-text-main tracking-tight">Security alerts</h2>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <h2 className="text-base font-semibold text-text-main tracking-tight">Security alerts</h2>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
               {alerts.filter((a) => a.status === "ACTIVE").length} Active
             </span>
           </div>
           <p className="text-xs text-text-sub mt-0.5">
-            Active security violations, runtime policy infractions, and anomalies requiring attention.
+            Active routing anomalies, policy conflicts, and prefix origin violations.
           </p>
         </div>
 
@@ -97,7 +97,7 @@ export const AlertsView: React.FC = () => {
           {alertEvents.length > 0 && (
             <button
               onClick={() => dismissAllAlerts()}
-              className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-xs font-medium flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer"
             >
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Dismiss all</span>
@@ -107,7 +107,7 @@ export const AlertsView: React.FC = () => {
       </div>
 
       {actionNotice && (
-        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-xs flex items-center gap-2">
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-xs flex items-center gap-2 shadow-xs transition-all">
           <Check className="w-3.5 h-3.5 shrink-0" />
           <span>{actionNotice}</span>
         </div>
@@ -115,37 +115,37 @@ export const AlertsView: React.FC = () => {
 
       {/* Triage Status Banner */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="card-panel p-4 flex items-center gap-3">
+        <div className="card-panel p-3.5 flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 shrink-0">
-            <ShieldAlert className="w-5 h-5" />
+            <ShieldAlert className="w-4 h-4 stroke-[2]" />
           </div>
           <div>
-            <div className="text-xs text-text-dim font-medium">Critical Threats</div>
-            <div className="text-lg font-bold text-text-main">
+            <div className="text-[11px] text-text-dim uppercase tracking-wider font-medium">Critical Threats</div>
+            <div className="text-xl font-semibold text-text-main tracking-tight">
               {alerts.filter((e) => e.severity === "HIGH").length}
             </div>
           </div>
         </div>
 
-        <div className="card-panel p-4 flex items-center gap-3">
+        <div className="card-panel p-3.5 flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0">
-            <AlertTriangle className="w-5 h-5" />
+            <AlertTriangle className="w-4 h-4 stroke-[2]" />
           </div>
           <div>
-            <div className="text-xs text-text-dim font-medium">Review Required</div>
-            <div className="text-lg font-bold text-text-main">
+            <div className="text-[11px] text-text-dim uppercase tracking-wider font-medium">Review Required</div>
+            <div className="text-xl font-semibold text-text-main tracking-tight">
               {alerts.filter((e) => e.status === "ACTIVE").length}
             </div>
           </div>
         </div>
 
-        <div className="card-panel p-4 flex items-center gap-3">
+        <div className="card-panel p-3.5 flex items-center gap-3.5">
           <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
-            <Check className="w-5 h-5" />
+            <Check className="w-4 h-4 stroke-[2]" />
           </div>
           <div>
-            <div className="text-xs text-text-dim font-medium">Acknowledged Today</div>
-            <div className="text-lg font-bold text-text-main">
+            <div className="text-[11px] text-text-dim uppercase tracking-wider font-medium">Acknowledged Today</div>
+            <div className="text-xl font-semibold text-text-main tracking-tight">
               {alerts.filter((e) => e.status !== "ACTIVE").length}
             </div>
           </div>
@@ -270,39 +270,39 @@ export const AlertsView: React.FC = () => {
                   <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                     <button
                       onClick={() => handleBlockResource(evt)}
-                      className="px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 text-[11px] font-medium flex items-center gap-1 transition-colors"
-                      title="Block route at border routers"
+                      className="px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 text-[11px] font-medium flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
+                      title="Record route suppression policy"
                     >
                       <Ban className="w-3 h-3" />
-                      <span>Block</span>
+                      <span>Suppress</span>
                     </button>
 
                     <button
                       onClick={() => handleAllowException(evt)}
-                      className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-medium flex items-center gap-1 transition-colors"
-                      title="Grant origin policy exception"
+                      className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-medium flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
+                      title="Authorize origin policy exception"
                     >
                       <Check className="w-3 h-3" />
-                      <span>Allow</span>
+                      <span>Authorize</span>
                     </button>
 
                     {!isAck ? (
                       <button
                         onClick={() => handleAcknowledge(evt)}
-                        className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-[11px] font-medium text-text-main flex items-center gap-1 transition-colors"
+                        className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-[11px] font-medium text-text-main flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
                       >
                         <Check className="w-3 h-3 text-emerald-400" />
-                        <span>Ack</span>
+                        <span>Acknowledge</span>
                       </button>
                     ) : (
                       <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 px-2 py-1">
-                        <Check className="w-3 h-3" /> Ack
+                        <Check className="w-3 h-3" /> Reviewed
                       </span>
                     )}
 
                     <button
                       onClick={() => setSelectedAlert(evt)}
-                      className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-medium flex items-center gap-1 transition-colors"
+                      className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-medium flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
                       title="Inspect Cryptographic Evidence"
                     >
                       <Lock className="w-3 h-3 text-brand-blue" />

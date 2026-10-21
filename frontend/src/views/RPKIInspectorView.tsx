@@ -85,10 +85,10 @@ export const RPKIInspectorView: React.FC = () => {
       {/* Header */}
       <div>
         <div className="flex items-center gap-2">
-          <h2 className="text-base font-bold text-text-main tracking-tight">
+          <h2 className="text-base font-semibold text-text-main tracking-tight">
             RPKI Origin Validator
           </h2>
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-bg-btn text-text-sub border border-border-card">
+          <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-bg-btn text-text-sub border border-border-card">
             RFC 6483 / RFC 6811
           </span>
         </div>
@@ -108,7 +108,7 @@ export const RPKIInspectorView: React.FC = () => {
               setAsn(item.asn);
               handleValidate(item.prefix, item.asn);
             }}
-            className="px-3 py-1 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-xs font-semibold text-text-main transition-colors cursor-pointer"
+            className="px-3 py-1 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-xs font-medium text-text-main transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
           >
             {item.label}
           </button>
@@ -119,7 +119,7 @@ export const RPKIInspectorView: React.FC = () => {
       <div className="card-panel p-5 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-main flex items-center gap-1.5">
+            <label className="text-xs font-medium text-text-main flex items-center gap-1.5">
               <Globe className="w-3.5 h-3.5 text-brand-blue" />
               <span>Target IP Prefix / CIDR</span>
             </label>
@@ -128,12 +128,12 @@ export const RPKIInspectorView: React.FC = () => {
               value={prefix}
               onChange={(e) => setPrefix(e.target.value)}
               placeholder="e.g. 1.1.1.0/24 or 198.51.100.0/24"
-              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-text-dim font-mono transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-brand-blue/60 focus:ring-1 focus:ring-brand-blue/30 font-mono transition-all"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-main flex items-center gap-1.5">
+            <label className="text-xs font-medium text-text-main flex items-center gap-1.5">
               <KeyRound className="w-3.5 h-3.5 text-brand-blue" />
               <span>Origin ASN</span>
             </label>
@@ -142,7 +142,7 @@ export const RPKIInspectorView: React.FC = () => {
               value={asn}
               onChange={(e) => setAsn(e.target.value)}
               placeholder="e.g. AS13335 or 13335"
-              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-text-dim font-mono transition-colors"
+              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-brand-blue/60 focus:ring-1 focus:ring-brand-blue/30 font-mono transition-all"
             />
           </div>
         </div>
@@ -154,7 +154,7 @@ export const RPKIInspectorView: React.FC = () => {
           <button
             onClick={() => handleValidate()}
             disabled={loading || !prefix || !asn}
-            className="px-4 py-2 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-xs font-semibold text-text-main flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+            className="px-4 py-2 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-xs font-medium text-text-main flex items-center gap-2 transition-all duration-150 active:scale-[0.98] cursor-pointer disabled:opacity-50 shadow-xs"
           >
             <SearchCheck className={`w-3.5 h-3.5 ${loading ? "animate-spin text-brand-blue" : ""}`} />
             <span>{loading ? "Validating ROA..." : "Validate Origin"}</span>

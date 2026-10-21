@@ -53,7 +53,7 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
       <div>
-        <h2 className="text-base font-bold text-text-main tracking-tight">
+        <h2 className="text-base font-semibold text-text-main tracking-tight">
           Settings & System Architecture
         </h2>
         <p className="text-xs text-text-sub mt-0.5">

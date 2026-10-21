@@ -26,15 +26,15 @@ export const EvidenceVaultView: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-text-main tracking-tight">Audit ledger</h2>
+          <h2 className="text-base font-semibold text-text-main tracking-tight">Audit ledger</h2>
           <p className="text-xs text-text-sub mt-0.5">
-            Immutable RFC 8785 evidence ledger with post-quantum non-repudiation.
+            RFC 8785 canonical evidence ledger with SHA-256 integrity verification.
           </p>
         </div>
 
         <button
           onClick={handleExportJson}
-          className="px-4 py-2 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-main text-xs font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+          className="px-3.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-main text-xs font-medium flex items-center gap-2 transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
         >
           <Download className="w-3.5 h-3.5 text-brand-blue" />
           <span>Export log (JSON)</span>
@@ -45,16 +45,16 @@ export const EvidenceVaultView: React.FC = () => {
       <div className="card-panel p-3.5 bg-bg-card border-brand-blue/30 text-xs text-text-sub flex items-start gap-3">
         <Lock className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
         <div className="space-y-0.5">
-          <div className="font-semibold text-text-main">Tamper-Proof Forensic Audit Trail</div>
+          <div className="font-semibold text-text-main">Tamper-Evident Forensic Audit Trail</div>
           <p className="text-[11px] leading-relaxed">
-            Every incident in this ledger is permanently sealed with an RFC 8785 canonical SHA-256 cryptographic hash. If an attacker or malicious administrator attempts to modify any past incident in the database, the cryptographic hash fails validation instantly.
+            Every incident in this ledger is sealed with an RFC 8785 canonical SHA-256 cryptographic digest. Any post-event modification in the database causes cryptographic verification to fail immediately.
           </p>
         </div>
       </div>
 
       {/* Audit Log Table */}
       <div className="card-panel overflow-hidden">
-        <div className="grid grid-cols-12 text-xs text-text-dim font-medium px-4 py-2.5 border-b border-border-card">
+        <div className="grid grid-cols-12 text-[11px] text-text-dim font-medium uppercase tracking-wider px-4 py-2.5 border-b border-border-card">
           <span className="col-span-3">Timestamp</span>
           <span className="col-span-3">Rule / Action</span>
           <span className="col-span-3">Resource</span>

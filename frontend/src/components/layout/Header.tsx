@@ -31,25 +31,25 @@ export const Header: React.FC = () => {
       {/* Center: Protection Status Pill */}
       <button
         onClick={() => setActiveTab("alerts")}
-        className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 border ${
+        className={`px-3.5 py-1 rounded-full text-xs font-medium transition-all duration-150 flex items-center gap-2 border cursor-pointer active:scale-[0.98] ${
           activeAlerts === 0
-            ? "bg-status-green-bg text-status-green border-green-800/40 hover:opacity-90"
-            : "bg-status-red-bg text-red-400 border-red-800/40 hover:opacity-90"
+            ? "bg-status-green-bg text-status-green border-green-800/40 hover:border-green-700/60"
+            : "bg-status-red-bg text-red-400 border-red-800/40 hover:border-red-700/60"
         }`}
       >
         <span
-          className={`w-1.5 h-1.5 rounded-full ${activeAlerts === 0 ? "bg-status-green" : "bg-red-500"}`}
+          className={`w-1.5 h-1.5 rounded-full ${activeAlerts === 0 ? "bg-status-green animate-pulse" : "bg-red-400"}`}
         ></span>
-        <span>{activeAlerts === 0 ? "Protection active" : `${activeAlerts} Threats active`}</span>
+        <span>{activeAlerts === 0 ? "Monitoring active" : `${activeAlerts} Anomalies detected`}</span>
       </button>
 
-      {/* Right: Search, Theme Toggle, Notification Bell, User, More Actions */}
+      {/* Right: Search, Theme Toggle, Notification Bell */}
       <div className="flex items-center gap-2.5">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub hover:border-text-dim transition-colors w-36">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub focus-within:border-brand-blue/60 focus-within:ring-1 focus-within:ring-brand-blue/30 transition-all w-44">
           <Search className="w-3.5 h-3.5 text-text-sub shrink-0" />
           <input
             type="text"
-            placeholder="Search"
+            placeholder="Search prefix, ASN, alert..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="bg-transparent border-none outline-none text-xs text-text-main w-full placeholder:text-text-dim"

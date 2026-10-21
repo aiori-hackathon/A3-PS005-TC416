@@ -46,22 +46,22 @@ export const Sidebar: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
                   isActive
-                    ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
+                    ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
                     : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <Icon
-                    className={`w-4 h-4 ${
+                    className={`w-4 h-4 shrink-0 ${
                       isActive ? "text-text-main" : "text-text-sub"
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
-                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-[#ef4444] text-white">
+                  <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-[#ef4444] text-white">
                     {item.badge}
                   </span>
                 )}
@@ -72,8 +72,8 @@ export const Sidebar: React.FC = () => {
 
         {/* Resources Section */}
         <div>
-          <div className="px-3 text-xs text-text-dim font-semibold mb-2">
-            Resources
+          <div className="px-3 text-[11px] text-text-dim font-medium uppercase tracking-wider mb-2">
+            Verification
           </div>
           <div className="space-y-1">
             {resourceNav.map((item) => {
@@ -83,14 +83,14 @@ export const Sidebar: React.FC = () => {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
                     isActive
-                      ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
+                      ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
                       : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
                   }`}
                 >
                   <Icon
-                    className={`w-4 h-4 ${
+                    className={`w-4 h-4 shrink-0 ${
                       isActive ? "text-text-main" : "text-text-sub"
                     }`}
                   />
@@ -106,13 +106,13 @@ export const Sidebar: React.FC = () => {
       <div className="pt-2 border-t border-border-sub space-y-2">
         <button
           onClick={() => setActiveTab("settings")}
-          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
             activeTab === "settings"
-              ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
+              ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
               : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
           }`}
         >
-          <Settings className="w-4 h-4 text-text-sub" />
+          <Settings className="w-4 h-4 text-text-sub shrink-0" />
           <span>Settings</span>
         </button>
 

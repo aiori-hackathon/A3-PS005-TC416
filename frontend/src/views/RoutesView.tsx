@@ -23,20 +23,20 @@ export const RoutesView: React.FC = () => {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-text-main tracking-tight">
+            <h2 className="text-base font-semibold text-text-main tracking-tight">
               Tracked Route Baselines
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/10 text-brand-blue border border-sky-500/20">
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-sky-500/10 text-brand-blue border border-sky-500/20">
               {routes.length} Active Baselines
             </span>
           </div>
           <p className="text-xs text-text-sub mt-0.5">
-            Cryptographically bounded IP prefixes with confirmed legitimate origin-AS assignments.
+            Learned IP prefix baselines and legitimate origin-AS assignments.
           </p>
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub w-64 relative">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub w-64 relative focus-within:border-brand-blue/60 focus-within:ring-1 focus-within:ring-brand-blue/30 transition-all">
           <Search className="w-3.5 h-3.5 text-text-sub shrink-0" />
           <input
             type="text"
@@ -54,7 +54,7 @@ export const RoutesView: React.FC = () => {
                 setLocalSearch("");
                 setSearchQuery("");
               }}
-              className="absolute right-2 text-text-dim hover:text-text-main"
+              className="absolute right-2 text-text-dim hover:text-text-main cursor-pointer"
             >
               <X className="w-3 h-3" />
             </button>
@@ -65,7 +65,7 @@ export const RoutesView: React.FC = () => {
       {/* Routes Table */}
       <div className="card-panel overflow-hidden">
         {/* Table Header */}
-        <div className="grid grid-cols-12 text-xs text-text-dim font-medium px-4 py-2.5 border-b border-border-card">
+        <div className="grid grid-cols-12 text-[11px] text-text-dim font-medium uppercase tracking-wider px-4 py-2.5 border-b border-border-card">
           <span className="col-span-4">Prefix (CIDR)</span>
           <span className="col-span-2">Origin ASN</span>
           <span className="col-span-2">Observations</span>
@@ -82,7 +82,7 @@ export const RoutesView: React.FC = () => {
               </p>
               <button
                 onClick={() => seedDemoDataAction()}
-                className="px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-brand-blue text-xs font-semibold hover:bg-sky-500/20 transition-colors inline-flex items-center gap-1.5"
+                className="px-3.5 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-brand-blue text-xs font-medium hover:bg-sky-500/20 transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Seed Benchmark Baselines</span>
@@ -97,13 +97,13 @@ export const RoutesView: React.FC = () => {
               return (
                 <div
                   key={route.prefix}
-                  className="grid grid-cols-12 items-center px-4 py-3 text-xs hover:bg-bg-hover-row transition-colors"
+                  className="grid grid-cols-12 items-center px-4 py-3 text-xs hover:bg-bg-hover-row transition-colors duration-150"
                 >
-                  <span className="col-span-4 font-mono font-semibold text-text-main flex items-center gap-2">
+                  <span className="col-span-4 font-mono font-medium text-text-main flex items-center gap-2">
                     <Globe className="w-3.5 h-3.5 text-brand-blue shrink-0" />
                     <span>{route.prefix}</span>
                   </span>
-                  <span className="col-span-2 font-mono font-bold text-brand-blue">
+                  <span className="col-span-2 font-mono font-medium text-brand-blue">
                     {route.origin_asn}
                   </span>
                   <span className="col-span-2 text-text-sub font-mono text-[11px]">
@@ -120,7 +120,7 @@ export const RoutesView: React.FC = () => {
                           asn: route.origin_asn,
                         })
                       }
-                      className="px-3 py-1 rounded-md bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-semibold transition-colors inline-flex items-center gap-1.5"
+                      className="px-2.5 py-1 rounded-md bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-medium transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5 cursor-pointer shadow-xs"
                       title="Validate with RPKI"
                     >
                       <SearchCheck className="w-3 h-3 text-brand-blue" />
