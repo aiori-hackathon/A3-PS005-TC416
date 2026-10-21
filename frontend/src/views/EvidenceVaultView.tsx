@@ -7,6 +7,9 @@ import {
   Search,
   Sparkles,
   X,
+  ExternalLink,
+  ShieldAlert,
+  CheckCircle2,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { EvidenceItem } from "../types";
@@ -33,15 +36,15 @@ export const EvidenceVaultView: React.FC = () => {
   ).length;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn">
+    <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn pb-12">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-text-main tracking-tight">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-lg font-bold text-text-main tracking-tight">
               Cryptographic Evidence Vault
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/10 text-brand-blue border border-sky-500/20">
+            <span className="badge badge-idle font-mono text-[11px]">
               RFC 8785 + FIPS 204
             </span>
           </div>
@@ -51,7 +54,7 @@ export const EvidenceVaultView: React.FC = () => {
         </div>
 
         {/* Search */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub w-64 relative">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-bg-input border border-border-card text-xs text-text-sub w-64 relative">
           <Search className="w-3.5 h-3.5 text-text-sub shrink-0" />
           <input
             type="text"
@@ -78,106 +81,141 @@ export const EvidenceVaultView: React.FC = () => {
       </div>
 
       {/* 3 Status Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div className="card-panel p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-sky-500/10 flex items-center justify-center text-brand-blue shrink-0">
-            <Lock className="w-5 h-5" />
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+        <div className="card-panel p-4 flex items-center gap-3.5 card-accent-blue">
+          <div className="w-10 h-10 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-brand-blue shrink-0">
+            <Lock className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-xs text-text-dim font-medium">Vault Records</div>
-            <div className="text-lg font-bold text-text-main">{evidence.length}</div>
+            <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">Vault Records</div>
+            <div className="text-xl font-bold text-text-main tracking-tight">{evidence.length} Immutable Blocks</div>
           </div>
         </div>
 
-        <div className="card-panel p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
-            <ShieldCheck className="w-5 h-5" />
+        <div className="card-panel p-4 flex items-center gap-3.5 card-accent-green">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+            <ShieldCheck className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-xs text-text-dim font-medium">Canonical RFC 8785</div>
-            <div className="text-lg font-bold text-emerald-400">100% Deterministic</div>
+            <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">Canonical RFC 8785</div>
+            <div className="text-xl font-bold text-status-green tracking-tight">100% Deterministic</div>
           </div>
         </div>
 
-        <div className="card-panel p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-purple-500/10 flex items-center justify-center text-purple-400 shrink-0">
-            <Cpu className="w-5 h-5" />
+        <div className="card-panel p-4 flex items-center gap-3.5 card-accent-blue">
+          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 shrink-0">
+            <Cpu className="w-5 h-5 stroke-[2.2]" />
           </div>
           <div>
-            <div className="text-xs text-text-dim font-medium">Quantum Signer</div>
-            <div className="text-lg font-bold text-purple-400">
-              {cryptoStatus?.algorithm || "ML-DSA-65"}
+            <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">Post-Quantum Signatures</div>
+            <div className="text-xl font-bold text-purple-400 tracking-tight">
+              {signedCount} / {evidence.length} Signed
             </div>
           </div>
         </div>
       </div>
 
-      {/* Evidence Table */}
-      <div className="card-panel overflow-hidden">
-        {/* Table Header */}
-        <div className="grid grid-cols-12 text-xs text-text-dim font-medium px-4 py-2.5 border-b border-border-card">
-          <span className="col-span-3">Evidence ID</span>
-          <span className="col-span-2">Alert ID</span>
-          <span className="col-span-4">SHA-256 Record Hash</span>
-          <span className="col-span-2">Signature</span>
-          <span className="col-span-1 text-right">Inspect</span>
+      {/* Records Table */}
+      <div className="card-panel overflow-hidden border-border-card">
+        <div className="px-5 py-3 border-b border-border-card flex items-center justify-between bg-bg-app">
+          <div className="flex items-center gap-2">
+            <FileCheck2 className="w-4 h-4 text-brand-blue" />
+            <span className="text-xs font-bold text-text-main">
+              Canonical Evidence Ledger ({filtered.length})
+            </span>
+          </div>
+          <span className="text-[11px] text-text-dim font-mono">
+            Algorithm: {cryptoStatus?.algorithm || "ML-DSA-65"} + SHA-256
+          </span>
         </div>
 
-        {/* Table Rows */}
-        <div className="divide-y divide-border-item">
-          {filtered.length === 0 ? (
-            <div className="px-4 py-10 text-center space-y-3">
-              <p className="text-xs text-text-sub">
-                No matching evidence records found in the vault.
-              </p>
-              <button
-                onClick={() => seedDemoDataAction()}
-                className="px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-brand-blue text-xs font-semibold hover:bg-sky-500/20 transition-colors inline-flex items-center gap-1.5"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Seed Evidence Records</span>
-              </button>
+        {filtered.length === 0 ? (
+          <div className="p-12 text-center space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-brand-blue flex items-center justify-center mx-auto border border-sky-500/20">
+              <Lock className="w-6 h-6" />
             </div>
-          ) : (
-            filtered.map((item) => (
-              <div
-                key={item.id}
-                className="grid grid-cols-12 items-center px-4 py-3 text-xs hover:bg-bg-hover-row transition-colors"
-              >
-                <span className="col-span-3 font-mono text-[11px] text-text-main font-semibold flex items-center gap-1.5 truncate">
-                  <FileCheck2 className="w-3.5 h-3.5 text-brand-blue shrink-0" />
-                  <span title={item.id}>{item.id}</span>
-                </span>
-                <span className="col-span-2 font-mono text-[11px] text-text-sub truncate" title={item.alert_id}>
-                  {item.alert_id.slice(0, 14)}...
-                </span>
-                <span className="col-span-4 font-mono text-[11px] text-emerald-400 truncate pr-2" title={item.record_hash}>
-                  {item.record_hash}
-                </span>
-                <span className="col-span-2">
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                      item.signature
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                        : "bg-bg-app border border-border-card text-brand-blue"
-                    }`}
-                  >
-                    {item.signature ? "SIGNED (ML-DSA)" : item.algorithm}
-                  </span>
-                </span>
-                <div className="col-span-1 text-right">
-                  <button
-                    onClick={() => setSelectedEvidence(item)}
-                    className="px-2.5 py-1 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-brand-blue hover:text-text-main text-[11px] font-semibold transition-colors cursor-pointer"
-                    title="Inspect RFC 8785 Canonical JSON & Test Tamper Resistance"
-                  >
-                    Inspect
-                  </button>
-                </div>
+            <div>
+              <div className="text-sm font-semibold text-text-main">
+                No evidence records found
               </div>
-            ))
-          )}
-        </div>
+              <p className="text-xs text-text-sub mt-1 max-w-sm mx-auto">
+                Evidence packets are automatically minted and canonicalized whenever a BGP anomaly is detected.
+              </p>
+            </div>
+            <button
+              onClick={() => seedDemoDataAction()}
+              className="btn btn-primary text-xs mt-2"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Seed Benchmark Incidents</span>
+            </button>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-bg-app border-b border-border-card text-text-dim text-[11px] uppercase tracking-wider select-none">
+                <tr>
+                  <th className="py-2.5 px-4 font-semibold">Evidence ID</th>
+                  <th className="py-2.5 px-4 font-semibold">Target Prefix</th>
+                  <th className="py-2.5 px-4 font-semibold">Observed ASN</th>
+                  <th className="py-2.5 px-4 font-semibold">SHA-256 Digest</th>
+                  <th className="py-2.5 px-4 font-semibold">Signature</th>
+                  <th className="py-2.5 px-4 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-card font-mono text-[11px]">
+                {filtered.map((item) => {
+                  const isSigned =
+                    item.signer_status === "SIGNED" || Boolean(item.signature);
+                  return (
+                    <tr
+                      key={item.id}
+                      className="hover:bg-bg-hover-row transition-colors group cursor-pointer"
+                      onClick={() => setSelectedEvidence(item)}
+                    >
+                      <td className="py-3 px-4 text-text-main font-semibold">
+                        <div className="flex items-center gap-1.5 font-mono">
+                          <Lock className="w-3 h-3 text-brand-blue" />
+                          <span>{item.id.substring(0, 8)}...</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-brand-blue font-semibold">
+                        {item.record.prefix || "N/A"}
+                      </td>
+                      <td className="py-3 px-4 text-text-sub">
+                        {item.record.observed_asn || "N/A"}
+                      </td>
+                      <td className="py-3 px-4 text-emerald-400 break-all max-w-xs truncate" title={item.record_hash}>
+                        {item.record_hash.substring(0, 16)}...
+                      </td>
+                      <td className="py-3 px-4">
+                        <span
+                          className={`badge text-[10px] py-0 px-2 ${
+                            isSigned ? "badge-success" : "badge-amber"
+                          }`}
+                        >
+                          {isSigned ? "PQ-SIGNED" : "UNSIGNED"}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedEvidence(item);
+                          }}
+                          className="btn btn-secondary text-xs px-2.5 py-1"
+                        >
+                          <span>Inspect</span>
+                          <ExternalLink className="w-3 h-3 text-brand-blue ml-1" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

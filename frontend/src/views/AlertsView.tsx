@@ -12,9 +12,15 @@ import {
   ChevronUp,
   Layers,
   Sparkles,
+  Network,
+  Lock,
+  ArrowUpRight,
+  Shield,
+  Activity,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
+import { BGPTopologyGraph } from "../components/BGPTopologyGraph";
 
 export const AlertsView: React.FC = () => {
   const {
@@ -25,6 +31,7 @@ export const AlertsView: React.FC = () => {
     setRpkiTarget,
     searchQuery,
     seedDemoDataAction,
+    setActiveTab,
   } = useHoraqStore();
 
   const [filterType, setFilterType] = useState<
@@ -58,20 +65,21 @@ export const AlertsView: React.FC = () => {
   const resolvedAlerts = alerts.filter((a) => a.status !== "ACTIVE");
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn">
+    <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn pb-12">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-text-main tracking-tight">
-              Security Alerts & Explainable Anomalies
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-lg font-bold text-text-main tracking-tight">
+              Explainable Anomaly Telemetry
             </h2>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-500/10 text-red-400 border border-red-500/20">
-              {activeAlerts.length} Active
+            <span className="badge badge-error">
+              <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-ping" />
+              <span>{activeAlerts.length} Active Threat{activeAlerts.length !== 1 ? "s" : ""}</span>
             </span>
           </div>
           <p className="text-xs text-text-sub mt-0.5">
-            Real-time origin-AS conflicts, subprefix hijacks, and explainable containment telemetry.
+            Real-time origin-AS conflicts, subprefix hijacks, and visual RFC 8785 containment telemetry.
           </p>
         </div>
 
@@ -79,7 +87,7 @@ export const AlertsView: React.FC = () => {
           {activeAlerts.length > 0 && (
             <button
               onClick={() => dismissAllAlerts()}
-              className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-xs font-semibold flex items-center gap-1.5 transition-colors"
+              className="btn btn-secondary text-xs"
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-status-green" />
               <span>Resolve all active</span>
@@ -88,82 +96,115 @@ export const AlertsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Triage Status Banner (3 Interactive Cards) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      {/* Triage Status Banner (3 Interactive KPI Cards) */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
         <div
           onClick={() => setFilterType("ORIGIN_CHANGE")}
-          className="card-panel p-4 flex items-center gap-3 cursor-pointer hover:border-red-500/50 transition-colors"
+          className={`card-panel p-4 flex items-center justify-between cursor-pointer card-accent-red hover:-translate-y-0.5 transition-all ${
+            filterType === "ORIGIN_CHANGE" ? "ring-2 ring-red-500/40" : ""
+          }`}
         >
-          <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 shrink-0">
-            <ShieldAlert className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-text-dim font-medium">Origin Conflicts</div>
-            <div className="text-lg font-bold text-text-main">
-              {originAlerts.length}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+              <ShieldAlert className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">
+                Origin Conflicts
+              </div>
+              <div className="text-xl font-bold text-text-main tracking-tight">
+                {originAlerts.length}
+              </div>
             </div>
           </div>
+          <span className="text-xs text-text-dim hover:text-text-main">
+            {filterType === "ORIGIN_CHANGE" ? "● Active" : "Filter →"}
+          </span>
         </div>
 
         <div
           onClick={() => setFilterType("SUBPREFIX_ANOMALY")}
-          className="card-panel p-4 flex items-center gap-3 cursor-pointer hover:border-amber-500/50 transition-colors"
+          className={`card-panel p-4 flex items-center justify-between cursor-pointer card-accent-amber hover:-translate-y-0.5 transition-all ${
+            filterType === "SUBPREFIX_ANOMALY" ? "ring-2 ring-amber-500/40" : ""
+          }`}
         >
-          <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-text-dim font-medium">Subprefix Hijacks</div>
-            <div className="text-lg font-bold text-text-main">
-              {subprefixAlerts.length}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+              <AlertTriangle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">
+                Subprefix Hijacks
+              </div>
+              <div className="text-xl font-bold text-text-main tracking-tight">
+                {subprefixAlerts.length}
+              </div>
             </div>
           </div>
+          <span className="text-xs text-text-dim hover:text-text-main">
+            {filterType === "SUBPREFIX_ANOMALY" ? "● Active" : "Filter →"}
+          </span>
         </div>
 
         <div
           onClick={() => setFilterType("all")}
-          className="card-panel p-4 flex items-center gap-3 cursor-pointer hover:border-emerald-500/50 transition-colors"
+          className={`card-panel p-4 flex items-center justify-between cursor-pointer card-accent-green hover:-translate-y-0.5 transition-all ${
+            filterType === "all" ? "ring-2 ring-emerald-500/40" : ""
+          }`}
         >
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
-            <Check className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="text-xs text-text-dim font-medium">Resolved / Inactive</div>
-            <div className="text-lg font-bold text-text-main">
-              {resolvedAlerts.length}
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+              <Check className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[11px] text-text-dim font-semibold uppercase tracking-wider">
+                Resolved / Inactive
+              </div>
+              <div className="text-xl font-bold text-text-main tracking-tight">
+                {resolvedAlerts.length}
+              </div>
             </div>
           </div>
+          <span className="text-xs text-text-dim hover:text-text-main">
+            {filterType === "all" ? "● All" : "Reset →"}
+          </span>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex items-center gap-1.5 border-b border-border-card pb-2">
-        <SlidersHorizontal className="w-3.5 h-3.5 text-text-dim mr-1.5" />
-        {[
-          { id: "all", label: "All Anomalies" },
-          { id: "active", label: `Active (${activeAlerts.length})` },
-          { id: "ORIGIN_CHANGE", label: `Origin Conflicts (${originAlerts.length})` },
-          { id: "SUBPREFIX_ANOMALY", label: `Subprefix Hijacks (${subprefixAlerts.length})` },
-          { id: "high", label: "High Severity" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilterType(tab.id as any)}
-            className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-              filterType === tab.id
-                ? "bg-bg-nav-active text-text-main shadow-sm font-semibold"
-                : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
+      {/* Filter Tabs & Quick Action */}
+      <div className="flex items-center justify-between border-b border-border-card pb-2.5">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-text-dim mr-1" />
+          {[
+            { id: "all", label: "All Anomalies" },
+            { id: "active", label: `Active (${activeAlerts.length})` },
+            { id: "ORIGIN_CHANGE", label: `Origin Conflicts (${originAlerts.length})` },
+            { id: "SUBPREFIX_ANOMALY", label: `Subprefix Hijacks (${subprefixAlerts.length})` },
+            { id: "high", label: "High Severity" },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setFilterType(tab.id as any)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                filterType === tab.id
+                  ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
+                  : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        <span className="text-[11px] text-text-dim font-mono">
+          Showing {filteredAlerts.length} of {alerts.length} events
+        </span>
       </div>
 
       {/* Alerts List */}
       {filteredAlerts.length === 0 ? (
-        <div className="card-panel p-10 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+        <div className="card-panel p-12 text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto border border-emerald-500/20">
             <CheckCircle2 className="w-6 h-6" />
           </div>
           <div>
@@ -178,10 +219,10 @@ export const AlertsView: React.FC = () => {
           </div>
           <button
             onClick={() => seedDemoDataAction()}
-            className="px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-brand-blue text-xs font-semibold hover:bg-sky-500/20 transition-colors inline-flex items-center gap-1.5 mt-2"
+            className="btn btn-primary text-xs mt-2"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>Seed Realistic Benchmark Incidents</span>
+            <span>Seed Benchmark Incidents</span>
           </button>
         </div>
       ) : (
@@ -197,21 +238,21 @@ export const AlertsView: React.FC = () => {
                 key={evt.id}
                 className={`card-panel p-5 transition-all ${
                   isResolved
-                    ? "opacity-60 bg-bg-card/40"
+                    ? "opacity-65 card-accent-green"
                     : isAck
-                    ? "border-amber-500/30"
+                    ? "card-accent-amber"
                     : isOrigin
-                    ? "border-red-500/40 shadow-sm"
-                    : "border-amber-500/40 shadow-sm"
+                    ? "card-accent-red"
+                    : "card-accent-amber"
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                  <div className="flex items-start gap-3.5 flex-1 min-w-0">
                     <div
-                      className={`p-2.5 rounded-lg shrink-0 mt-0.5 ${
+                      className={`p-2.5 rounded-xl shrink-0 mt-0.5 border ${
                         isOrigin
-                          ? "bg-red-500/10 text-red-400"
-                          : "bg-amber-500/10 text-amber-400"
+                          ? "bg-red-500/10 border-red-500/20 text-red-400"
+                          : "bg-amber-500/10 border-amber-500/20 text-amber-400"
                       }`}
                     >
                       {isOrigin ? (
@@ -225,22 +266,20 @@ export const AlertsView: React.FC = () => {
                       {/* Title & Badges */}
                       <div className="flex items-center gap-2 flex-wrap">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            evt.severity === "HIGH"
-                              ? "bg-red-500/10 text-red-400 border border-red-500/20"
-                              : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                          className={`badge ${
+                            evt.severity === "HIGH" ? "badge-error" : "badge-amber"
                           }`}
                         >
                           {evt.severity}
                         </span>
-                        <span className="text-sm font-bold text-text-main">
+                        <span className="text-sm font-bold text-text-main tracking-tight">
                           {evt.title}
                         </span>
-                        <span className="text-xs font-mono font-semibold text-brand-blue px-2 py-0.5 rounded bg-bg-input border border-border-card">
+                        <span className="text-xs font-mono font-semibold text-brand-blue px-2 py-0.5 rounded-md bg-bg-input border border-border-card">
                           {evt.prefix}
                         </span>
                         {evt.scenario && (
-                          <span className="text-[10px] font-medium text-text-dim bg-bg-app border border-border-card px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-medium text-text-dim bg-bg-app border border-border-card px-2 py-0.5 rounded-md">
                             {evt.scenario}
                           </span>
                         )}
@@ -251,125 +290,90 @@ export const AlertsView: React.FC = () => {
                         {evt.explanation}
                       </p>
 
-                      {/* Visual Containment & Hijack Breakdown */}
-                      {isOrigin ? (
-                        <div className="p-3 rounded-lg bg-bg-app border border-border-card space-y-2">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-text-main">
-                            <ShieldAlert className="w-3.5 h-3.5 text-red-400" />
-                            <span>Origin-AS Conflict Analysis</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            <div className="p-2 rounded bg-bg-card border border-border-card">
-                              <span className="text-[10px] text-text-dim block">Authorized Reference Origin</span>
-                              <span className="font-mono font-bold text-status-green">
-                                {evt.baseline_asn || "N/A"}
-                              </span>
-                              <span className="text-[10px] text-text-dim block">First recorded legitimate baseline</span>
-                            </div>
-                            <div className="p-2 rounded bg-red-500/10 border border-red-500/20">
-                              <span className="text-[10px] text-red-400 block font-semibold">Observed Rogue Origin</span>
-                              <span className="font-mono font-bold text-red-400">
-                                {evt.observed_asn}
-                              </span>
-                              <span className="text-[10px] text-red-400/80 block">Unauthorized origin injection</span>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="p-3 rounded-lg bg-bg-app border border-border-card space-y-2">
-                          <div className="flex items-center gap-1.5 text-xs font-semibold text-text-main">
-                            <Layers className="w-3.5 h-3.5 text-brand-blue" />
-                            <span>BGP Subprefix Containment Breakdown</span>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                            <div className="p-2 rounded bg-bg-card border border-border-card">
-                              <span className="text-[10px] text-text-dim block">Legitimate Parent Baseline</span>
-                              <span className="font-mono font-bold text-text-main">
-                                {evt.parent_prefix}
-                              </span>
-                              <span className="text-[10px] text-brand-blue block">
-                                Origin: {evt.baseline_asn}
-                              </span>
-                            </div>
-                            <div className="p-2 rounded bg-amber-500/10 border border-amber-500/20">
-                              <span className="text-[10px] text-amber-400 block font-semibold">Hijacked Specific Subnet</span>
-                              <span className="font-mono font-bold text-amber-400">
-                                {evt.prefix}
-                              </span>
-                              <span className="text-[10px] text-amber-400/80 block">
-                                Rogue Origin: {evt.observed_asn}
-                              </span>
-                            </div>
-                          </div>
-                          <p className="text-[10px] text-text-dim italic">
-                            Routing impact: Due to RFC 4271 Longest Prefix Match (LPM), routers worldwide will prefer this more-specific announcement, steering traffic away from {evt.parent_prefix}.
-                          </p>
-                        </div>
-                      )}
+                      {/* Interactive SVG BGP Route Topology Diagram Component */}
+                      <BGPTopologyGraph alert={evt} />
 
-                      {/* Telemetry metadata ribbon */}
-                      <div className="text-xs text-text-sub flex items-center gap-4 pt-1 flex-wrap">
-                        <span className="flex items-center gap-1 text-text-dim font-mono text-[11px]">
-                          <Clock className="w-3 h-3" />
-                          {evt.created_at
-                            ? new Date(evt.created_at).toLocaleTimeString()
-                            : "Just now"}
-                        </span>
-                        <span className="text-[11px] text-text-dim">
-                          Collector: <strong className="text-text-main font-mono">{evt.collector}</strong>
-                        </span>
-                        <span className="text-[11px] text-text-dim font-mono">
-                          Evidence ID: {evt.evidence_id.slice(0, 16)}...
-                        </span>
+                      {/* Quick Meta Footer */}
+                      <div className="flex items-center gap-4 text-xs text-text-dim pt-1 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <Clock className="w-3.5 h-3.5" />
+                          <span>
+                            {new Date(evt.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              second: "2-digit",
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Lock className="w-3.5 h-3.5 text-brand-blue" />
+                          <span className="font-mono text-[11px] text-text-sub">
+                            Evidence ID: {evt.id.substring(0, 12)}...
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Actions on right */}
-                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                    <button
-                      onClick={() => {
-                        setRpkiTarget({
-                          prefix: evt.prefix,
-                          asn: evt.observed_asn,
-                        });
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-xs font-semibold text-text-sub hover:text-text-main flex items-center gap-1.5 transition-colors"
-                      title="Validate route origin with RPKI via RIPEstat"
+                  {/* Actions Column */}
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span
+                      className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${
+                        isResolved
+                          ? "bg-emerald-500/10 text-status-green border-emerald-500/20"
+                          : isAck
+                          ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                          : "bg-red-500/10 text-red-400 border-red-500/20 animate-pulse"
+                      }`}
                     >
-                      <SearchCheck className="w-3.5 h-3.5 text-brand-blue" />
-                      <span>RPKI Check</span>
-                    </button>
+                      {evt.status}
+                    </span>
 
-                    <button
-                      onClick={() => setSelectedAlert(evt)}
-                      className="px-3 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/20 text-brand-blue text-xs font-bold flex items-center gap-1.5 transition-colors"
-                      title="Inspect RFC 8785 canonical evidence & test tamper resistance"
-                    >
-                      <FileCheck2 className="w-3.5 h-3.5" />
-                      <span>Inspect Evidence</span>
-                    </button>
-
-                    {evt.status === "ACTIVE" && (
+                    <div className="flex items-center gap-1.5 mt-2">
                       <button
-                        onClick={() => updateAlertStatus(evt.id, "ACKNOWLEDGED")}
-                        className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-xs font-semibold text-text-main flex items-center gap-1 transition-colors"
-                        title="Acknowledge incident"
+                        onClick={() => setSelectedAlert(evt)}
+                        title="Inspect RFC 8785 Canonical JSON & Post-Quantum Signatures"
+                        className="btn btn-secondary text-xs px-2.5 py-1.5"
                       >
-                        <Check className="w-3 h-3 text-status-amber" />
-                        <span>Ack</span>
+                        <FileCheck2 className="w-3.5 h-3.5 text-brand-blue" />
+                        <span>Evidence</span>
                       </button>
-                    )}
 
-                    {evt.status !== "RESOLVED" && (
                       <button
-                        onClick={() => updateAlertStatus(evt.id, "RESOLVED")}
-                        className="p-1.5 rounded-lg text-text-dim hover:text-status-green hover:bg-bg-nav-hover transition-colors"
-                        title="Mark as resolved"
+                        onClick={() => {
+                          setRpkiTarget({
+                            asn: evt.observed_asn,
+                            prefix: evt.prefix,
+                          });
+                          setActiveTab("rpki");
+                        }}
+                        title="Query RPKI ROA Table"
+                        className="btn btn-secondary text-xs px-2.5 py-1.5"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
+                        <SearchCheck className="w-3.5 h-3.5 text-text-sub" />
+                        <span>RPKI</span>
                       </button>
-                    )}
+
+                      {evt.status === "ACTIVE" && (
+                        <button
+                          onClick={() => updateAlertStatus(evt.id, "ACKNOWLEDGED")}
+                          title="Mark as Acknowledged"
+                          className="btn btn-secondary text-xs px-2 py-1.5"
+                        >
+                          Ack
+                        </button>
+                      )}
+
+                      {evt.status !== "RESOLVED" && (
+                        <button
+                          onClick={() => updateAlertStatus(evt.id, "RESOLVED")}
+                          title="Resolve Anomaly"
+                          className="btn btn-secondary text-xs px-2 py-1.5 text-status-green hover:bg-emerald-500/10 hover:border-emerald-500/30"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

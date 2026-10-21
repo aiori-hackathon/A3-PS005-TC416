@@ -117,21 +117,21 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-fadeIn select-none"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-3xl max-h-[92vh] flex flex-col bg-bg-card border border-border-card rounded-xl shadow-2xl overflow-hidden animate-slideUp"
+        className="w-full max-w-3xl max-h-[92vh] flex flex-col bg-bg-card border border-border-card rounded-2xl shadow-2xl overflow-hidden animate-slideUp"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
         <div className="h-14 border-b border-border-sub bg-bg-header flex items-center justify-between px-6 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-brand-blue">
-              <ShieldCheck className="w-4 h-4" />
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-sky-500/10 border border-sky-500/25 flex items-center justify-center text-brand-blue shadow-xs">
+              <ShieldCheck className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-text-main">
+              <h3 className="text-sm font-bold text-text-main tracking-tight">
                 Cryptographic Evidence Record
               </h3>
               <p className="text-[11px] text-text-dim font-mono">
@@ -142,17 +142,17 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-text-dim hover:text-text-main hover:bg-bg-nav-hover transition-colors"
+            className="btn-icon"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs">
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 text-xs select-text">
           {/* Tamper Warning Banner */}
           {isTampered && (
-            <div className="p-3.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 space-y-1 animate-fadeIn">
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 space-y-1 animate-fadeIn">
               <div className="flex items-center gap-2 font-bold text-xs">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>SIMULATED PAYLOAD TAMPERING ACTIVE</span>
@@ -164,17 +164,15 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
           )}
 
           {/* Section 1: SHA-256 Integrity Verification */}
-          <div className="card-panel p-4 space-y-3 bg-bg-app">
+          <div className="card-panel p-4 space-y-3 bg-bg-app border-border-card">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-brand-blue tracking-wide uppercase">
+              <span className="text-[11px] font-bold text-brand-blue tracking-wider uppercase">
                 SHA-256 Canonical Digest (RFC 8785)
               </span>
               <button
                 onClick={handleToggleTampering}
-                className={`px-3 py-1 rounded-md text-xs font-semibold flex items-center gap-1.5 border transition-colors cursor-pointer ${
-                  isTampered
-                    ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
-                    : "bg-bg-btn border-border-card text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
+                className={`btn btn-secondary text-xs px-2.5 py-1 ${
+                  isTampered ? "border-red-500/50 text-red-400 bg-red-500/10" : ""
                 }`}
               >
                 <AlertTriangle className="w-3.5 h-3.5 text-status-amber" />
@@ -186,7 +184,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               <span className="text-[11px] text-text-dim block font-mono">
                 Expected Digest (Vault Stored Hash):
               </span>
-              <div className="p-2 rounded bg-bg-input border border-border-card font-mono text-[11px] text-emerald-400 break-all select-all">
+              <div className="p-2.5 rounded-lg bg-bg-input border border-border-card font-mono text-[11px] text-emerald-400 break-all select-all">
                 {expectedHash || "Computing canonical digest..."}
               </div>
             </div>
@@ -197,7 +195,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 <span className="text-[11px] text-red-400 block font-mono">
                   Computed Digest (From Corrupted In-Memory Payload):
                 </span>
-                <div className="p-2 rounded bg-red-950/20 border border-red-500/40 font-mono text-[11px] text-red-400 break-all select-all">
+                <div className="p-2.5 rounded-lg bg-red-950/20 border border-red-500/40 font-mono text-[11px] text-red-400 break-all select-all">
                   {hashResult ? hashResult.computed : "Click 'Verify Content Integrity' to re-hash"}
                 </div>
               </div>
@@ -207,7 +205,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               <button
                 onClick={handleVerifyHash}
                 disabled={verifyingHash}
-                className="px-4 py-2 rounded-lg bg-brand-blue text-slate-950 hover:bg-sky-400 text-xs font-bold flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                className="btn btn-primary text-xs"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>
@@ -240,17 +238,15 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
           </div>
 
           {/* Section 2: Post-Quantum Digital Signature */}
-          <div className="card-panel p-4 space-y-3 bg-bg-app">
+          <div className="card-panel p-4 space-y-3 bg-bg-app border-border-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs font-bold text-text-main">
                 <Cpu className="w-4 h-4 text-brand-blue" />
                 <span>Post-Quantum Signature (NIST FIPS 204 ML-DSA-65)</span>
               </div>
               <span
-                className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                  evidence?.signature
-                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                    : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                className={`badge ${
+                  evidence?.signature ? "badge-success" : "badge-amber"
                 }`}
               >
                 {evidence?.signature ? "SIGNED (Post-Quantum)" : "UNSIGNED"}
@@ -261,13 +257,13 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               <div className="space-y-2 text-[11px] font-mono">
                 <div className="space-y-1">
                   <span className="text-text-dim block">Public Key (Base64)</span>
-                  <div className="p-2 rounded bg-bg-input border border-border-card text-text-sub break-all select-all max-h-16 overflow-y-auto">
+                  <div className="p-2.5 rounded-lg bg-bg-input border border-border-card text-text-sub break-all select-all max-h-16 overflow-y-auto">
                     {evidence.public_key}
                   </div>
                 </div>
                 <div className="space-y-1">
                   <span className="text-text-dim block">Quantum-Resistant Signature (Base64)</span>
-                  <div className="p-2 rounded bg-bg-input border border-border-card text-purple-400 break-all select-all max-h-16 overflow-y-auto">
+                  <div className="p-2.5 rounded-lg bg-bg-input border border-border-card text-purple-400 break-all select-all max-h-16 overflow-y-auto">
                     {evidence.signature}
                   </div>
                 </div>
@@ -280,7 +276,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 <button
                   onClick={handleSign}
                   disabled={signing}
-                  className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-xs font-semibold text-text-main flex items-center gap-1.5 transition-colors cursor-pointer"
+                  className="btn btn-secondary text-xs"
                 >
                   <Lock className="w-3.5 h-3.5 text-brand-blue" />
                   <span>{signing ? "Signing..." : "Sign with ML-DSA-65"}</span>
@@ -300,7 +296,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleCopy}
-                  className="px-2 py-1 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-[11px] text-text-sub hover:text-text-main flex items-center gap-1 transition-colors cursor-pointer"
+                  className="btn btn-secondary text-[11px] px-2.5 py-1"
                 >
                   {copied ? (
                     <Check className="w-3 h-3 text-emerald-400" />
@@ -312,7 +308,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 
                 <button
                   onClick={handleDownload}
-                  className="px-2 py-1 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-[11px] text-text-sub hover:text-text-main flex items-center gap-1 transition-colors cursor-pointer"
+                  className="btn btn-secondary text-[11px] px-2.5 py-1"
                 >
                   <Download className="w-3 h-3" />
                   <span>Export</span>
@@ -320,7 +316,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               </div>
             </div>
 
-            <pre className="p-3 rounded-lg bg-bg-input border border-border-card font-mono text-[11px] text-text-sub overflow-x-auto max-h-56 leading-relaxed">
+            <pre className="p-3.5 rounded-xl bg-bg-input border border-border-card font-mono text-[11px] text-text-sub overflow-x-auto max-h-56 leading-relaxed select-text">
               {JSON.stringify(record, null, 2)}
             </pre>
           </div>
@@ -333,7 +329,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
           </span>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-xs font-semibold text-text-main transition-colors cursor-pointer"
+            className="btn btn-secondary text-xs px-4"
           >
             Close
           </button>

@@ -46,22 +46,22 @@ export const Sidebar: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
+                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs transition-all w-full text-left cursor-pointer ${
                   isActive
-                    ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
+                    ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
                     : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <Icon
-                    className={`w-4 h-4 ${
+                    className={`w-4 h-4 transition-colors ${
                       isActive ? "text-brand-blue" : "text-text-sub"
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/30">
+                  <span className="badge badge-error text-[10px] py-0 px-1.5 leading-tight">
                     {item.badge}
                   </span>
                 )}
@@ -72,8 +72,8 @@ export const Sidebar: React.FC = () => {
 
         {/* Resources Section */}
         <div>
-          <div className="px-3 text-xs text-text-dim font-semibold mb-2">
-            Resources
+          <div className="px-3 text-[10px] text-text-dim font-bold uppercase tracking-wider mb-2">
+            Resources & Forensic Tools
           </div>
           <div className="space-y-1">
             {resourceNav.map((item) => {
@@ -83,14 +83,14 @@ export const Sidebar: React.FC = () => {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all w-full text-left cursor-pointer ${
                     isActive
-                      ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
+                      ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
                       : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
                   }`}
                 >
                   <Icon
-                    className={`w-4 h-4 ${
+                    className={`w-4 h-4 transition-colors ${
                       isActive ? "text-brand-blue" : "text-text-sub"
                     }`}
                   />
@@ -106,9 +106,9 @@ export const Sidebar: React.FC = () => {
       <div className="pt-2 border-t border-border-sub space-y-2">
         <button
           onClick={() => setActiveTab("settings")}
-          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
+          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all w-full text-left cursor-pointer ${
             activeTab === "settings"
-              ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
+              ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
               : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
           }`}
         >
@@ -117,8 +117,8 @@ export const Sidebar: React.FC = () => {
         </button>
 
         <div className="px-3 pt-1 text-[11px] text-text-dim flex items-center justify-between">
-          <span>HORA-Q</span>
-          <span>v1.0 (AIORI-3)</span>
+          <span className="font-semibold text-text-sub">HORA-Q</span>
+          <span className="font-mono text-[10px]">AIORI-3 Track 2</span>
         </div>
       </div>
     </aside>

@@ -11,6 +11,7 @@ import {
   X,
   Sparkles,
   Trash2,
+  CheckCircle2,
 } from "lucide-react";
 import { useHoraqStore } from "../../stores/useHoraqStore";
 
@@ -45,10 +46,10 @@ export const Header: React.FC = () => {
     <header className="h-14 border-b border-border-sub bg-bg-header flex items-center justify-between px-6 select-none shrink-0 z-50 transition-colors">
       {/* Left: Brand Logo + Product Name */}
       <div
-        className="flex items-center gap-2.5 cursor-pointer"
+        className="flex items-center gap-3 cursor-pointer group"
         onClick={() => setActiveTab("overview")}
       >
-        <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-brand-blue shadow-sm">
+        <div className="w-8 h-8 rounded-lg bg-sky-500/10 border border-sky-500/25 flex items-center justify-center text-brand-blue shadow-sm group-hover:border-brand-blue transition-colors">
           <Shield className="w-4 h-4 stroke-[2.2]" />
         </div>
         <div className="flex flex-col">
@@ -56,7 +57,7 @@ export const Header: React.FC = () => {
             <span className="font-bold text-text-main text-base tracking-tight leading-none">
               HORA-Q
             </span>
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-brand-blue border border-sky-500/20 leading-none">
+            <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded bg-sky-500/10 text-brand-blue border border-sky-500/20 leading-none">
               AIORI-3
             </span>
           </div>
@@ -69,99 +70,93 @@ export const Header: React.FC = () => {
       {/* Center: Protection Status Pill */}
       <button
         onClick={() => setActiveTab("alerts")}
-        className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5 border ${
+        className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all flex items-center gap-2 border cursor-pointer ${
           activeAlerts > 0
-            ? "bg-status-red-bg text-red-500 border-red-800/40 hover:opacity-90 animate-pulse"
+            ? "bg-status-red-bg text-red-500 border-red-800/40 hover:opacity-90"
             : "bg-status-green-bg text-status-green border-green-800/40 hover:opacity-90"
         }`}
         title={activeAlerts > 0 ? "Click to view active alerts" : "BGP Route Monitor healthy"}
       >
         <span
-          className={`w-1.5 h-1.5 rounded-full ${
-            activeAlerts > 0 ? "bg-red-500" : "bg-status-green"
+          className={`w-2 h-2 rounded-full ${
+            activeAlerts > 0 ? "bg-red-500 animate-ping" : "bg-status-green"
           }`}
         />
         <span>
           {activeAlerts > 0
-            ? `${activeAlerts} Anomalies active`
-            : "Continuous BGP Guard active"}
+            ? `${activeAlerts} Threat Anomaly Active`
+            : "Continuous BGP Guard Active"}
         </span>
       </button>
 
       {/* Right Actions: Quick Search, Seed Demo, Live Toggle, Refresh, Theme, Bell */}
       <div className="flex items-center gap-2.5">
-        {/* Search with Clear button */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub hover:border-text-dim transition-colors w-48 relative">
+        {/* Search with Clear button & Keyboard hint */}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-input border border-border-card text-xs text-text-sub hover:border-text-dim transition-colors w-52 relative">
           <Search className="w-3.5 h-3.5 text-text-sub shrink-0" />
           <input
             type="text"
-            placeholder="Search prefix, ASN, tag..."
+            placeholder="Search prefix, ASN..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="bg-transparent border-none outline-none text-xs text-text-main w-full placeholder:text-text-dim pr-4"
+            className="bg-transparent border-none outline-none text-xs text-text-main placeholder-text-dim w-full"
           />
-          {searchQuery && (
+          {searchQuery ? (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-2 text-text-dim hover:text-text-main"
+              className="text-text-dim hover:text-text-main"
             >
               <X className="w-3 h-3" />
             </button>
+          ) : (
+            <kbd className="hidden sm:inline-block text-[10px] text-text-dim border border-border-card px-1 rounded bg-bg-app font-mono">
+              /
+            </kbd>
           )}
         </div>
-
-        {/* Demo Data Quick Seeder */}
-        <button
-          onClick={() => seedDemoDataAction()}
-          className="px-2.5 py-1.5 rounded-lg bg-sky-500/10 border border-sky-500/20 text-brand-blue hover:bg-sky-500/20 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-          title="Seed realistic demo routes & anomalies (Cloudflare, Google, Quad9)"
-        >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Seed Demo</span>
-        </button>
 
         {/* Live Auto-Refresh Toggle */}
         <button
           onClick={toggleAutoRefresh}
-          className={`px-2.5 py-1.5 rounded-lg text-xs font-medium border flex items-center gap-1.5 transition-colors ${
+          title={isAutoRefresh ? "Live polling active (every 3s)" : "Auto-refresh paused"}
+          className={`px-2.5 py-1.5 rounded-lg border text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
             isAutoRefresh
-              ? "bg-bg-btn border-border-card text-text-main hover:bg-bg-nav-hover"
-              : "bg-bg-app border-border-card text-text-dim hover:text-text-main"
+              ? "bg-emerald-500/10 text-status-green border-emerald-500/30"
+              : "bg-bg-btn text-text-sub border-border-card hover:text-text-main"
           }`}
-          title={isAutoRefresh ? "Live polling active (every 5s)" : "Live polling paused"}
         >
-          <Radio className={`w-3 h-3 ${isAutoRefresh ? "text-status-green animate-pulse" : "text-text-dim"}`} />
-          <span className="text-[11px]">{isAutoRefresh ? "Live" : "Paused"}</span>
+          <Radio className={`w-3.5 h-3.5 ${isAutoRefresh ? "animate-pulse text-emerald-400" : ""}`} />
+          <span className="hidden md:inline">{isAutoRefresh ? "Live 3s" : "Paused"}</span>
         </button>
 
-        {/* Refresh Data */}
+        {/* Manual Refresh */}
         <button
           onClick={() => fetchAllData()}
           disabled={isLoading}
-          className="w-7 h-7 rounded-full bg-bg-btn border border-border-card flex items-center justify-center text-text-sub hover:text-text-main transition-colors disabled:opacity-50"
+          className="btn-icon"
           title="Refresh telemetry"
         >
           <RotateCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin text-brand-blue" : ""}`} />
         </button>
 
-        {/* Theme Toggle Button */}
+        {/* Theme Toggle */}
         <button
           onClick={cycleTheme}
-          className="w-7 h-7 rounded-full bg-bg-btn border border-border-card flex items-center justify-center text-text-sub hover:text-text-main transition-colors"
-          title={`Theme: ${theme.toUpperCase()} (Click to toggle)`}
+          className="btn-icon"
+          title={`Theme: ${theme}`}
         >
           <ThemeIcon className="w-3.5 h-3.5" />
         </button>
 
-        {/* Notification Bell Icon */}
+        {/* Notifications badge */}
         <button
           onClick={() => setActiveTab("alerts")}
-          className="w-7 h-7 rounded-full bg-bg-btn border border-border-card flex items-center justify-center text-text-sub hover:text-text-main transition-colors relative"
+          className="btn-icon relative"
           title="Security Alerts"
         >
           <Bell className="w-3.5 h-3.5" />
           {activeAlerts > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-red-500" />
           )}
         </button>
       </div>

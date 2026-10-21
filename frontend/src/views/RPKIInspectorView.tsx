@@ -8,6 +8,9 @@ import {
   XCircle,
   HelpCircle,
   Info,
+  Layers,
+  ArrowRight,
+  ShieldCheck,
 } from "lucide-react";
 import { api } from "../api";
 import { RPKIResult } from "../types";
@@ -54,25 +57,25 @@ export const RPKIInspectorView: React.FC = () => {
     switch (status) {
       case "VALID":
         return {
-          bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+          badgeClass: "badge-success",
           icon: CheckCircle2,
           text: "VALID (Cryptographically Authorized ROA Matches Origin)",
         };
       case "INVALID":
         return {
-          bg: "bg-red-500/10 text-red-400 border-red-500/20",
+          badgeClass: "badge-error",
           icon: XCircle,
           text: "INVALID (Origin ASN Conflict or Exceeded Max Length)",
         };
       case "UNKNOWN":
         return {
-          bg: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+          badgeClass: "badge-amber",
           icon: HelpCircle,
           text: "UNKNOWN (No Covering ROA in Trust Anchors)",
         };
       default:
         return {
-          bg: "bg-zinc-500/10 text-zinc-400 border-zinc-500/20",
+          badgeClass: "badge-idle",
           icon: AlertCircle,
           text: "UNAVAILABLE (RPKI Provider Offline or Request Timed Out)",
         };
@@ -80,15 +83,15 @@ export const RPKIInspectorView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn pb-12">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2">
-          <h2 className="text-base font-bold text-text-main tracking-tight">
-            RPKI Origin Validator
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-lg font-bold text-text-main tracking-tight">
+            RPKI Origin Validator & ROA Inspector
           </h2>
-          <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/10 text-brand-blue border border-sky-500/20">
-            RIPEstat REST Client
+          <span className="badge badge-idle font-mono text-[11px]">
+            RFC 6483 / RFC 6811
           </span>
         </div>
         <p className="text-xs text-text-sub mt-0.5">
@@ -98,179 +101,173 @@ export const RPKIInspectorView: React.FC = () => {
 
       {/* Quick Presets */}
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-text-dim">Quick Presets:</span>
-        {presets.map((item, idx) => (
+        <span className="text-[11px] text-text-dim font-semibold uppercase tracking-wider mr-1">
+          Benchmark Targets:
+        </span>
+        {presets.map((item) => (
           <button
-            key={idx}
+            key={item.label}
             onClick={() => {
               setPrefix(item.prefix);
               setAsn(item.asn);
               handleValidate(item.prefix, item.asn);
             }}
-            className="px-2.5 py-1 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-[11px] font-medium text-text-sub hover:text-text-main transition-colors cursor-pointer"
+            className="btn btn-secondary text-xs px-2.5 py-1"
           >
             {item.label}
           </button>
         ))}
       </div>
 
-      {/* Input Form Card */}
-      <div className="card-panel p-5 space-y-4">
+      {/* Query Form */}
+      <div className="card-panel p-5 space-y-4 border-border-card">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-sub">
-              IP Prefix (IPv4 / IPv6 CIDR)
+            <label className="text-xs font-semibold text-text-main flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-brand-blue" />
+              <span>Target IP Prefix / CIDR</span>
             </label>
             <input
               type="text"
               value={prefix}
               onChange={(e) => setPrefix(e.target.value)}
-              placeholder="e.g. 1.1.1.0/24 or 2001:db8::/32"
-              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main font-mono focus:border-brand-blue outline-none"
+              placeholder="e.g. 1.1.1.0/24 or 198.51.100.0/24"
+              className="w-full px-3 py-2 rounded-xl bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-brand-blue font-mono transition-colors shadow-xs"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-text-sub">
-              Origin Autonomous System (ASN)
+            <label className="text-xs font-semibold text-text-main flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5 text-brand-blue" />
+              <span>Origin ASN</span>
             </label>
             <input
               type="text"
               value={asn}
               onChange={(e) => setAsn(e.target.value)}
-              placeholder="e.g. AS13335 or 15169"
-              className="w-full px-3 py-2 rounded-lg bg-bg-input border border-border-card text-xs text-text-main font-mono focus:border-brand-blue outline-none"
+              placeholder="e.g. AS13335 or 13335"
+              className="w-full px-3 py-2 rounded-xl bg-bg-input border border-border-card text-xs text-text-main outline-none focus:border-brand-blue font-mono transition-colors shadow-xs"
             />
           </div>
         </div>
 
-        <button
-          onClick={() => handleValidate()}
-          disabled={loading || !prefix || !asn}
-          className="px-4 py-2 rounded-lg bg-brand-blue text-slate-950 hover:bg-sky-400 text-xs font-bold flex items-center gap-2 transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
-        >
-          <SearchCheck className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
-          <span>{loading ? "Querying RIPEstat..." : "Validate RPKI Status"}</span>
-        </button>
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-[11px] text-text-dim">
+            Live query via RIPEstat / RouteViews validator endpoint
+          </span>
+          <button
+            onClick={() => handleValidate()}
+            disabled={loading || !prefix || !asn}
+            className="btn btn-primary text-xs px-5"
+          >
+            <SearchCheck className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+            <span>{loading ? "Validating ROA..." : "Validate Origin"}</span>
+          </button>
+        </div>
       </div>
 
-      {/* Error Notice */}
+      {/* Error Banner */}
       {error && (
-        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-lg text-xs flex items-center gap-2">
+        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* Result Card */}
+      {/* Validation Result Box */}
       {result && (
-        <div className="card-panel p-5 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {(() => {
-                const badge = getStatusBadge(result.status);
-                const Icon = badge.icon;
-                return (
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full text-xs font-bold border ${badge.bg}`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span>{badge.text}</span>
-                  </span>
-                );
-              })()}
+        <div className="card-panel p-5 space-y-5 animate-slideUp border-border-card">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="space-y-1">
+              <span className="text-[11px] text-text-dim font-semibold uppercase tracking-wider block">
+                RPKI Validation Decision
+              </span>
+              <div className="flex items-center gap-2">
+                {(() => {
+                  const badge = getStatusBadge(result.status);
+                  const Icon = badge.icon;
+                  return (
+                    <div
+                      className={`badge ${badge.badgeClass} text-xs py-1 px-3 flex items-center gap-1.5`}
+                    >
+                      <Icon className="w-4 h-4" />
+                      <span>{result.status}</span>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
-            <span className="text-[11px] text-text-dim font-mono">
-              Provider: {result.provider}
-            </span>
+
+            <div className="text-right text-[11px] text-text-dim font-mono">
+              <div>Provider: <strong className="text-text-sub">{result.provider}</strong></div>
+              <div>Evaluated: {new Date(result.lookup_time).toLocaleTimeString()}</div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs pt-1">
-            <div className="p-3 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-dim block text-[11px]">Validated Prefix</span>
-              <span className="font-mono font-bold text-text-main mt-0.5 block">
-                {result.prefix}
+          {/* Plain explanation */}
+          <div className="p-3.5 rounded-xl bg-bg-app border border-border-card flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
+            <div className="text-xs text-text-sub space-y-1">
+              <span className="font-semibold text-text-main block">
+                {getStatusBadge(result.status).text}
               </span>
-            </div>
-
-            <div className="p-3 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-dim block text-[11px]">Validated Origin</span>
-              <span className="font-mono font-bold text-brand-blue mt-0.5 block">
-                {result.origin_asn}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-dim block text-[11px]">Validating ROAs</span>
-              <span className="font-mono font-bold text-text-main mt-0.5 block">
-                {result.validating_roas.length} records
-              </span>
-            </div>
-
-            <div className="p-3 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-dim block text-[11px]">Lookup Timestamp</span>
-              <span className="font-mono text-text-sub mt-0.5 block text-[11px]">
-                {result.lookup_time
-                  ? new Date(result.lookup_time).toLocaleTimeString()
-                  : "Just now"}
-              </span>
+              <p className="leading-relaxed">{result.details}</p>
             </div>
           </div>
 
           {/* Validating ROAs Table */}
-          {result.validating_roas.length > 0 && (
-            <div className="space-y-2 pt-2">
-              <h4 className="text-xs font-semibold text-text-main">
-                Validating ROA Cryptographic Payloads
-              </h4>
-              <div className="rounded-lg border border-border-card overflow-hidden">
-                <div className="grid grid-cols-12 text-[11px] font-medium text-text-dim px-3 py-2 bg-bg-app border-b border-border-card">
-                  <span className="col-span-4">Authorizing Origin</span>
-                  <span className="col-span-4">Authorized Prefix</span>
-                  <span className="col-span-2">Max Length</span>
-                  <span className="col-span-2 text-right">Validity</span>
-                </div>
-                <div className="divide-y divide-border-item bg-bg-card font-mono text-xs">
-                  {result.validating_roas.map((roa, i) => (
-                    <div key={i} className="grid grid-cols-12 px-3 py-2 items-center">
-                      <span className="col-span-4 text-brand-blue font-bold">
-                        {roa.origin}
-                      </span>
-                      <span className="col-span-4 text-text-main">
-                        {roa.prefix}
-                      </span>
-                      <span className="col-span-2 text-text-sub">
-                        /{roa.max_length}
-                      </span>
-                      <span className="col-span-2 text-right text-emerald-400 font-semibold">
-                        {roa.validity}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-semibold text-text-main flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-blue" />
+                <span>Validating ROA Records ({result.validating_roas.length})</span>
+              </span>
+              <span className="text-[11px] text-text-dim">
+                Signed by Trust Anchor
+              </span>
             </div>
-          )}
+
+            {result.validating_roas.length === 0 ? (
+              <div className="p-4 rounded-xl bg-bg-app border border-border-card text-center text-xs text-text-dim">
+                No matching ROAs discovered in public RIR repositories.
+              </div>
+            ) : (
+              <div className="border border-border-card rounded-xl overflow-hidden">
+                <table className="w-full text-left text-xs font-mono">
+                  <thead className="bg-bg-app text-text-dim text-[11px] uppercase tracking-wider select-none border-b border-border-card">
+                    <tr>
+                      <th className="py-2 px-3 font-semibold">Authorized Origin ASN</th>
+                      <th className="py-2 px-3 font-semibold">Covering Prefix</th>
+                      <th className="py-2 px-3 font-semibold">Max-Length</th>
+                      <th className="py-2 px-3 font-semibold">ROA Match</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-card text-[11px]">
+                    {result.validating_roas.map((roa, idx) => (
+                      <tr key={idx} className="hover:bg-bg-hover-row transition-colors">
+                        <td className="py-2.5 px-3 text-text-main font-semibold">
+                          {roa.origin}
+                        </td>
+                        <td className="py-2.5 px-3 text-brand-blue">{roa.prefix}</td>
+                        <td className="py-2.5 px-3 text-text-sub">/{roa.max_length}</td>
+                        <td className="py-2.5 px-3">
+                          <span
+                            className={`badge text-[10px] py-0 px-2 ${
+                              roa.validity === "valid" ? "badge-success" : "badge-error"
+                            }`}
+                          >
+                            {roa.validity.toUpperCase()}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       )}
-
-      {/* Educational BGP Guide Card */}
-      <div className="card-panel p-4 space-y-2 text-xs text-text-sub">
-        <div className="flex items-center gap-2 font-semibold text-text-main">
-          <Info className="w-4 h-4 text-brand-blue" />
-          <span>Understanding RPKI Origin Validation (RFC 6483 / RFC 6811)</span>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 text-[11px]">
-          <div className="p-2.5 rounded bg-bg-app border border-border-card">
-            <span className="font-bold text-emerald-400 block mb-0.5">VALID State</span>
-            At least one valid ROA matches the announcing ASN and prefix length is ≤ maxLength. Routers should accept and prioritize.
-          </div>
-          <div className="p-2.5 rounded bg-bg-app border border-border-card">
-            <span className="font-bold text-red-400 block mb-0.5">INVALID State</span>
-            One or more ROAs cover this prefix, but either the origin ASN does not match or the prefix is longer than maxLength. Routers should drop.
-          </div>
-        </div>
-      </div>
     </div>
   );
 };
