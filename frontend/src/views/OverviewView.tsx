@@ -1,5 +1,13 @@
-import React, { useState } from "react";
-import { Shield, RefreshCw, ArrowRight } from "lucide-react";
+import React from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  CheckCircle2,
+  Globe,
+  Radio,
+  Shield,
+  Sparkles,
+} from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 
 export const OverviewView: React.FC = () => {
@@ -7,227 +15,240 @@ export const OverviewView: React.FC = () => {
     overview,
     alerts,
     routes,
-    runScenarioAction,
-    seedDemoDataAction,
     setActiveTab,
+    setSelectedAlert,
   } = useHoraqStore();
 
-  const [isScanning, setIsScanning] = useState(false);
+  const activeAlerts = alerts.filter((a) => a.status === "ACTIVE");
+  const topAlert = activeAlerts[0] || null;
 
-  const activeAgentsCount = overview?.tracked_routes || routes.length || 3;
-  const mcpCount = 3; // Core BGP Peers (Cogent AS174, Lumen AS3356, NTT AS2914)
-  const totalScanned = (overview?.total_observations || 48) + alerts.length;
-  const blockedCount = alerts.filter((a) => a.status === "ACTIVE").length;
+  const prefixesTracked = overview?.tracked_routes || routes.length || 0;
+  const updatesEvaluated = (overview?.total_observations || 0) + alerts.length;
+  const connectedPeers = "3 Tier-1";
 
-  const displayEvents = alerts.slice(0, 5);
+  // Recent 5 alerts for activity
+  const recentActivity = alerts.slice(0, 5);
 
-  const [scenarioRunning, setScenarioRunning] = useState<string | null>(null);
-
-  const handleRunScenario = async (name: string) => {
-    setScenarioRunning(name);
-    try {
-      await runScenarioAction(name);
-    } finally {
-      setScenarioRunning(null);
+  const getAlertHeadline = (alert: typeof topAlert) => {
+    if (!alert) return "No active routing anomalies";
+    if (alert.kind === "ORIGIN_CHANGE") {
+      return "Origin conflict requires review";
     }
+    if (alert.kind === "SUBPREFIX_ANOMALY") {
+      return "Subprefix anomaly requires review";
+    }
+    return alert.title || "Routing anomaly requires review";
   };
 
-  const handleScan = async () => {
-    setIsScanning(true);
-    try {
-      await runScenarioAction("run-all");
-    } finally {
-      setIsScanning(false);
+  const getAlertDescription = (alert: typeof topAlert) => {
+    if (!alert) return "All monitored prefixes match established routing baselines.";
+    if (alert.kind === "ORIGIN_CHANGE") {
+      return `Prefix ${alert.prefix} was observed with origin ${alert.observed_asn}, while the stored baseline is ${alert.baseline_asn || "unknown"}.`;
     }
+    if (alert.kind === "SUBPREFIX_ANOMALY") {
+      return `More-specific prefix ${alert.prefix} announced by ${alert.observed_asn} overlaps baseline route ${alert.parent_prefix || "parent prefix"}.`;
+    }
+    return alert.explanation || alert.title;
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8">
-      {/* Top Section: Hero + Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-        {/* Left Hero Card */}
-        <div className="md:col-span-7 space-y-3">
-          <div className="text-status-green">
-            <Shield className="w-8 h-8 stroke-[2]" />
+    <div className="max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fadeIn">
+      {/* Header & Status Banner */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border-card">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-main tracking-tight">
+            Routing overview
+          </h1>
+          <p className="text-xs sm:text-sm text-text-sub mt-1 max-w-xl leading-relaxed">
+            HORA-Q monitors BGP announcements for origin conflicts and unexpected more-specific routes.
+          </p>
+        </div>
+
+        {/* Apple-style Feed Status Pill */}
+        <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-bg-card border border-border-card text-xs text-text-sub shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-status-green animate-pulse" />
+            <span className="font-medium text-text-main">Monitoring active</span>
+            <span className="text-text-dim">•</span>
+            <span className="text-text-dim text-[11px]">Evaluation Replay</span>
           </div>
-          <div>
-            <h2 className="text-xl font-semibold text-text-main tracking-tight">System protected</h2>
-            <p className="text-xs text-text-sub mt-1 leading-relaxed">
-              Zero-Trust BGP runtime monitor active. {blockedCount > 0 ? `${blockedCount} anomalies identified & quarantined.` : "All routing announcements within baseline policy."}
-            </p>
-          </div>
-          <div className="pt-1 flex flex-wrap items-center gap-2">
-            {blockedCount > 0 && (
+        </div>
+      </div>
+
+      {/* Primary Alert Callout (Apple Card / Google Surface) */}
+      {topAlert ? (
+        <div className="p-5 sm:p-6 rounded-2xl bg-red-500/[0.08] border border-red-500/20 shadow-xs transition-all">
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-red-500/15 text-red-400 border border-red-500/25">
+                  <AlertTriangle className="w-3 h-3" />
+                  {topAlert.severity || "HIGH"}
+                </span>
+                <span className="text-xs text-text-dim font-mono">
+                  {topAlert.created_at
+                    ? new Date(topAlert.created_at).toLocaleTimeString()
+                    : "Recent observation"}
+                </span>
+              </div>
+
+              <h2 className="text-base sm:text-lg font-semibold text-text-main tracking-tight">
+                {getAlertHeadline(topAlert)}
+              </h2>
+
+              <p className="text-xs sm:text-sm text-text-sub max-w-2xl leading-relaxed font-mono">
+                {getAlertDescription(topAlert)}
+              </p>
+
+              {activeAlerts.length > 1 && (
+                <p className="text-xs text-text-dim pt-1 font-medium">
+                  + {activeAlerts.length - 1} other active anomaly requiring review
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 pt-1 sm:pt-0">
               <button
-                onClick={() => setActiveTab("alerts")}
-                className="px-3.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold hover:bg-red-500/20 flex items-center gap-1.5 transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
+                onClick={() => {
+                  setSelectedAlert(topAlert);
+                  setActiveTab("alerts");
+                }}
+                className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium text-xs transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs flex items-center gap-1.5"
               >
-                <span>Review {blockedCount} Anomalies</span>
+                <span>Review alert</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
-            )}
-            <button
-              onClick={handleScan}
-              disabled={isScanning || !!scenarioRunning}
-              className="px-3.5 py-1.5 rounded-lg bg-bg-btn border border-border-card text-xs font-medium text-text-main hover:bg-bg-nav-hover hover:border-text-dim transition-all duration-150 active:scale-[0.98] flex items-center gap-2 disabled:opacity-50 cursor-pointer shadow-xs"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isScanning ? "animate-spin text-brand-blue" : ""}`} />
-              <span>{isScanning ? "Scanning..." : "Scan now"}</span>
-            </button>
-            <button
-              onClick={() => handleRunScenario("seed-demo")}
-              disabled={!!scenarioRunning}
-              className="px-3.5 py-1.5 rounded-lg bg-bg-btn border border-border-card text-xs font-medium text-text-sub hover:text-text-main hover:bg-bg-nav-hover transition-all duration-150 active:scale-[0.98] cursor-pointer shadow-xs"
-            >
-              Seed benchmark data
-            </button>
-          </div>
-        </div>
-
-        {/* Right Stats Grid (2x2) */}
-        <div className="md:col-span-5 grid grid-cols-2 gap-y-5 gap-x-4">
-          <div>
-            <div className="text-xs text-text-sub">Active prefixes</div>
-            <div className="text-2xl font-semibold text-text-main tracking-tight mt-0.5">{activeAgentsCount}</div>
-            <div className="text-[11px] text-text-dim">Protected IP blocks</div>
-          </div>
-          <div>
-            <div className="text-xs text-text-sub">BGP peers</div>
-            <div className="text-2xl font-semibold text-text-main tracking-tight mt-0.5">{mcpCount}</div>
-            <div className="text-[11px] text-text-dim">Upstream tier-1 links</div>
-          </div>
-          <div>
-            <div className="text-xs text-text-sub">Actions scanned</div>
-            <div className="text-2xl font-semibold text-text-main tracking-tight mt-0.5">{totalScanned}</div>
-            <div className="text-[11px] text-text-dim">Evaluated BGP updates</div>
-          </div>
-          <div>
-            <div className="text-xs text-text-sub">Threats blocked</div>
-            <div className="text-2xl font-semibold text-[#f87171] tracking-tight mt-0.5">{blockedCount}</div>
-            <div className="text-[11px] text-text-dim">High/critical anomalies</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 1-Click Interactive Evaluation Controller */}
-      <div className="card-panel p-4 space-y-3 border-brand-blue/30 bg-bg-card">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-text-main flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-brand-blue animate-pulse" />
-              <span>Interactive Demonstration Pipeline</span>
             </div>
-            <p className="text-[11px] text-text-sub mt-0.5">
-              Click any scenario below to trigger a real end-to-end BGP routing observation and inspect detection live:
+          </div>
+        </div>
+      ) : (
+        <div className="p-5 sm:p-6 rounded-2xl bg-status-green-bg/20 border border-green-500/20 flex items-start gap-4">
+          <div className="w-9 h-9 rounded-xl bg-status-green-bg border border-green-500/30 text-status-green flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-sm sm:text-base font-semibold text-text-main">
+              No active routing anomalies
+            </h2>
+            <p className="text-xs text-text-sub leading-relaxed">
+              All monitored prefixes match established routing baselines. Zero uncoordinated origin conflicts detected.
             </p>
           </div>
-          <button
-            onClick={() => handleRunScenario("reset")}
-            disabled={!!scenarioRunning}
-            className="text-[11px] text-text-dim hover:text-red-400 px-2 py-1 rounded bg-bg-btn border border-border-card transition-colors cursor-pointer"
+        </div>
+      )}
+
+      {/* Four Clean Metric Widgets (Apple Widget / Google Metric Grid) */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        <div className="card-panel p-4 space-y-1">
+          <div className="text-xs font-medium text-text-sub">Active anomalies</div>
+          <div
+            className={`text-2xl sm:text-3xl font-bold tracking-tight ${
+              activeAlerts.length > 0 ? "text-[#ff453a]" : "text-text-main"
+            }`}
           >
-            Reset database
-          </button>
+            {activeAlerts.length}
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-          <button
-            onClick={() => handleRunScenario("baseline")}
-            disabled={!!scenarioRunning}
-            className="p-3 rounded-lg bg-bg-btn hover:bg-bg-nav-hover border border-border-card hover:border-emerald-500/40 text-left transition-colors cursor-pointer group"
-          >
-            <div className="text-xs font-bold text-text-main group-hover:text-status-green flex items-center justify-between">
-              <span>1. Normal Route</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-status-green">0 Alerts</span>
-            </div>
-            <div className="text-[11px] text-text-sub mt-1 leading-relaxed">
-              Seeds baseline: <code className="text-text-main font-mono">192.0.2.0/24</code> from legitimate <code className="text-text-main font-mono">AS64496</code>.
-            </div>
-          </button>
+        <div className="card-panel p-4 space-y-1">
+          <div className="text-xs font-medium text-text-sub">Prefixes tracked</div>
+          <div className="text-2xl sm:text-3xl font-bold text-text-main tracking-tight">
+            {prefixesTracked}
+          </div>
+        </div>
 
-          <button
-            onClick={() => handleRunScenario("origin-change")}
-            disabled={!!scenarioRunning}
-            className="p-3 rounded-lg bg-bg-btn hover:bg-bg-nav-hover border border-border-card hover:border-red-500/40 text-left transition-colors cursor-pointer group"
-          >
-            <div className="text-xs font-bold text-text-main group-hover:text-red-400 flex items-center justify-between">
-              <span>2. Origin Hijack</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-500/10 text-red-400">1 Alert</span>
-            </div>
-            <div className="text-[11px] text-text-sub mt-1 leading-relaxed">
-              Rogue <code className="text-text-main font-mono">AS64511</code> claims IP block. Preserves baseline without poisoning.
-            </div>
-          </button>
+        <div className="card-panel p-4 space-y-1">
+          <div className="text-xs font-medium text-text-sub">BGP updates evaluated</div>
+          <div className="text-2xl sm:text-3xl font-bold text-text-main tracking-tight">
+            {updatesEvaluated}
+          </div>
+        </div>
 
-          <button
-            onClick={() => handleRunScenario("subprefix")}
-            disabled={!!scenarioRunning}
-            className="p-3 rounded-lg bg-bg-btn hover:bg-bg-nav-hover border border-border-card hover:border-amber-500/40 text-left transition-colors cursor-pointer group"
-          >
-            <div className="text-xs font-bold text-text-main group-hover:text-amber-400 flex items-center justify-between">
-              <span>3. Subprefix Attack</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400">1 Alert</span>
-            </div>
-            <div className="text-[11px] text-text-sub mt-1 leading-relaxed">
-              Carves <code className="text-text-main font-mono">/25</code> slice from <code className="text-text-main font-mono">/24</code>. Exploits Longest Prefix Match.
-            </div>
-          </button>
+        <div className="card-panel p-4 space-y-1">
+          <div className="text-xs font-medium text-text-sub">Connected peers</div>
+          <div className="text-2xl sm:text-3xl font-bold text-text-main tracking-tight">
+            {connectedPeers}
+          </div>
         </div>
       </div>
 
-
-      {/* Live Activity Section */}
+      {/* Recent Activity Table */}
       <div className="space-y-3">
-        <h3 className="text-sm font-semibold text-text-main">Live activity</h3>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-text-main">Recent activity</h2>
+          {recentActivity.length > 0 && (
+            <button
+              onClick={() => setActiveTab("alerts")}
+              className="text-xs text-brand-blue hover:underline transition-colors flex items-center gap-1 cursor-pointer font-medium"
+            >
+              <span>View all alerts</span>
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+        </div>
 
         <div className="card-panel overflow-hidden">
-          {/* Table Header (hidden on mobile, visible on sm+) */}
-          <div className="hidden sm:grid grid-cols-12 text-[11px] text-text-dim font-medium uppercase tracking-wider px-4 py-2.5 border-b border-border-card">
+          {/* Desktop Table Header */}
+          <div className="hidden sm:grid grid-cols-12 text-[11px] text-text-dim font-semibold uppercase tracking-wider px-4 py-3 border-b border-border-card">
             <span className="col-span-2">Time</span>
-            <span className="col-span-2">Prefix</span>
-            <span className="col-span-2">Origin ASN</span>
-            <span className="col-span-4">Explanation</span>
-            <span className="col-span-2 text-right">Decision</span>
+            <span className="col-span-3">Prefix</span>
+            <span className="col-span-2">Observed Origin</span>
+            <span className="col-span-3">Explanation</span>
+            <span className="col-span-2 text-right">Status</span>
           </div>
 
-          {/* Desktop Table Rows */}
           <div className="hidden sm:block divide-y divide-border-item">
-            {displayEvents.length === 0 ? (
+            {recentActivity.length === 0 ? (
               <div className="px-4 py-8 text-center text-xs text-text-sub">
                 No recent security incidents recorded — continuous baseline monitoring active.
               </div>
             ) : (
-              displayEvents.map((evt) => {
+              recentActivity.map((evt) => {
                 const isBlock = evt.severity === "HIGH" || evt.status === "ACTIVE";
                 const isReview = evt.status === "ACKNOWLEDGED";
-                const timeStr = evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "Just now";
-                const targetPrefix = evt.prefix;
-                const originAsn = evt.observed_asn;
-                const explanation = evt.explanation || evt.title;
-                const decisionLabel = isBlock ? "Block" : isReview ? "Review" : "Allow";
+                const timeStr = evt.created_at
+                  ? new Date(evt.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      second: "2-digit",
+                    })
+                  : "Just now";
 
                 return (
                   <div
                     key={evt.id}
-                    className={`grid grid-cols-12 items-center px-4 py-3 text-xs transition-colors duration-150 ${
-                      isBlock ? "bg-status-red-bg/40 border-y border-red-500/10" : "hover:bg-bg-hover-row"
-                    }`}
+                    onClick={() => {
+                      setSelectedAlert(evt);
+                      setActiveTab("alerts");
+                    }}
+                    className="grid grid-cols-12 items-center px-4 py-3 text-xs hover:bg-bg-hover-row transition-colors duration-150 cursor-pointer"
                   >
-                    <span className="col-span-2 text-text-sub font-mono text-[11px]">{timeStr}</span>
-                    <span className="col-span-2 font-mono text-[11px] font-medium text-text-main">{targetPrefix}</span>
-                    <span className="col-span-2 font-mono text-[11px] font-medium text-text-main">{originAsn}</span>
-                    <span className="col-span-4 text-text-sub text-xs truncate pr-2" title={explanation}>{explanation}</span>
+                    <span className="col-span-2 text-text-sub font-mono text-[11px]">
+                      {timeStr}
+                    </span>
+                    <span className="col-span-3 font-mono text-[11px] font-semibold text-text-main">
+                      {evt.prefix}
+                    </span>
+                    <span className="col-span-2 font-mono text-[11px] font-medium text-brand-blue">
+                      {evt.observed_asn}
+                    </span>
+                    <span
+                      className="col-span-3 text-text-sub text-xs truncate pr-2"
+                      title={evt.explanation || evt.title}
+                    >
+                      {evt.explanation || evt.title}
+                    </span>
                     <div className="col-span-2 text-right">
                       <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium ${
+                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-medium ${
                           isBlock
                             ? "bg-red-500/10 text-red-400 border border-red-500/20"
                             : isReview
                             ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-status-green-bg text-status-green border border-green-800/40"
+                            : "bg-status-green-bg text-status-green border border-green-500/20"
                         }`}
                       >
-                        {decisionLabel}
+                        {evt.status}
                       </span>
                     </div>
                   </div>
@@ -238,112 +259,78 @@ export const OverviewView: React.FC = () => {
 
           {/* Mobile Stacked Card View */}
           <div className="sm:hidden divide-y divide-border-item">
-            {displayEvents.length === 0 ? (
+            {recentActivity.length === 0 ? (
               <div className="px-4 py-8 text-center text-xs text-text-sub">
                 No recent security incidents recorded — continuous baseline monitoring active.
               </div>
             ) : (
-              displayEvents.map((evt) => {
+              recentActivity.map((evt) => {
                 const isBlock = evt.severity === "HIGH" || evt.status === "ACTIVE";
                 const isReview = evt.status === "ACKNOWLEDGED";
-                const timeStr = evt.created_at ? new Date(evt.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now";
-                const targetPrefix = evt.prefix;
-                const originAsn = evt.observed_asn;
-                const explanation = evt.explanation || evt.title;
-                const decisionLabel = isBlock ? "Block" : isReview ? "Review" : "Allow";
+                const timeStr = evt.created_at
+                  ? new Date(evt.created_at).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Just now";
 
                 return (
                   <div
                     key={evt.id}
-                    className={`p-3.5 space-y-1.5 transition-colors duration-150 ${
-                      isBlock ? "bg-status-red-bg/30" : "hover:bg-bg-hover-row"
-                    }`}
+                    onClick={() => {
+                      setSelectedAlert(evt);
+                      setActiveTab("alerts");
+                    }}
+                    className="p-3.5 space-y-1.5 hover:bg-bg-hover-row transition-colors cursor-pointer"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-semibold text-text-main">{targetPrefix}</span>
+                      <span className="font-mono text-xs font-semibold text-text-main">
+                        {evt.prefix}
+                      </span>
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                           isBlock
                             ? "bg-red-500/10 text-red-400 border border-red-500/20"
                             : isReview
                             ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                            : "bg-status-green-bg text-status-green border border-green-800/40"
+                            : "bg-status-green-bg text-status-green border border-green-500/20"
                         }`}
                       >
-                        {decisionLabel}
+                        {evt.status}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-[11px] text-text-dim font-mono">
-                      <span>Origin: {originAsn}</span>
+                      <span>Origin: {evt.observed_asn}</span>
                       <span>•</span>
                       <span>{timeStr}</span>
                     </div>
-                    <p className="text-xs text-text-sub leading-relaxed">{explanation}</p>
+                    <p className="text-xs text-text-sub leading-relaxed line-clamp-2">
+                      {evt.explanation || evt.title}
+                    </p>
                   </div>
                 );
               })
             )}
           </div>
         </div>
-
-        {/* 24h Timeline Slider */}
-        <div className="flex items-center justify-between text-xs text-text-dim pt-3 px-1">
-          <span>24h</span>
-          <div className="flex-1 h-0.5 bg-border-card mx-4 relative flex items-center">
-            {alerts.slice(0, 20).map((evt, idx) => {
-              const evtTime = evt.created_at ? new Date(evt.created_at).getTime() : Date.now();
-              const now = Date.now();
-              const hoursAgo = (now - evtTime) / (1000 * 60 * 60);
-              const pct = Math.max(0, Math.min(100, 100 - (hoursAgo / 24) * 100));
-              const isBlock = evt.severity === "HIGH" || evt.status === "ACTIVE";
-              const isReview = evt.status === "ACKNOWLEDGED";
-              const dotColor = isBlock ? "bg-[#ef4444]" : isReview ? "bg-status-amber" : "bg-status-green";
-              return (
-                <div
-                  key={idx}
-                  className={`absolute w-2 h-2 rounded-full ${dotColor} -translate-x-1/2`}
-                  style={{ left: `${pct}%` }}
-                  title={`${evt.title} — ${evt.status}`}
-                />
-              );
-            })}
-          </div>
-          <span>now</span>
-        </div>
       </div>
 
-      {/* Plain English Guide for Evaluators */}
-      <div className="card-panel p-4 space-y-3 bg-bg-card">
-        <h4 className="text-xs font-bold text-text-main flex items-center gap-1.5">
-          <Shield className="w-3.5 h-3.5 text-brand-blue" />
-          <span>How HORA-Q Protects Global Routing (Plain English Guide)</span>
-        </h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-text-sub">
-          <div className="p-3 rounded-lg bg-bg-app border border-border-card space-y-1">
-            <div className="font-semibold text-text-main flex items-center gap-1.5">
-              <span className="text-status-green">●</span> 1. Baseline Memory
-            </div>
-            <p className="text-[11px] leading-relaxed">
-              HORA-Q remembers which company legitimately owns each IP address block. Attackers cannot trick the system into trusting their fake announcements (Zero Baseline Poisoning).
-            </p>
-          </div>
-          <div className="p-3 rounded-lg bg-bg-app border border-border-card space-y-1">
-            <div className="font-semibold text-text-main flex items-center gap-1.5">
-              <span className="text-status-amber">●</span> 2. Subprefix Detection
-            </div>
-            <p className="text-[11px] leading-relaxed">
-              When an attacker advertises a smaller IP slice (/25 instead of /24), global routers favor the more specific route. HORA-Q catches this mathematical containment immediately.
-            </p>
-          </div>
-          <div className="p-3 rounded-lg bg-bg-app border border-border-card space-y-1">
-            <div className="font-semibold text-text-main flex items-center gap-1.5">
-              <span className="text-brand-blue">●</span> 3. Cryptographic Proof
-            </div>
-            <p className="text-[11px] leading-relaxed">
-              Every detection generates a SHA-256 sealed audit record. Anyone can verify the evidence in a standard terminal to prove it hasn't been altered or fabricated.
-            </p>
-          </div>
+      {/* Demonstration Shortcut */}
+      <div className="card-panel p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <Sparkles className="w-4 h-4 text-brand-blue shrink-0" />
+          <span className="text-text-sub">
+            Testing detection capabilities? Run the automated test suite in{" "}
+            <span className="font-medium text-text-main">Scenarios</span>.
+          </span>
         </div>
+        <button
+          onClick={() => setActiveTab("scenarios")}
+          className="self-start sm:self-auto px-3.5 py-1.5 rounded-xl bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-xs font-medium text-text-main transition-colors flex items-center gap-1.5 cursor-pointer shrink-0"
+        >
+          <span>Explore scenarios</span>
+          <ArrowRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </div>
   );
