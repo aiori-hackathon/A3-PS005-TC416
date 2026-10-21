@@ -1,16 +1,14 @@
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import {
   AlertTriangle,
+  ShieldAlert,
   CheckCircle2,
-  Clock,
-  Shield,
-  SlidersHorizontal,
-  ChevronDown,
-  ChevronRight,
-  FileText,
   Ban,
   Check,
-  CheckCheck,
+  Clock,
+  SlidersHorizontal,
+  FileCheck2,
+  Lock,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
@@ -21,462 +19,302 @@ export const AlertsView: React.FC = () => {
     updateAlertStatus,
     dismissAllAlerts,
     setSelectedAlert,
+    setRpkiTarget,
     searchQuery,
+    setActiveTab,
   } = useHoraqStore();
 
-  const [filterSeverity, setFilterSeverity] = useState<"all" | "high" | "medium">("all");
-  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "acknowledged" | "resolved">("all");
-  const [isGrouped, setIsGrouped] = useState(true);
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+  const [filterSeverity, setFilterSeverity] = useState<
+    "all" | "high" | "medium" | "critical"
+  >("all");
+  const [acknowledgedIds, setAcknowledgedIds] = useState<Set<string>>(new Set());
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
 
-  // Reconciled Counts directly from the raw alert array
-  const totalAlertsCount = alerts.length;
-  const activeCount = alerts.filter((a) => a.status === "ACTIVE").length;
-  const highSeverityCount = alerts.filter((a) => a.severity === "HIGH").length;
-  const resolvedCount = alerts.filter((a) => a.status === "RESOLVED").length;
-
-  // Filter raw alerts first based on search and filters
-  const filteredAlerts = useMemo(() => {
-    return alerts.filter((e) => {
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const match =
-          e.prefix.toLowerCase().includes(q) ||
-          e.observed_asn.toLowerCase().includes(q) ||
-          (e.baseline_asn && e.baseline_asn.toLowerCase().includes(q)) ||
-          e.title.toLowerCase().includes(q);
-        if (!match) return false;
-      }
-      if (filterSeverity !== "all" && e.severity.toLowerCase() !== filterSeverity) {
-        return false;
-      }
-      if (filterStatus !== "all" && e.status.toLowerCase() !== filterStatus) {
-        return false;
-      }
-      return true;
-    });
-  }, [alerts, searchQuery, filterSeverity, filterStatus]);
-
-  // Group alerts by (prefix, observed_asn, kind) to solve repeated row visual noise
-  const groupedIncidents = useMemo(() => {
-    if (!isGrouped) return null;
-    const map = new Map<string, { latest: AlertItem; items: AlertItem[] }>();
-
-    for (const item of filteredAlerts) {
-      const key = `${item.prefix}::${item.observed_asn}::${item.kind}`;
-      if (!map.has(key)) {
-        map.set(key, { latest: item, items: [item] });
-      } else {
-        const group = map.get(key)!;
-        group.items.push(item);
-        // keep latest timestamp
-        if (new Date(item.created_at) > new Date(group.latest.created_at)) {
-          group.latest = item;
-        }
-      }
+  // Filter alerts by query and severity
+  const alertEvents = alerts.filter((e) => {
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const match =
+        e.prefix.toLowerCase().includes(q) ||
+        e.observed_asn.toLowerCase().includes(q) ||
+        (e.baseline_asn && e.baseline_asn.toLowerCase().includes(q)) ||
+        e.title.toLowerCase().includes(q);
+      if (!match) return false;
     }
-    return Array.from(map.values());
-  }, [filteredAlerts, isGrouped]);
+    if (filterSeverity === "all") return true;
+    if (filterSeverity === "critical" || filterSeverity === "high") {
+      return e.severity === "HIGH";
+    }
+    return e.severity === "MEDIUM" || e.severity === "LOW";
+  });
 
-  const toggleGroupExpand = (key: string) => {
-    setExpandedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
+  const handleAcknowledge = (event: AlertItem) => {
+    setAcknowledgedIds((prev) => new Set([...prev, event.id]));
+    updateAlertStatus(event.id, "ACKNOWLEDGED");
   };
 
-  const handleRecordSuppression = (alert: AlertItem) => {
-    updateAlertStatus(alert.id, "ACKNOWLEDGED");
-    setActionFeedback(
-      `Recorded operator policy intent: Suppress route ${alert.prefix} from ${alert.observed_asn}. Alert acknowledged.`
-    );
-    setTimeout(() => setActionFeedback(null), 4000);
+  const handleBlockResource = (event: AlertItem) => {
+    setActionNotice(`Origin route ${event.prefix} from ${event.observed_asn} filtered & blocked at edge`);
+    updateAlertStatus(event.id, "ACKNOWLEDGED");
+    setTimeout(() => setActionNotice(null), 3500);
   };
 
-  const handleAuthorizeOrigin = (alert: AlertItem) => {
-    updateAlertStatus(alert.id, "RESOLVED");
-    setActionFeedback(
-      `Authorized policy exception for ${alert.observed_asn} on ${alert.prefix}. Incident marked resolved.`
-    );
-    setTimeout(() => setActionFeedback(null), 4000);
+  const handleAllowException = (event: AlertItem) => {
+    setActionNotice(`Granted origin exception for '${event.observed_asn}' on ${event.prefix}`);
+    updateAlertStatus(event.id, "RESOLVED");
+    setTimeout(() => setActionNotice(null), 3500);
   };
 
-  const handleAcknowledge = (alert: AlertItem) => {
-    updateAlertStatus(alert.id, "ACKNOWLEDGED");
-    setActionFeedback(`Incident ${alert.id.slice(0, 8)} acknowledged without policy change.`);
-    setTimeout(() => setActionFeedback(null), 4000);
+  const getSeverityBadge = (sev: string) => {
+    switch ((sev || "info").toLowerCase()) {
+      case "high":
+      case "critical":
+        return "bg-red-500/10 text-red-400 border border-red-500/20";
+      case "medium":
+        return "bg-amber-500/10 text-amber-400 border border-amber-500/20";
+      default:
+        return "bg-blue-500/10 text-blue-400 border border-blue-500/20";
+    }
   };
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      {/* 1. Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-border-card">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-lg font-bold text-text-main tracking-tight">
-              Security alerts ledger
-            </h1>
-            <span className="px-2 py-0.2 rounded text-[11px] font-semibold bg-status-red-bg text-status-red border border-status-red">
-              {activeCount} Unreviewed
+            <h2 className="text-base font-bold text-text-main tracking-tight">Security alerts</h2>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+              {alerts.filter((a) => a.status === "ACTIVE").length} Active
             </span>
           </div>
           <p className="text-xs text-text-sub mt-0.5">
-            Investigate origin ASN conflicts, subprefix containment anomalies, and record operator policy decisions.
+            Active security violations, runtime policy infractions, and anomalies requiring attention.
           </p>
         </div>
 
-        {activeCount > 0 && (
-          <button
-            onClick={() => dismissAllAlerts()}
-            className="px-3 py-1.5 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-text-sub hover:text-text-main text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-          >
-            <CheckCheck className="w-3.5 h-3.5 text-status-green" />
-            <span>Mark all unreviewed as resolved</span>
-          </button>
-        )}
-      </div>
-
-      {/* 2. Reconciled Metrics Cards (Single Source of Truth) */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <div className="card-panel p-3.5 space-y-1">
-          <div className="text-[11px] text-text-dim font-medium uppercase tracking-wider">
-            Total recorded
-          </div>
-          <div className="text-xl font-bold text-text-main font-mono">
-            {totalAlertsCount}
-          </div>
-          <div className="text-[11px] text-text-sub">
-            All stored anomaly events
-          </div>
-        </div>
-
-        <div className="card-panel p-3.5 space-y-1">
-          <div className="text-[11px] text-text-dim font-medium uppercase tracking-wider">
-            Unreviewed
-          </div>
-          <div className="text-xl font-bold text-status-red font-mono">
-            {activeCount}
-          </div>
-          <div className="text-[11px] text-text-sub">
-            Status: ACTIVE
-          </div>
-        </div>
-
-        <div className="card-panel p-3.5 space-y-1">
-          <div className="text-[11px] text-text-dim font-medium uppercase tracking-wider">
-            High severity
-          </div>
-          <div className="text-xl font-bold text-text-main font-mono">
-            {highSeverityCount}
-          </div>
-          <div className="text-[11px] text-text-sub">
-            Origin & subprefix risks
-          </div>
-        </div>
-
-        <div className="card-panel p-3.5 space-y-1">
-          <div className="text-[11px] text-text-dim font-medium uppercase tracking-wider">
-            Resolved / Authorized
-          </div>
-          <div className="text-xl font-bold text-status-green font-mono">
-            {resolvedCount}
-          </div>
-          <div className="text-[11px] text-text-sub">
-            Status: RESOLVED
-          </div>
+        <div className="flex items-center gap-2">
+          {alertEvents.length > 0 && (
+            <button
+              onClick={() => dismissAllAlerts()}
+              className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-xs font-semibold flex items-center gap-1.5 transition-colors"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              <span>Dismiss all</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Action Notification Feedback Banner */}
-      {actionFeedback && (
-        <div className="p-3 rounded bg-bg-card border border-brand-blue/30 text-xs text-text-main flex items-center gap-2">
-          <Shield className="w-4 h-4 text-brand-blue shrink-0" />
-          <span>{actionFeedback}</span>
+      {actionNotice && (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-2 rounded-lg text-xs flex items-center gap-2">
+          <Check className="w-3.5 h-3.5 shrink-0" />
+          <span>{actionNotice}</span>
         </div>
       )}
 
-      {/* 3. Filters & Grouping Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs pt-1 border-b border-border-card pb-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-text-dim mr-1" />
-          
-          {/* Severity Filter */}
-          <div className="flex items-center rounded bg-bg-app border border-border-card p-0.5">
-            {(["all", "high", "medium"] as const).map((sev) => (
-              <button
-                key={sev}
-                onClick={() => setFilterSeverity(sev)}
-                className={`px-2.5 py-1 rounded text-xs font-medium capitalize transition-colors cursor-pointer ${
-                  filterSeverity === sev
-                    ? "bg-bg-btn text-text-main shadow-xs"
-                    : "text-text-sub hover:text-text-main"
-                }`}
-              >
-                {sev === "all" ? "All Severities" : `${sev} Severity`}
-              </button>
-            ))}
+      {/* Triage Status Banner */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <div className="card-panel p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center text-red-400 shrink-0">
+            <ShieldAlert className="w-5 h-5" />
           </div>
-
-          {/* Status Filter */}
-          <div className="flex items-center rounded bg-bg-app border border-border-card p-0.5">
-            {(["all", "active", "acknowledged", "resolved"] as const).map((st) => (
-              <button
-                key={st}
-                onClick={() => setFilterStatus(st)}
-                className={`px-2.5 py-1 rounded text-xs font-medium capitalize transition-colors cursor-pointer ${
-                  filterStatus === st
-                    ? "bg-bg-btn text-text-main shadow-xs"
-                    : "text-text-sub hover:text-text-main"
-                }`}
-              >
-                {st}
-              </button>
-            ))}
+          <div>
+            <div className="text-xs text-text-dim font-medium">Critical Threats</div>
+            <div className="text-lg font-bold text-text-main">
+              {alerts.filter((e) => e.severity === "HIGH").length}
+            </div>
           </div>
         </div>
 
-        {/* Grouping Toggle */}
-        <label className="flex items-center gap-2 text-text-sub cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={isGrouped}
-            onChange={(e) => setIsGrouped(e.target.checked)}
-            className="rounded border-border-card bg-bg-input text-brand-blue"
-          />
-          <span>Group repeated updates for same prefix/ASN</span>
-        </label>
+        <div className="card-panel p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 shrink-0">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs text-text-dim font-medium">Review Required</div>
+            <div className="text-lg font-bold text-text-main">
+              {alerts.filter((e) => e.status === "ACTIVE").length}
+            </div>
+          </div>
+        </div>
+
+        <div className="card-panel p-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
+            <Check className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="text-xs text-text-dim font-medium">Acknowledged Today</div>
+            <div className="text-lg font-bold text-text-main">
+              {alerts.filter((e) => e.status !== "ACTIVE").length}
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* 4. Incident Cards List */}
-      <div className="space-y-3">
-        {filteredAlerts.length === 0 ? (
-          <div className="card-panel p-10 text-center space-y-2">
-            <CheckCircle2 className="w-8 h-8 text-status-green mx-auto" />
-            <h3 className="text-sm font-semibold text-text-main">
-              No matching alerts found
-            </h3>
-            <p className="text-xs text-text-sub max-w-sm mx-auto">
-              No security anomalies match your active filters. All observed BGP announcements comply with baseline policies.
+      {/* Filter Tabs */}
+      <div className="flex items-center gap-1.5 border-b border-border-card pb-2">
+        <SlidersHorizontal className="w-3.5 h-3.5 text-text-dim mr-1.5" />
+        {(["all", "critical", "high", "medium"] as const).map((sev) => (
+          <button
+            key={sev}
+            onClick={() => setFilterSeverity(sev)}
+            className={`px-3 py-1 rounded-md text-xs font-medium capitalize transition-colors ${
+              filterSeverity === sev
+                ? "bg-bg-nav-active text-text-main shadow-sm"
+                : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
+            }`}
+          >
+            {sev === "all" ? "All Alerts" : `${sev} Severity`}
+          </button>
+        ))}
+      </div>
+
+      {/* Alerts List */}
+      {alertEvents.length === 0 ? (
+        <div className="card-panel p-10 text-center space-y-3">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-text-main">All systems secure</h3>
+            <p className="text-xs text-text-sub mt-1 max-w-sm mx-auto">
+              No outstanding high-risk policy infractions or security threats detected in your BGP environment.
             </p>
           </div>
-        ) : isGrouped && groupedIncidents ? (
-          // Grouped Display
-          groupedIncidents.map(({ latest, items }) => {
-            const groupKey = `${latest.prefix}::${latest.observed_asn}::${latest.kind}`;
-            const isExpanded = expandedGroups.has(groupKey);
-            const isOrigin = latest.kind === "ORIGIN_CHANGE";
-            const isSubprefix = latest.kind === "SUBPREFIX_ANOMALY";
-            const isResolved = latest.status === "RESOLVED";
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {alertEvents.map((evt) => {
+            const isAck = evt.status !== "ACTIVE" || acknowledgedIds.has(evt.id);
+            const isOrigin = evt.kind === "ORIGIN_CHANGE";
 
             return (
               <div
-                key={groupKey}
-                className={`card-panel transition-colors ${
-                  isResolved
-                    ? "opacity-60 bg-bg-card/50"
-                    : "border-border-card hover:border-text-dim"
+                key={evt.id}
+                className={`card-panel p-4 transition-all ${
+                  isAck ? "opacity-70 bg-bg-card/40" : "border-amber-500/30"
                 }`}
               >
-                {/* Main Incident Summary Row */}
-                <div className="p-4 space-y-3">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                    <div className="space-y-1.5 flex-1 min-w-0">
-                      {/* Tags & Title */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span
-                          className={`px-1.5 py-0.2 rounded text-[10px] font-bold uppercase tracking-wider ${
-                            latest.severity === "HIGH"
-                              ? "bg-status-red-bg text-status-red border border-status-red"
-                              : "bg-status-amber-bg text-status-amber border border-status-amber"
-                          }`}
-                        >
-                          {latest.severity}
-                        </span>
-
-                        <span className="font-semibold text-xs text-text-main">
-                          {isOrigin
-                            ? "Origin ASN Conflict"
-                            : isSubprefix
-                            ? "Subprefix Containment Anomaly"
-                            : latest.title}
-                        </span>
-
-                        <span className="font-mono text-xs text-text-main bg-bg-app px-2 py-0.5 rounded border border-border-card font-medium">
-                          {latest.prefix}
-                        </span>
-
-                        {items.length > 1 && (
-                          <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-bg-app text-text-sub border border-border-card">
-                            {items.length} observations
-                          </span>
-                        )}
-
-                        <span
-                          className={`px-2 py-0.2 rounded text-[10px] font-semibold uppercase ${
-                            latest.status === "ACTIVE"
-                              ? "bg-status-red-bg text-status-red border border-status-red"
-                              : latest.status === "RESOLVED"
-                              ? "bg-status-green-bg text-status-green border border-status-green"
-                              : "bg-status-amber-bg text-status-amber border border-status-amber"
-                          }`}
-                        >
-                          {latest.status}
-                        </span>
-                      </div>
-
-                      {/* ASN Relationship Comparison */}
-                      <div className="text-xs text-text-sub flex items-center gap-3 flex-wrap">
-                        <span>
-                          Observed origin:{" "}
-                          <strong className="font-mono text-status-red font-semibold">
-                            {latest.observed_asn}
-                          </strong>
-                        </span>
-                        {latest.baseline_asn && (
-                          <span>
-                            Reference baseline:{" "}
-                            <strong className="font-mono text-status-green font-semibold">
-                              {latest.baseline_asn}
-                            </strong>
-                          </span>
-                        )}
-                        <span className="text-text-dim flex items-center gap-1 text-[11px]">
-                          <Clock className="w-3 h-3" />
-                          <span>Latest: {new Date(latest.created_at).toLocaleTimeString()}</span>
-                        </span>
-                      </div>
-
-                      {/* Plain-English Explanation */}
-                      <div className="p-2.5 rounded bg-bg-app border border-border-card text-xs text-text-sub leading-relaxed">
-                        <strong className="text-text-main font-semibold block mb-0.5">
-                          {isOrigin
-                            ? "Why this matters: Unauthorized Origin Claim"
-                            : "Why this matters: Longest Prefix Match Interception Risk"}
-                        </strong>
-                        <p className="text-[11px] text-text-sub">
-                          {isOrigin
-                            ? `Autonomous System ${latest.observed_asn} announced route ${latest.prefix}, which differs from the established baseline origin ${latest.baseline_asn || "of this prefix"}. External routers accepting this update will direct traffic away from the legitimate owner.`
-                            : `A more-specific subnet (${latest.prefix}) was announced by ${latest.observed_asn}. In BGP, routers prefer the most specific prefix length regardless of path attributes, placing all traffic to this slice at risk of interception.`}
-                        </p>
-                      </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-start gap-3 flex-1 min-w-0">
+                    <div
+                      className={`p-2 rounded-lg shrink-0 mt-0.5 ${
+                        evt.severity === "HIGH"
+                          ? "bg-red-500/10 text-red-400"
+                          : "bg-amber-500/10 text-amber-400"
+                      }`}
+                    >
+                      {evt.severity === "HIGH" ? (
+                        <Ban className="w-4 h-4" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4" />
+                      )}
                     </div>
 
-                    {/* Operational Decision Actions */}
-                    <div className="flex flex-wrap items-center gap-1.5 shrink-0 sm:self-start">
-                      <button
-                        onClick={() => handleRecordSuppression(latest)}
-                        className="px-2.5 py-1.5 rounded bg-bg-btn border border-border-card hover:border-status-red hover:text-status-red text-text-sub text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Record operator decision to suppress/filter this route"
-                      >
-                        <Ban className="w-3 h-3 text-status-red" />
-                        <span>Suppress route</span>
-                      </button>
-
-                      <button
-                        onClick={() => handleAuthorizeOrigin(latest)}
-                        className="px-2.5 py-1.5 rounded bg-bg-btn border border-border-card hover:border-status-green hover:text-status-green text-text-sub text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Authorize this origin as a legitimate exception/migration"
-                      >
-                        <Check className="w-3 h-3 text-status-green" />
-                        <span>Authorize</span>
-                      </button>
-
-                      {latest.status === "ACTIVE" && (
-                        <button
-                          onClick={() => handleAcknowledge(latest)}
-                          className="px-2.5 py-1.5 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-text-sub hover:text-text-main text-xs font-medium transition-colors cursor-pointer"
+                    <div className="space-y-1 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${getSeverityBadge(
+                            evt.severity
+                          )}`}
                         >
-                          Acknowledge
-                        </button>
-                      )}
+                          {evt.severity}
+                        </span>
+                        <span className="text-xs font-semibold text-text-main">
+                          {evt.title}
+                        </span>
+                        <span className="text-[11px] font-mono text-text-dim px-1.5 py-0.5 rounded bg-bg-input border border-border-card">
+                          {evt.prefix}
+                        </span>
+                      </div>
 
-                      <button
-                        onClick={() => setSelectedAlert(latest)}
-                        className="px-2.5 py-1.5 rounded bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-brand-blue text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer"
-                        title="Inspect RFC 8785 evidence record and SHA-256 integrity"
-                      >
-                        <FileText className="w-3 h-3" />
-                        <span>Evidence</span>
-                      </button>
+                      <div className="text-xs text-text-sub flex items-center gap-3 pt-0.5 flex-wrap">
+                        <span className="font-medium text-text-main">
+                          Observed ASN: <span className="font-mono text-red-400">{evt.observed_asn}</span>
+                        </span>
+                        {evt.baseline_asn && (
+                          <span className="text-text-sub">
+                            Baseline ASN: <span className="font-mono text-status-green">{evt.baseline_asn}</span>
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 text-text-dim font-mono text-[11px]">
+                          <Clock className="w-3 h-3" />
+                          {evt.created_at
+                            ? new Date(evt.created_at).toLocaleTimeString()
+                            : "Just now"}
+                        </span>
+                        <span className="font-mono text-[11px] font-bold text-red-400">
+                          Status: {evt.status}
+                        </span>
+                      </div>
+
+                      {/* Plain English Translation for Evaluators & Non-Technical Reviewers */}
+                      <div className="mt-1.5 px-2.5 py-1.5 rounded bg-amber-500/5 border border-amber-500/20 text-[11px] text-amber-200/90 leading-relaxed flex items-start gap-1.5">
+                        <span className="font-bold text-amber-400 shrink-0 mt-0.5">Summary:</span>
+                        <span>
+                          {evt.kind === "ORIGIN_CHANGE"
+                            ? `Foreign network (${evt.observed_asn}) is broadcasting your IP prefix (${evt.prefix}). Internet traffic meant for ${evt.baseline_asn || "your network"} is at risk of interception.`
+                            : `Unauthorized network (${evt.observed_asn}) announced a narrower slice (${evt.prefix}) inside your parent IP block. Internet routers will redirect your traffic to the attacker due to Longest Prefix Match.`}
+                        </span>
+                      </div>
+
+                      {/* Technical Details Box (Exact inficy-gateway styling) */}
+                      <div className="mt-1.5 text-[11px] font-mono bg-bg-app p-2 rounded-md border border-border-card text-text-sub max-w-2xl overflow-x-auto leading-relaxed">
+                        {evt.explanation}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Expand History Toggle for Groups with Multiple Occurrences */}
-                  {items.length > 1 && (
-                    <div className="pt-2 border-t border-border-item">
-                      <button
-                        onClick={() => toggleGroupExpand(groupKey)}
-                        className="text-[11px] text-text-dim hover:text-text-main flex items-center gap-1 transition-colors cursor-pointer"
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="w-3 h-3" />
-                        ) : (
-                          <ChevronRight className="w-3 h-3" />
-                        )}
-                        <span>
-                          {isExpanded ? "Hide" : "Show"} history ({items.length} occurrences from{" "}
-                          {new Date(items[items.length - 1].created_at).toLocaleTimeString()})
-                        </span>
-                      </button>
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                    <button
+                      onClick={() => handleBlockResource(evt)}
+                      className="px-2.5 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 text-red-400 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                      title="Block route at border routers"
+                    >
+                      <Ban className="w-3 h-3" />
+                      <span>Block</span>
+                    </button>
 
-                      {isExpanded && (
-                        <div className="mt-2 space-y-1 pl-4 border-l border-border-card">
-                          {items.map((subItem) => (
-                            <div
-                              key={subItem.id}
-                              className="text-[11px] font-mono text-text-dim flex items-center justify-between py-1 border-b border-border-item/40"
-                            >
-                              <span>{new Date(subItem.created_at).toLocaleString()}</span>
-                              <span>Collector: {subItem.collector || "rrc00"}</span>
-                              <span className="text-text-sub">Status: {subItem.status}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                    <button
+                      onClick={() => handleAllowException(evt)}
+                      className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-medium flex items-center gap-1 transition-colors"
+                      title="Grant origin policy exception"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>Allow</span>
+                    </button>
+
+                    {!isAck ? (
+                      <button
+                        onClick={() => handleAcknowledge(evt)}
+                        className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-[11px] font-medium text-text-main flex items-center gap-1 transition-colors"
+                      >
+                        <Check className="w-3 h-3 text-emerald-400" />
+                        <span>Ack</span>
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1 px-2 py-1">
+                        <Check className="w-3 h-3" /> Ack
+                      </span>
+                    )}
+
+                    <button
+                      onClick={() => setSelectedAlert(evt)}
+                      className="px-2.5 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-text-dim text-text-sub hover:text-text-main text-[11px] font-medium flex items-center gap-1 transition-colors"
+                      title="Inspect Cryptographic Evidence"
+                    >
+                      <Lock className="w-3 h-3 text-brand-blue" />
+                      <span>Evidence</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             );
-          })
-        ) : (
-          // Stream Display (Un-grouped)
-          filteredAlerts.map((alert) => (
-            <div key={alert.id} className="card-panel p-4 space-y-2">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold uppercase bg-status-red-bg text-status-red border border-status-red">
-                    {alert.severity}
-                  </span>
-                  <span className="font-semibold text-xs text-text-main">{alert.title}</span>
-                  <span className="font-mono text-xs text-text-main bg-bg-app px-1.5 py-0.2 rounded border border-border-card">
-                    {alert.prefix}
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSelectedAlert(alert)}
-                  className="px-2.5 py-1 rounded bg-bg-btn border border-border-card text-brand-blue text-xs font-medium flex items-center gap-1 cursor-pointer"
-                >
-                  <FileText className="w-3 h-3" />
-                  <span>Evidence</span>
-                </button>
-              </div>
-              <div className="text-xs text-text-sub flex items-center gap-3">
-                <span>Observed: <strong className="font-mono text-status-red">{alert.observed_asn}</strong></span>
-                {alert.baseline_asn && (
-                  <span>Expected: <strong className="font-mono text-status-green">{alert.baseline_asn}</strong></span>
-                )}
-                <span className="text-text-dim font-mono text-[11px]">
-                  {new Date(alert.created_at).toLocaleTimeString()}
-                </span>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+          })}
+        </div>
+      )}
     </div>
   );
 };

@@ -1,12 +1,12 @@
 import React from "react";
 import {
   LayoutGrid,
-  AlertTriangle,
+  Bell,
   Globe,
-  FlaskConical,
-  FileText,
-  ShieldCheck,
-  SendHorizontal,
+  Terminal,
+  History,
+  SearchCheck,
+  Radio,
   Settings,
 } from "lucide-react";
 import { useHoraqStore, NavTab } from "../../stores/useHoraqStore";
@@ -21,27 +21,24 @@ export const Sidebar: React.FC = () => {
     {
       id: "alerts" as NavTab,
       label: "Alerts",
-      icon: AlertTriangle,
+      icon: Bell,
       badge: activeAlertsCount > 0 ? activeAlertsCount : undefined,
     },
     { id: "routes" as NavTab, label: "Baselines", icon: Globe },
-    { id: "scenarios" as NavTab, label: "Scenario lab", icon: FlaskConical },
+    { id: "scenarios" as NavTab, label: "Scenarios", icon: Terminal },
   ];
 
-  const toolsNav = [
-    { id: "evidence" as NavTab, label: "Evidence ledger", icon: FileText },
-    { id: "rpki" as NavTab, label: "RPKI inspector", icon: ShieldCheck },
-    { id: "inject" as NavTab, label: "Manual route test", icon: SendHorizontal },
+  const resourceNav = [
+    { id: "evidence" as NavTab, label: "Audit ledger", icon: History },
+    { id: "rpki" as NavTab, label: "RPKI Inspector", icon: SearchCheck },
+    { id: "inject" as NavTab, label: "Inject Route", icon: Radio },
   ];
 
   return (
-    <aside className="w-52 bg-bg-sidebar border-r border-border-sub flex flex-col justify-between p-2.5 select-none shrink-0 h-[calc(100vh-3.25rem)] transition-colors">
+    <aside className="w-56 bg-bg-sidebar border-r border-border-sub flex flex-col justify-between p-3 select-none shrink-0 h-[calc(100vh-3.5rem)] transition-colors">
       {/* Top Navigation */}
-      <div className="space-y-5">
-        <div className="space-y-0.5">
-          <div className="px-2.5 py-1 text-[11px] font-medium text-text-dim uppercase tracking-wider">
-            Monitoring
-          </div>
+      <div className="space-y-6">
+        <div className="space-y-1">
           {mainNav.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -49,22 +46,22 @@ export const Sidebar: React.FC = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
-                className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors w-full text-left cursor-pointer ${
+                className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
                   isActive
-                    ? "bg-bg-nav-active text-text-main font-medium border-l-2 border-brand-blue pl-2"
+                    ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
                     : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
                 }`}
               >
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                   <Icon
-                    className={`w-3.5 h-3.5 shrink-0 ${
-                      isActive ? "text-brand-blue" : "text-text-dim"
+                    className={`w-4 h-4 ${
+                      isActive ? "text-text-main" : "text-text-sub"
                     }`}
                   />
                   <span>{item.label}</span>
                 </div>
                 {item.badge !== undefined && (
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-status-red text-white">
+                  <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-[#ef4444] text-white">
                     {item.badge}
                   </span>
                 )}
@@ -73,56 +70,56 @@ export const Sidebar: React.FC = () => {
           })}
         </div>
 
-        {/* Verification & Analysis Tools Section */}
-        <div className="space-y-0.5">
-          <div className="px-2.5 py-1 text-[11px] font-medium text-text-dim uppercase tracking-wider">
-            Verification
+        {/* Resources Section */}
+        <div>
+          <div className="px-3 text-xs text-text-dim font-semibold mb-2">
+            Resources
           </div>
-          {toolsNav.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id)}
-                className={`flex items-center gap-2.5 px-2.5 py-1.5 rounded text-xs transition-colors w-full text-left cursor-pointer ${
-                  isActive
-                    ? "bg-bg-nav-active text-text-main font-medium border-l-2 border-brand-blue pl-2"
-                    : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
-                }`}
-              >
-                <Icon
-                  className={`w-3.5 h-3.5 shrink-0 ${
-                    isActive ? "text-brand-blue" : "text-text-dim"
+          <div className="space-y-1">
+            {resourceNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveTab(item.id)}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
+                    isActive
+                      ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
+                      : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
                   }`}
-                />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
+                >
+                  <Icon
+                    className={`w-4 h-4 ${
+                      isActive ? "text-text-main" : "text-text-sub"
+                    }`}
+                  />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Bottom Section: Settings */}
-      <div className="pt-2 border-t border-border-item">
+      {/* Bottom: Settings */}
+      <div className="pt-2 border-t border-border-sub space-y-2">
         <button
           onClick={() => setActiveTab("settings")}
-          className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors w-full text-left cursor-pointer ${
+          className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all w-full text-left ${
             activeTab === "settings"
-              ? "bg-bg-nav-active text-text-main font-medium border-l-2 border-brand-blue pl-2"
+              ? "bg-bg-nav-active text-text-main font-medium shadow-sm"
               : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
           }`}
         >
-          <div className="flex items-center gap-2.5">
-            <Settings
-              className={`w-3.5 h-3.5 shrink-0 ${
-                activeTab === "settings" ? "text-brand-blue" : "text-text-dim"
-              }`}
-            />
-            <span>Settings</span>
-          </div>
-          <span className="text-[10px] text-text-dim font-mono">v1.0</span>
+          <Settings className="w-4 h-4 text-text-sub" />
+          <span>Settings</span>
         </button>
+
+        <div className="px-3 pt-1 text-[11px] text-text-dim flex items-center justify-between">
+          <span>HORA-Q</span>
+          <span>v1.0 (AIORI-3)</span>
+        </div>
       </div>
     </aside>
   );
