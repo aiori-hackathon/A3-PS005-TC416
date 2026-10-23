@@ -151,7 +151,7 @@ export const RPKIInspectorView: React.FC = () => {
           <button
             onClick={() => handleValidate()}
             disabled={loading || !prefix.trim() || !asn.trim()}
-            className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium text-xs transition-all active:scale-[0.98] shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors active:scale-[0.98] disabled:opacity-50 cursor-pointer flex items-center gap-2"
           >
             <Search className="w-3.5 h-3.5" />
             <span>{loading ? "Checking RPKI..." : "Check route origin"}</span>

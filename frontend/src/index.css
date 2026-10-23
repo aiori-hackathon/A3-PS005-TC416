@@ -2,69 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Apple & Google Design Tokens (Human Interface Guidelines / Material Design 3) */
+/* HORA-Q Cohesive Charcoal & High-Readability Palette */
 :root {
-  --bg-app: #f5f5f7;
-  --bg-header: rgba(255, 255, 255, 0.85);
-  --bg-sidebar: #f0f0f2;
+  --bg-app: #f4f5f7;
+  --bg-header: rgba(255, 255, 255, 0.92);
+  --bg-sidebar: #ebedf0;
   --bg-card: #ffffff;
   --border-card: rgba(0, 0, 0, 0.08);
   --border-sub: rgba(0, 0, 0, 0.08);
-  --border-item: rgba(0, 0, 0, 0.04);
+  --border-item: rgba(0, 0, 0, 0.05);
   --bg-input: #ffffff;
-  --bg-btn: rgba(0, 0, 0, 0.04);
+  --bg-btn: rgba(0, 0, 0, 0.05);
   --bg-nav-active: #ffffff;
   --bg-nav-hover: rgba(0, 0, 0, 0.05);
-  --text-main: #1d1d1f;
-  --text-sub: #86868b;
-  --text-dim: #a1a1a6;
+  --text-main: #111827;
+  --text-sub: #4b5563;
+  --text-dim: #6b7280;
   --bg-hover-row: rgba(0, 0, 0, 0.02);
-  --bg-block-row: rgba(255, 59, 48, 0.08);
-  --border-block-row: rgba(255, 59, 48, 0.2);
-  --badge-green-bg: rgba(52, 199, 89, 0.12);
-  --badge-green-text: #28a745;
-  --badge-green-border: rgba(52, 199, 89, 0.25);
-  --badge-amber-bg: rgba(255, 149, 0, 0.12);
-  --badge-amber-text: #ff9500;
-  --badge-amber-border: rgba(255, 149, 0, 0.25);
+  --bg-block-row: rgba(239, 68, 68, 0.08);
+  --border-block-row: rgba(239, 68, 68, 0.2);
+  --badge-green-bg: rgba(34, 197, 94, 0.1);
+  --badge-green-text: #16a34a;
+  --badge-green-border: rgba(34, 197, 94, 0.25);
+  --badge-amber-bg: rgba(245, 158, 11, 0.1);
+  --badge-amber-text: #d97706;
+  --badge-amber-border: rgba(245, 158, 11, 0.25);
   --badge-idle-bg: rgba(0, 0, 0, 0.06);
-  --badge-idle-text: #86868b;
-  --brand-blue: #0071e3;
-  --apple-blue: #0071e3;
+  --badge-idle-text: #6b7280;
+  --brand-blue: #0891b2;
+  --accent-cyan: #0891b2;
 }
 
 html.dark {
-  --bg-app: #000000;
-  --bg-header: rgba(22, 22, 24, 0.85);
-  --bg-sidebar: #121214;
-  --bg-card: #1c1c1e;
+  --bg-app: #0e1015;
+  --bg-header: rgba(18, 20, 26, 0.92);
+  --bg-sidebar: #13151c;
+  --bg-card: #181a22;
   --border-card: rgba(255, 255, 255, 0.08);
   --border-sub: rgba(255, 255, 255, 0.08);
   --border-item: rgba(255, 255, 255, 0.05);
-  --bg-input: rgba(255, 255, 255, 0.06);
-  --bg-btn: rgba(255, 255, 255, 0.08);
-  --bg-nav-active: #2c2c2e;
-  --bg-nav-hover: rgba(255, 255, 255, 0.05);
-  --text-main: #ffffff;
-  --text-sub: #8e8e93;
-  --text-dim: #636366;
+  --bg-input: rgba(255, 255, 255, 0.04);
+  --bg-btn: rgba(255, 255, 255, 0.06);
+  --bg-nav-active: #222530;
+  --bg-nav-hover: rgba(255, 255, 255, 0.04);
+  --text-main: #f9fafb;
+  --text-sub: #d1d5db;
+  --text-dim: #9ca3af;
   --bg-hover-row: rgba(255, 255, 255, 0.03);
-  --bg-block-row: rgba(255, 69, 58, 0.12);
-  --border-block-row: rgba(255, 69, 58, 0.25);
-  --badge-green-bg: rgba(48, 209, 88, 0.12);
-  --badge-green-text: #30d158;
-  --badge-green-border: rgba(48, 209, 88, 0.25);
-  --badge-amber-bg: rgba(255, 159, 10, 0.12);
-  --badge-amber-text: #ff9f0a;
-  --badge-amber-border: rgba(255, 159, 10, 0.25);
+  --bg-block-row: rgba(239, 68, 68, 0.1);
+  --border-block-row: rgba(239, 68, 68, 0.25);
+  --badge-green-bg: rgba(34, 197, 94, 0.12);
+  --badge-green-text: #4ade80;
+  --badge-green-border: rgba(34, 197, 94, 0.25);
+  --badge-amber-bg: rgba(245, 158, 11, 0.12);
+  --badge-amber-text: #fbbf24;
+  --badge-amber-border: rgba(245, 158, 11, 0.25);
   --badge-idle-bg: rgba(255, 255, 255, 0.06);
-  --badge-idle-text: #8e8e93;
-  --brand-blue: #0a84ff;
-  --apple-blue: #0a84ff;
+  --badge-idle-text: #9ca3af;
+  --brand-blue: #06b6d4;
+  --accent-cyan: #06b6d4;
 }
 
 @layer base {
-  body {
+  html, body {
+    margin: 0;
+    padding: 0;
     background-color: var(--bg-app);
     color: var(--text-main);
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
@@ -72,20 +74,22 @@ html.dark {
     -moz-osx-font-smoothing: grayscale;
     user-select: none;
     overflow: hidden;
+    box-shadow: none !important;
+    outline: none !important;
   }
 
-  /* Apple-style subtle scrollbar */
+  /* Subtle enterprise scrollbar without glowing edges */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(120, 120, 128, 0.25); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(120, 120, 128, 0.4); }
+  ::-webkit-scrollbar-thumb { background: rgba(140, 145, 155, 0.25); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(140, 145, 155, 0.4); }
 }
 
 .card-panel {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 @layer utilities {

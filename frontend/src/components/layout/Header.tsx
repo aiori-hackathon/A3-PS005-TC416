@@ -1,6 +1,7 @@
 import React from "react";
 import { Search, Bell, Sun, Moon, Laptop, Menu, X } from "lucide-react";
 import { useHoraqStore } from "../../stores/useHoraqStore";
+import { groupAlertObservations } from "../../utils/incidentGrouping";
 
 export const Header: React.FC = () => {
   const {
@@ -14,7 +15,7 @@ export const Header: React.FC = () => {
     toggleSidebar,
   } = useHoraqStore();
 
-  const activeAlerts = alerts.filter((a) => a.status === "ACTIVE").length;
+  const activeIncidents = groupAlertObservations(alerts).filter((a) => a.status === "ACTIVE").length;
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
@@ -44,26 +45,26 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* Center: Calm Apple-style Status Pill */}
+      {/* Center: Calm Status Pill */}
       <button
         onClick={() => setActiveTab("alerts")}
         className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-150 flex items-center gap-2 border cursor-pointer active:scale-[0.98] ${
-          activeAlerts === 0
+          activeIncidents === 0
             ? "bg-status-green-bg text-status-green border-green-500/20 hover:border-green-500/40"
             : "bg-status-red-bg text-red-400 border-red-500/20 hover:border-red-500/40"
         }`}
       >
         <span
           className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-            activeAlerts === 0 ? "bg-status-green animate-pulse" : "bg-red-400"
+            activeIncidents === 0 ? "bg-status-green animate-pulse" : "bg-red-400"
           }`}
         />
         <span className="truncate max-w-[130px] sm:max-w-none">
-          {activeAlerts === 0 ? "Monitoring active" : `${activeAlerts} Anomalies detected`}
+          {activeIncidents === 0 ? "Monitoring active" : `${activeIncidents} Anomalies detected`}
         </span>
       </button>
 
-      {/* Right: Apple Rounded Search, Theme Toggle, Notification Bell */}
+      {/* Right: Rounded Search, Theme Toggle, Notification Bell */}
       <div className="flex items-center gap-2 sm:gap-2.5">
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-bg-input border border-border-card text-xs text-text-sub focus-within:border-brand-blue/60 focus-within:ring-1 focus-within:ring-brand-blue/20 transition-all w-28 sm:w-40 md:w-48">
           <Search className="w-3.5 h-3.5 text-text-dim shrink-0" />
@@ -92,7 +93,7 @@ export const Header: React.FC = () => {
           title="Alerts & Notifications"
         >
           <Bell className="w-3.5 h-3.5" />
-          {activeAlerts > 0 && (
+          {activeIncidents > 0 && (
             <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-[#ff453a] rounded-full" />
           )}
         </button>

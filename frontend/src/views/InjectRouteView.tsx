@@ -187,7 +187,7 @@ export const InjectRouteView: React.FC = () => {
           <button
             type="submit"
             disabled={loading || !prefix.trim() || !originAsn.trim()}
-            className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium text-xs transition-all active:scale-[0.98] shadow-xs disabled:opacity-50 cursor-pointer flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors active:scale-[0.98] disabled:opacity-50 cursor-pointer flex items-center gap-2"
           >
             <Send className="w-3.5 h-3.5" />
             <span>{loading ? "Evaluating..." : "Submit test observation"}</span>
@@ -231,7 +231,7 @@ export const InjectRouteView: React.FC = () => {
           {lastOutcome.alerts_count > 0 && (
             <div className="pt-2 flex items-center justify-between">
               <span className="text-xs text-text-sub">
-                A new alert has been recorded and sealed with cryptographic evidence.
+                A new alert has been recorded with canonical RFC 8785 evidence.
               </span>
               <button
                 onClick={() => setActiveTab("alerts")}

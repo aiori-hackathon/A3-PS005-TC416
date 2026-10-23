@@ -126,8 +126,8 @@ export const EvidenceVaultView: React.FC = () => {
                     <span
                       className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-medium ${
                         isSigned
-                          ? "bg-status-green-bg text-status-green border border-green-500/20"
-                          : "bg-bg-btn text-text-sub border border-border-card"
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                          : "bg-slate-500/15 text-slate-300 border border-slate-500/25"
                       }`}
                     >
                       {isSigned ? "ML-DSA-65 Signed" : "Unsigned (SHA-256)"}
@@ -170,18 +170,18 @@ export const EvidenceVaultView: React.FC = () => {
                     <span
                       className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
                         isSigned
-                          ? "bg-status-green-bg text-status-green border border-green-500/20"
-                          : "bg-bg-btn text-text-sub border border-border-card"
+                          ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                          : "bg-slate-500/15 text-slate-300 border border-slate-500/25"
                       }`}
                     >
-                      {isSigned ? "Signed" : "Unsigned"}
+                      {isSigned ? "ML-DSA-65 Signed" : "Unsigned"}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2 text-[11px] text-text-sub font-mono">
                     <span className="text-text-main font-medium">{ruleName}</span>
                     <span>•</span>
-                    <span className="text-text-dim">{timeStr}</span>
+                    <span className="text-text-sub">{timeStr}</span>
                   </div>
 
                   <div className="text-[10px] font-mono text-text-dim truncate">

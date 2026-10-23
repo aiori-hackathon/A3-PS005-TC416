@@ -62,7 +62,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
     }
   };
 
-  // Tamper Simulation Toggle (Simulated in-memory demo)
+  // Payload Mutation Simulation Toggle (Simulated in-memory demo)
   const handleToggleTampering = () => {
     if (!isTampered) {
       const cloned = JSON.parse(JSON.stringify(originalRecord));
@@ -133,7 +133,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-bg-card border border-border-card rounded-xl shadow-2xl overflow-hidden"
+        className="w-full max-w-2xl max-h-[90vh] flex flex-col bg-bg-card border border-border-card rounded-xl shadow-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -191,24 +191,24 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
             </div>
           </div>
 
-          {/* Integrity & Signature Status Badges */}
+          {/* Integrity & Signature Status Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg bg-bg-app border border-border-card space-y-1">
+            <div className="p-3.5 rounded-lg bg-bg-app border border-border-card space-y-1">
               <div className="text-[11px] text-text-dim font-medium">Content Integrity</div>
               <div className="flex items-center gap-1.5 font-semibold text-status-green">
                 <Check className="w-4 h-4" />
-                <span>SHA-256 Digest Sealed</span>
+                <span>SHA-256 Digest Recorded</span>
               </div>
               <p className="text-[11px] text-text-sub leading-relaxed pt-0.5">
                 Payload canonicalized via RFC 8785 JSON Canonicalization Scheme.
               </p>
             </div>
 
-            <div className="p-3 rounded-lg bg-bg-app border border-border-card space-y-1">
+            <div className="p-3.5 rounded-lg bg-bg-app border border-border-card space-y-1">
               <div className="text-[11px] text-text-dim font-medium">Digital Signature</div>
               <div
                 className={`flex items-center gap-1.5 font-semibold ${
-                  isSigned ? "text-status-green" : "text-text-dim"
+                  isSigned ? "text-status-green" : "text-text-sub"
                 }`}
               >
                 {isSigned ? (
@@ -217,26 +217,26 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                     <span>ML-DSA-65 Signed</span>
                   </>
                 ) : (
-                  <span>Unsigned</span>
+                  <span className="text-text-dim font-medium">Unsigned</span>
                 )}
               </div>
               <p className="text-[11px] text-text-sub leading-relaxed pt-0.5">
                 {isSigned
                   ? "Post-quantum digital signature verified under NIST FIPS 204."
-                  : "Cryptographic hash verified; signature not yet applied."}
+                  : "Cryptographic hash recorded; signature not yet applied."}
               </p>
             </div>
           </div>
 
-          {/* Tamper Warning if active */}
+          {/* Simulated Payload Modification Warning if active */}
           {isTampered && (
             <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 space-y-1">
               <div className="flex items-center gap-1.5 font-semibold">
                 <AlertTriangle className="w-4 h-4" />
-                <span>Simulated In-Memory Tampering Active</span>
+                <span>Simulated In-Memory Payload Mutation Active</span>
               </div>
               <p className="text-[11px] text-red-300 leading-relaxed">
-                Incident values were mutated in browser memory (severity downgraded, origin changed). Re-verifying will catch this mismatch.
+                Incident values were mutated in browser memory (severity downgraded, origin changed). Re-verifying will catch this payload mismatch.
               </p>
             </div>
           )}
@@ -244,7 +244,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
           {/* Verification Actions */}
           <div className="p-3.5 rounded-lg bg-bg-app border border-border-card space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="font-medium text-text-main">Forensic Actions</span>
+              <span className="font-medium text-text-main">Forensic Verification</span>
               <button
                 onClick={handleToggleTampering}
                 className={`px-2.5 py-1 rounded text-[11px] font-medium border transition-colors cursor-pointer ${
@@ -253,7 +253,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                     : "bg-bg-btn border-border-card text-text-sub hover:text-text-main"
                 }`}
               >
-                {isTampered ? "Reset untampered" : "Simulate tampering (demo)"}
+                {isTampered ? "Reset original payload" : "Mutate payload (demo)"}
               </button>
             </div>
 
@@ -273,7 +273,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 <button
                   onClick={handleSign}
                   disabled={signing}
-                  className="px-3.5 py-1.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium text-xs transition-all active:scale-[0.98] shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  className="px-3.5 py-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors active:scale-[0.98] flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                 >
                   <Cpu className="w-3.5 h-3.5" />
                   <span>{signing ? "Signing..." : "Sign with ML-DSA-65"}</span>
@@ -315,7 +315,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 ) : (
                   <>
                     <AlertTriangle className="w-4 h-4 shrink-0" />
-                    <span>Integrity failed: Computed hash differs from sealed digest (tamper detected).</span>
+                    <span>Integrity failed: Computed hash differs from recorded digest (payload mismatch detected).</span>
                   </>
                 )}
               </div>
@@ -341,7 +341,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
             <div className="space-y-3 pt-2 border-t border-border-card">
               <div className="space-y-1">
                 <div className="text-[11px] text-text-dim font-mono">
-                  Sealed Canonical SHA-256 Digest:
+                  Recorded Canonical SHA-256 Digest:
                 </div>
                 <div className="p-2 rounded bg-bg-input border border-border-card font-mono text-[11px] text-brand-blue break-all select-all">
                   {expectedHash}
@@ -359,21 +359,44 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 </div>
               )}
 
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-[11px] text-text-dim font-mono">
-                  <span>Canonical Payload (RFC 8785 JCS):</span>
+              {/* Canonical Payload JSON View */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-text-dim font-mono">
+                    Canonical Payload (RFC 8785):
+                  </span>
                   <button
                     onClick={handleCopy}
-                    className="hover:text-text-main flex items-center gap-1 text-[10px] cursor-pointer"
+                    className="text-[11px] text-brand-blue hover:underline flex items-center gap-1 cursor-pointer"
                   >
-                    <Copy className="w-3 h-3" />
-                    <span>{copied ? "Copied" : "Copy"}</span>
+                    {copied ? <Check className="w-3 h-3 text-status-green" /> : <Copy className="w-3 h-3" />}
+                    <span>{copied ? "Copied" : "Copy JSON"}</span>
                   </button>
                 </div>
-                <pre className="p-3 rounded-lg bg-bg-app border border-border-card font-mono text-[11px] text-text-sub max-h-48 overflow-auto leading-relaxed">
+                <pre className="p-3 rounded bg-bg-input border border-border-card font-mono text-[11px] text-text-sub overflow-x-auto max-h-48 leading-relaxed">
                   {JSON.stringify(record, null, 2)}
                 </pre>
               </div>
+
+              {/* Signature Block */}
+              {isSigned && (
+                <div className="space-y-2 pt-2 border-t border-border-card">
+                  <div className="text-[11px] text-text-dim font-mono">
+                    NIST FIPS 204 ML-DSA-65 Signature:
+                  </div>
+                  <div className="p-2 rounded bg-bg-input border border-border-card font-mono text-[11px] text-text-sub break-all select-all">
+                    {evidence?.signature}
+                  </div>
+                  {evidence?.public_key && (
+                    <div className="space-y-1">
+                      <div className="text-[11px] text-text-dim font-mono">Signer Public Key:</div>
+                      <div className="p-2 rounded bg-bg-input border border-border-card font-mono text-[11px] text-text-sub break-all select-all">
+                        {evidence.public_key}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

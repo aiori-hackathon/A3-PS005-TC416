@@ -163,7 +163,7 @@ export const ScenariosView: React.FC = () => {
           <button
             onClick={handleRunAll}
             disabled={!!runningId}
-            className="px-4 py-2 rounded-xl bg-[#0071e3] hover:bg-[#0077ED] text-white font-medium text-xs transition-all active:scale-[0.98] shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors active:scale-[0.98] flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <Play className={`w-3.5 h-3.5 fill-current ${runningId === "run-all" ? "animate-spin" : ""}`} />
             <span>{runningId === "run-all" ? "Running suite..." : "Run suite"}</span>

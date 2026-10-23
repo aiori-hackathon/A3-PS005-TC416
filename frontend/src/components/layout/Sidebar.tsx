@@ -10,11 +10,12 @@ import {
   Settings,
 } from "lucide-react";
 import { useHoraqStore, NavTab } from "../../stores/useHoraqStore";
+import { groupAlertObservations } from "../../utils/incidentGrouping";
 
 export const Sidebar: React.FC = () => {
   const { activeTab, setActiveTab, alerts, sidebarOpen, setSidebarOpen } = useHoraqStore();
 
-  const activeAlertsCount = alerts.filter((a) => a.status === "ACTIVE").length;
+  const activeIncidentsCount = groupAlertObservations(alerts).filter((a) => a.status === "ACTIVE").length;
 
   const handleNavClick = (tab: NavTab) => {
     setActiveTab(tab);
@@ -27,7 +28,7 @@ export const Sidebar: React.FC = () => {
       id: "alerts" as NavTab,
       label: "Alerts",
       icon: Bell,
-      badge: activeAlertsCount > 0 ? activeAlertsCount : undefined,
+      badge: activeIncidentsCount > 0 ? activeIncidentsCount : undefined,
     },
     { id: "routes" as NavTab, label: "Route baselines", icon: Globe },
   ];
