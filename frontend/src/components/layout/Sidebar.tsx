@@ -48,7 +48,7 @@ export const Sidebar: React.FC = () => {
       <div className="px-3 text-[11px] text-text-dim font-semibold uppercase tracking-wider mb-1.5">
         {title}
       </div>
-      <div className="space-y-0.5">
+      <div className="space-y-1">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -56,13 +56,16 @@ export const Sidebar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id)}
-              className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
+              className={`relative flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
                 isActive
-                  ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
-                  : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
+                  ? "bg-bg-nav-active border border-brand-blue/25 text-text-main font-semibold shadow-xs"
+                  : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover border border-transparent"
               }`}
             >
-              <div className="flex items-center gap-2.5">
+              {isActive && (
+                <span className="absolute left-0 top-2 bottom-2 w-1 bg-brand-blue rounded-r-full shadow-[0_0_8px_rgba(98,168,255,0.7)]" />
+              )}
+              <div className="flex items-center gap-2.5 pl-1">
                 <Icon
                   className={`w-4 h-4 shrink-0 transition-colors ${
                     isActive ? "text-brand-blue" : "text-text-dim"
@@ -71,7 +74,7 @@ export const Sidebar: React.FC = () => {
                 <span>{item.label}</span>
               </div>
               {item.badge !== undefined && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#ff453a] text-white">
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-status-red text-white shadow-[0_0_6px_rgba(255,113,133,0.6)]">
                   {item.badge}
                 </span>
               )}
@@ -84,7 +87,7 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className={`w-56 bg-bg-sidebar border-r border-border-sub flex flex-col justify-between p-3 select-none shrink-0 h-[calc(100vh-3.5rem)] transition-all duration-200 z-40 ${
+      className={`w-56 bg-bg-sidebar border-r border-border-card flex flex-col justify-between p-3 select-none shrink-0 h-[calc(100vh-3.5rem)] transition-all duration-200 z-40 ${
         sidebarOpen
           ? "fixed top-14 left-0 bottom-0 shadow-2xl md:relative md:top-0"
           : "hidden md:flex"
@@ -98,17 +101,20 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Bottom: Settings */}
-      <div className="pt-2 border-t border-border-sub space-y-2">
+      <div className="pt-2 border-t border-border-card space-y-2">
         <button
           onClick={() => handleNavClick("settings")}
-          className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
+          className={`relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
             activeTab === "settings"
-              ? "bg-bg-nav-active text-text-main font-semibold shadow-xs"
-              : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
+              ? "bg-bg-nav-active border border-brand-blue/25 text-text-main font-semibold shadow-xs"
+              : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover border border-transparent"
           }`}
         >
+          {activeTab === "settings" && (
+            <span className="absolute left-0 top-2 bottom-2 w-1 bg-brand-blue rounded-r-full shadow-[0_0_8px_rgba(98,168,255,0.7)]" />
+          )}
           <Settings
-            className={`w-4 h-4 shrink-0 ${
+            className={`w-4 h-4 shrink-0 pl-1 ${
               activeTab === "settings" ? "text-brand-blue" : "text-text-dim"
             }`}
           />
@@ -116,8 +122,8 @@ export const Sidebar: React.FC = () => {
         </button>
 
         <div className="px-3 pt-1 text-[11px] text-text-dim flex items-center justify-between">
-          <span>HORA-Q</span>
-          <span>v1.0 (AIORI-3)</span>
+          <span className="font-semibold text-text-sub">HORA-Q</span>
+          <span className="font-mono text-[10px]">v1.0 (AIORI-3)</span>
         </div>
       </div>
     </aside>

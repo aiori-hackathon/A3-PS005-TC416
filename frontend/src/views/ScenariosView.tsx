@@ -148,9 +148,9 @@ export const ScenariosView: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 border-b border-border-card">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-border-card">
         <div>
-          <h1 className="text-xl sm:text-2xl font-semibold text-text-main tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
             Scenarios
           </h1>
           <p className="text-xs sm:text-sm text-text-sub mt-1">
@@ -163,7 +163,7 @@ export const ScenariosView: React.FC = () => {
           <button
             onClick={handleRunAll}
             disabled={!!runningId}
-            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors active:scale-[0.98] flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-brand-blue hover:from-blue-500 hover:to-blue-400 text-white font-bold text-xs transition-all active:scale-[0.98] shadow-md shadow-blue-500/20 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             <Play className={`w-3.5 h-3.5 fill-current ${runningId === "run-all" ? "animate-spin" : ""}`} />
             <span>{runningId === "run-all" ? "Running suite..." : "Run suite"}</span>
@@ -172,16 +172,16 @@ export const ScenariosView: React.FC = () => {
           <button
             onClick={() => seedDemoDataAction()}
             disabled={!!runningId}
-            className="px-3.5 py-2 rounded-xl bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-xs font-medium text-text-sub hover:text-text-main transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-bg-btn border border-border-card hover:border-brand-blue/40 text-xs font-semibold text-text-sub hover:text-text-main transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
-            <Sparkles className="w-3.5 h-3.5" />
+            <Sparkles className="w-3.5 h-3.5 text-accent-indigo" />
             <span>Seed demo data</span>
           </button>
 
           <button
             onClick={() => setShowResetConfirm(true)}
             disabled={!!runningId}
-            className="px-3.5 py-2 rounded-xl bg-bg-btn border border-border-card hover:bg-red-500/10 hover:text-red-400 text-xs font-medium text-text-dim transition-colors flex items-center gap-1.5 cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-bg-btn border border-border-card hover:bg-red-500/10 hover:border-red-500/30 hover:text-status-red text-xs font-semibold text-text-dim transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Reset</span>
@@ -191,22 +191,31 @@ export const ScenariosView: React.FC = () => {
 
       {/* Scenarios List */}
       <div className="space-y-3">
-        {scenarios.map((sc) => {
+        {scenarios.map((sc, idx) => {
           const isRunning = runningId === sc.id;
           const isExpanded = expandedId === sc.id;
+          const isHijack = sc.id.includes("hijack") || sc.expected.includes("Alert");
 
           return (
             <div
               key={sc.id}
-              className="card-panel overflow-hidden transition-all duration-150"
+              className={`card-panel overflow-hidden transition-all duration-150 hover:border-brand-blue/35 ${
+                isHijack ? "accent-top-coral" : "accent-top-indigo"
+              }`}
             >
               <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="space-y-1 flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h2 className="text-xs sm:text-sm font-semibold text-text-main">
+                    <h2 className="text-xs sm:text-sm font-bold text-text-main">
                       {sc.name}
                     </h2>
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-bg-app border border-border-card text-brand-blue">
+                    <span
+                      className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${
+                        isHijack
+                          ? "bg-red-500/15 text-status-red border-red-500/30"
+                          : "bg-accent-indigo/15 text-accent-indigo border-accent-indigo/30"
+                      }`}
+                    >
                       {sc.expected}
                     </span>
                   </div>
@@ -227,25 +236,25 @@ export const ScenariosView: React.FC = () => {
                   <button
                     onClick={() => handleRun(sc.id)}
                     disabled={!!runningId}
-                    className="px-3 py-1.5 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover hover:border-brand-blue/50 text-xs font-medium text-text-main transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-xs"
+                    className="px-3.5 py-1.5 rounded-xl bg-bg-btn border border-border-card hover:border-brand-blue/50 text-xs font-bold text-text-main transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-2xs"
                   >
-                    <Play className={`w-3 h-3 fill-current ${isRunning ? "animate-spin" : ""}`} />
+                    <Play className={`w-3 h-3 fill-current ${isRunning ? "animate-spin text-brand-blue" : "text-brand-blue"}`} />
                     <span>{isRunning ? "Running..." : "Run scenario"}</span>
                   </button>
                 </div>
               </div>
 
               {isExpanded && (
-                <div className="px-4 py-3 bg-[#0E1115] border-t border-border-item text-xs space-y-2">
+                <div className="px-4 py-3 bg-bg-app border-t border-border-item text-xs space-y-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-text-sub font-mono text-[11px]">
                     <div>
-                      <span className="text-text-dim">Prefix:</span> {sc.prefix}
+                      <span className="text-text-dim">Prefix:</span> <span className="text-text-main font-semibold">{sc.prefix}</span>
                     </div>
                     <div>
-                      <span className="text-text-dim">Origin ASN:</span> {sc.asn}
+                      <span className="text-text-dim">Origin ASN:</span> <span className="text-accent-teal font-semibold">{sc.asn}</span>
                     </div>
                   </div>
-                  <p className="text-[11px] text-text-sub leading-relaxed pt-1 border-t border-border-card/50">
+                  <p className="text-[11px] text-text-sub leading-relaxed pt-1 border-t border-border-card">
                     {sc.technicalDetails}
                   </p>
                 </div>

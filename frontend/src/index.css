@@ -2,65 +2,90 @@
 @tailwind components;
 @tailwind utilities;
 
-/* HORA-Q Cohesive Charcoal & High-Readability Palette */
+/* HORA-Q "Aurora Obsidian" Design System (Google Material 3 Expressive × Apple Refined Depth) */
+
 :root {
-  --bg-app: #f4f5f7;
+  /* Light Theme — Soft Warm Daylight Slate */
+  --bg-app: #f4f6fa;
   --bg-header: rgba(255, 255, 255, 0.92);
-  --bg-sidebar: #ebedf0;
+  --bg-sidebar: #e9eef7;
   --bg-card: #ffffff;
-  --border-card: rgba(0, 0, 0, 0.08);
-  --border-sub: rgba(0, 0, 0, 0.08);
+  --bg-elevated: #f8fafd;
+  --bg-interactive: #e2eaf6;
+  --divider: #d6e0ee;
+  --border-card: #d6e0ee;
+  --border-sub: #d6e0ee;
   --border-item: rgba(0, 0, 0, 0.05);
   --bg-input: #ffffff;
-  --bg-btn: rgba(0, 0, 0, 0.05);
+  --bg-btn: #eef3fb;
   --bg-nav-active: #ffffff;
-  --bg-nav-hover: rgba(0, 0, 0, 0.05);
-  --text-main: #111827;
-  --text-sub: #4b5563;
-  --text-dim: #6b7280;
-  --bg-hover-row: rgba(0, 0, 0, 0.02);
-  --bg-block-row: rgba(239, 68, 68, 0.08);
-  --border-block-row: rgba(239, 68, 68, 0.2);
-  --badge-green-bg: rgba(34, 197, 94, 0.1);
+  --bg-nav-hover: rgba(37, 99, 235, 0.07);
+  --text-main: #0f172a;
+  --text-sub: #475569;
+  --text-dim: #64748b;
+  --bg-hover-row: rgba(37, 99, 235, 0.03);
+  --bg-block-row: rgba(225, 29, 72, 0.08);
+  --border-block-row: rgba(225, 29, 72, 0.22);
+  --badge-green-bg: rgba(22, 163, 74, 0.1);
   --badge-green-text: #16a34a;
-  --badge-green-border: rgba(34, 197, 94, 0.25);
-  --badge-amber-bg: rgba(245, 158, 11, 0.1);
+  --badge-green-border: rgba(22, 163, 74, 0.25);
+  --badge-amber-bg: rgba(217, 119, 6, 0.1);
   --badge-amber-text: #d97706;
-  --badge-amber-border: rgba(245, 158, 11, 0.25);
+  --badge-amber-border: rgba(217, 119, 6, 0.25);
   --badge-idle-bg: rgba(0, 0, 0, 0.06);
-  --badge-idle-text: #6b7280;
-  --brand-blue: #0891b2;
-  --accent-cyan: #0891b2;
+  --badge-idle-text: #64748b;
+  --brand-blue: #2563eb;
+  --accent-cyan: #0284c7;
+  --accent-indigo: #6366f1;
+  --accent-teal: #0d9488;
+  --status-critical: #e11d48;
+  --status-critical-bg: rgba(225, 29, 72, 0.1);
+  --status-warning: #d97706;
+  --status-warning-bg: rgba(217, 119, 6, 0.1);
+  --status-info: #0284c7;
+  --status-info-bg: rgba(2, 132, 199, 0.1);
 }
 
 html.dark {
-  --bg-app: #0e1015;
-  --bg-header: rgba(18, 20, 26, 0.92);
-  --bg-sidebar: #13151c;
-  --bg-card: #181a22;
-  --border-card: rgba(255, 255, 255, 0.08);
-  --border-sub: rgba(255, 255, 255, 0.08);
-  --border-item: rgba(255, 255, 255, 0.05);
-  --bg-input: rgba(255, 255, 255, 0.04);
-  --bg-btn: rgba(255, 255, 255, 0.06);
-  --bg-nav-active: #222530;
-  --bg-nav-hover: rgba(255, 255, 255, 0.04);
-  --text-main: #f9fafb;
-  --text-sub: #d1d5db;
-  --text-dim: #9ca3af;
-  --bg-hover-row: rgba(255, 255, 255, 0.03);
-  --bg-block-row: rgba(239, 68, 68, 0.1);
-  --border-block-row: rgba(239, 68, 68, 0.25);
-  --badge-green-bg: rgba(34, 197, 94, 0.12);
-  --badge-green-text: #4ade80;
-  --badge-green-border: rgba(34, 197, 94, 0.25);
-  --badge-amber-bg: rgba(245, 158, 11, 0.12);
-  --badge-amber-text: #fbbf24;
-  --badge-amber-border: rgba(245, 158, 11, 0.25);
-  --badge-idle-bg: rgba(255, 255, 255, 0.06);
-  --badge-idle-text: #9ca3af;
-  --brand-blue: #06b6d4;
-  --accent-cyan: #06b6d4;
+  /* Dark Theme — Aurora Obsidian */
+  --bg-app: #0b1019;
+  --bg-header: rgba(16, 23, 36, 0.90);
+  --bg-sidebar: #101724;
+  --bg-card: #151e2c;
+  --bg-elevated: #1c2737;
+  --bg-interactive: #243349;
+  --divider: #233144;
+  --border-card: #202d3e;
+  --border-sub: #202d3e;
+  --border-item: rgba(255, 255, 255, 0.06);
+  --bg-input: #101724;
+  --bg-btn: #1c2737;
+  --bg-nav-active: #1a2536;
+  --bg-nav-hover: rgba(98, 168, 255, 0.09);
+  --text-main: #f4f7ff;
+  --text-sub: #b0bcd0;
+  --text-dim: #8795ad;
+  --bg-hover-row: rgba(98, 168, 255, 0.04);
+  --bg-block-row: rgba(255, 113, 133, 0.12);
+  --border-block-row: rgba(255, 113, 133, 0.28);
+  --badge-green-bg: rgba(67, 217, 155, 0.12);
+  --badge-green-text: #43d99b;
+  --badge-green-border: rgba(67, 217, 155, 0.28);
+  --badge-amber-bg: rgba(245, 190, 86, 0.12);
+  --badge-amber-text: #f5be56;
+  --badge-amber-border: rgba(245, 190, 86, 0.28);
+  --badge-idle-bg: rgba(135, 149, 173, 0.12);
+  --badge-idle-text: #8795ad;
+  --brand-blue: #62a8ff;
+  --accent-cyan: #4cd9cf;
+  --accent-indigo: #a49aff;
+  --accent-teal: #4cd9cf;
+  --status-critical: #ff7185;
+  --status-critical-bg: rgba(255, 113, 133, 0.12);
+  --status-warning: #f5be56;
+  --status-warning-bg: rgba(245, 190, 86, 0.12);
+  --status-info: #72b9ff;
+  --status-info-bg: rgba(114, 185, 255, 0.12);
 }
 
 @layer base {
@@ -78,25 +103,56 @@ html.dark {
     outline: none !important;
   }
 
-  /* Subtle enterprise scrollbar without glowing edges */
+  /* Refined subtle scrollbar with navy tint */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(140, 145, 155, 0.25); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(140, 145, 155, 0.4); }
+  ::-webkit-scrollbar-thumb { background: rgba(135, 149, 173, 0.25); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(135, 149, 173, 0.45); }
 }
 
+/* Material 3 Expressive & Apple Surface Depth */
 .card-panel {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  box-shadow: 0 4px 18px -2px rgba(3, 7, 18, 0.35), 0 1px 2px rgba(3, 7, 18, 0.2);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
+
+.card-panel-elevated {
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-card);
+  border-radius: 14px;
+  box-shadow: 0 8px 30px -4px rgba(3, 7, 18, 0.5), 0 2px 4px rgba(3, 7, 18, 0.25);
+}
+
+/* Localized Ambient Lighting Gradients */
+.aurora-ambient-glow {
+  background: radial-gradient(100% 120% at 50% 0%, rgba(98, 168, 255, 0.09) 0%, rgba(164, 154, 255, 0.05) 50%, transparent 100%);
+}
+
+.aurora-success-glow {
+  background: radial-gradient(100% 120% at 50% 0%, rgba(67, 217, 155, 0.10) 0%, rgba(76, 217, 207, 0.05) 50%, transparent 100%);
+}
+
+.aurora-critical-glow {
+  background: radial-gradient(100% 120% at 50% 0%, rgba(255, 113, 133, 0.12) 0%, rgba(245, 190, 86, 0.04) 50%, transparent 100%);
+}
+
+/* Accent top edges for cards */
+.accent-top-blue { border-top: 2px solid #62a8ff; }
+.accent-top-indigo { border-top: 2px solid #a49aff; }
+.accent-top-teal { border-top: 2px solid #4cd9cf; }
+.accent-top-green { border-top: 2px solid #43d99b; }
+.accent-top-coral { border-top: 2px solid #ff7185; }
 
 @layer utilities {
   .bg-bg-app, .bg-app { background-color: var(--bg-app) !important; }
   .bg-bg-header, .bg-header { background-color: var(--bg-header) !important; }
   .bg-bg-sidebar, .bg-sidebar { background-color: var(--bg-sidebar) !important; }
   .bg-bg-card, .bg-card { background-color: var(--bg-card) !important; }
+  .bg-bg-elevated, .bg-elevated { background-color: var(--bg-elevated) !important; }
+  .bg-bg-interactive, .bg-interactive { background-color: var(--bg-interactive) !important; }
   .bg-bg-input, .bg-input { background-color: var(--bg-input) !important; }
   .bg-bg-btn, .bg-btn { background-color: var(--bg-btn) !important; }
   .bg-bg-nav-active, .bg-nav-active { background-color: var(--bg-nav-active) !important; }
@@ -110,11 +166,16 @@ html.dark {
   .border-border-card, .border-card { border-color: var(--border-card) !important; }
   .border-border-sub, .border-sub { border-color: var(--border-sub) !important; }
   .border-border-item, .border-item { border-color: var(--border-item) !important; }
+  .border-divider, .border-div { border-color: var(--divider) !important; }
   .border-border-block { border-color: var(--border-block-row) !important; }
 
   .text-text-main, .text-main { color: var(--text-main) !important; }
   .text-text-sub, .text-sub { color: var(--text-sub) !important; }
   .text-text-dim, .text-dim { color: var(--text-dim) !important; }
+  .text-brand-blue { color: var(--brand-blue) !important; }
+  .text-accent-indigo { color: var(--accent-indigo) !important; }
+  .text-accent-teal { color: var(--accent-teal) !important; }
   .text-status-green { color: var(--badge-green-text) !important; }
   .text-status-amber { color: var(--badge-amber-text) !important; }
+  .text-status-red { color: var(--status-critical) !important; }
 }

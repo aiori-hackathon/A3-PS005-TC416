@@ -187,7 +187,7 @@ export const InjectRouteView: React.FC = () => {
           <button
             type="submit"
             disabled={loading || !prefix.trim() || !originAsn.trim()}
-            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-medium text-xs transition-colors active:scale-[0.98] disabled:opacity-50 cursor-pointer flex items-center gap-2"
+            className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-600 to-brand-blue hover:from-blue-500 hover:to-blue-400 text-white font-bold text-xs transition-all active:scale-[0.98] shadow-md shadow-blue-500/20 disabled:opacity-50 cursor-pointer flex items-center gap-2"
           >
             <Send className="w-3.5 h-3.5" />
             <span>{loading ? "Evaluating..." : "Submit test observation"}</span>

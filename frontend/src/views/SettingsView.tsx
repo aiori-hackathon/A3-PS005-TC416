@@ -51,8 +51,8 @@ export const SettingsView: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="pb-2 border-b border-border-card">
-        <h1 className="text-xl sm:text-2xl font-semibold text-text-main tracking-tight">
+      <div className="pb-3 border-b border-border-card">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
           Settings
         </h1>
         <p className="text-xs sm:text-sm text-text-sub mt-1">
