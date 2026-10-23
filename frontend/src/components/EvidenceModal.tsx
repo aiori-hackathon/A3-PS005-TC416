@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   X,
-  ShieldCheck,
   Download,
   AlertTriangle,
   Check,
@@ -141,7 +140,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
         <div className="h-14 border-b border-border-card bg-bg-card flex items-center justify-between px-5 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-md bg-status-green-bg border border-green-800/40 flex items-center justify-center text-status-green">
-              <ShieldCheck className="w-4 h-4 stroke-[2]" />
+              <Lock className="w-4 h-4 stroke-[2]" />
             </div>
             <div>
               <h2 className="text-sm font-semibold text-text-main tracking-tight">

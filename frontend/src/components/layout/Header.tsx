@@ -1,5 +1,5 @@
 import React from "react";
-import { Search, Bell, Sun, Moon, Laptop, Shield, Menu, X } from "lucide-react";
+import { Search, Bell, Sun, Moon, Laptop, Menu, X } from "lucide-react";
 import { useHoraqStore } from "../../stores/useHoraqStore";
 
 export const Header: React.FC = () => {
@@ -24,7 +24,7 @@ export const Header: React.FC = () => {
 
   return (
     <header className="h-14 border-b border-border-sub bg-bg-header backdrop-blur-md flex items-center justify-between px-3 sm:px-6 select-none shrink-0 z-50 transition-colors">
-      {/* Left: Mobile Menu Toggle + Apple-style Brand */}
+      {/* Left: Mobile Menu Toggle + Apple-style Brand Wordmark */}
       <div className="flex items-center gap-3">
         <button
           onClick={toggleSidebar}
@@ -35,13 +35,10 @@ export const Header: React.FC = () => {
         </button>
 
         <div
-          className="flex items-center gap-2 cursor-pointer group"
+          className="flex items-center cursor-pointer"
           onClick={() => setActiveTab("overview")}
         >
-          <div className="w-7 h-7 rounded-lg bg-[#0071e3] text-white flex items-center justify-center shadow-xs transition-transform group-hover:scale-105">
-            <Shield className="w-4 h-4 stroke-[2.2]" />
-          </div>
-          <span className="font-semibold text-text-main text-[15px] tracking-tight">
+          <span className="font-bold text-text-main text-[16px] tracking-tight hover:opacity-90 transition-opacity">
             HORA-Q
           </span>
         </div>

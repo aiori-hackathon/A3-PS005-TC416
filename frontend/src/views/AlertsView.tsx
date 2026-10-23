@@ -9,7 +9,6 @@ import {
   ChevronUp,
   SearchCheck,
   Ban,
-  ShieldCheck,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
@@ -293,7 +292,7 @@ export const AlertsView: React.FC = () => {
                           className="px-2.5 py-1 rounded-lg bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-[11px] font-medium text-text-sub hover:text-text-main flex items-center gap-1.5 transition-colors cursor-pointer"
                           title="Authorize origin exception"
                         >
-                          <ShieldCheck className="w-3 h-3 text-status-green" />
+                          <Check className="w-3 h-3 text-status-green" />
                           <span>Authorize origin</span>
                         </button>
                       </div>

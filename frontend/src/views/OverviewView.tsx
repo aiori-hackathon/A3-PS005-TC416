@@ -5,7 +5,6 @@ import {
   CheckCircle2,
   Globe,
   Radio,
-  Shield,
   Sparkles,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
