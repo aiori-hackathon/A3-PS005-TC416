@@ -515,6 +515,19 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
 
         # 2. Inject Origin Conflict Incident (Baseline preserved, alert generated)
         a1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=99999, collector="rrc00", scenario="demo-origin-conflict")
+        if a1["alerts"] and is_mldsa_available():
+            ev_id = a1["alerts"][0]["evidence_id"]
+            ev_rec = a1["alerts"][0]["evidence"]["record"]
+            canon_b = canonicalize_json(ev_rec)
+            sig_b64, pub_b64 = sign_data(canon_b)
+            update_evidence_signature(
+                db_path=settings.database_path,
+                evidence_id=ev_id,
+                algorithm=ALGORITHM_NAME,
+                signature=sig_b64,
+                public_key=pub_b64,
+                signer_status="SIGNED",
+            )
 
         # 3. Inject Subprefix Hijack Incident (Alert generated, baseline NOT poisoned)
         a2 = process_observation(db_path=settings.database_path, prefix_raw="8.8.8.128/25", origin_asn_raw=66666, collector="rrc03", scenario="demo-subprefix-hijack")

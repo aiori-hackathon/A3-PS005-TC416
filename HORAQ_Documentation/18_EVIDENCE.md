@@ -13,6 +13,18 @@ Do not present a planned capability as implemented or a described test as passed
 
 Package the facts that explain why an alert exists.
 
+## Evidence Invariant: Telemetry Observations vs Forensic Evidence Records
+
+To ensure consistency across the API, database, and user interface:
+- **BGP Telemetry Updates / Observations (`observations` table)**: Every normalized BGP update evaluated by the detection pipeline is recorded in the telemetry observations table. Routine baseline announcements and matching telemetry increment observation counters without generating alerts.
+- **Forensic Evidence Records (`evidence` table)**: An evidence record is created **exclusively when an observation triggers an anomaly alert** (e.g. `ORIGIN_CHANGE` or `SUBPREFIX_ANOMALY`). Each evidence record links to an `alert_id`, binds the anomaly context into an RFC 8785 canonical JSON payload, calculates a SHA-256 digest, and is optionally signed with NIST FIPS 204 ML-DSA-65 post-quantum digital signatures.
+- **Count Semantics Across the System**:
+  - `total_observations` / **Updates Evaluated**: Total BGP updates ingested and evaluated (e.g., 13 updates in the benchmark).
+  - `tracked_routes` / **Prefixes Tracked**: Active trusted route baselines (e.g., 7 monitored reference roots).
+  - `total_alerts` / `active_alerts` / **Active Anomalies**: Detected routing anomalies requiring operator review (e.g., 3 active incidents).
+  - `total_evidence` / **Audit Ledger Records**: Forensic evidence records in the cryptographic audit ledger (e.g., 3 anomaly records).
+  - `signed_evidence`: Cryptographically signed records with verified post-quantum signatures (e.g., 1 signed record in demo).
+
 For this area, preserve source provenance and timestamps wherever relevant.
 Validate inputs and represent errors explicitly instead of silently inventing a result.
 Keep the behavior explainable and add tests for both normal and failure paths.

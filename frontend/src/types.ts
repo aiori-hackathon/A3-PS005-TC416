@@ -12,6 +12,8 @@ export interface OverviewStats {
   total_observations: number;
   total_alerts: number;
   active_alerts: number;
+  total_evidence?: number;
+  signed_evidence?: number;
   latest_observation_time: string | null;
   crypto_status: CryptoStatus;
   database: string;

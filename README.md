@@ -128,7 +128,7 @@ cd d:\HORA-Q\backend
 # Install dependencies (if not already installed)
 pip install -r requirements.txt
 
-# Run the backend test suite (36 tests)
+# Run the backend test suite (38 tests)
 pytest -v
 
 # Start the FastAPI server on port 8000

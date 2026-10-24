@@ -38,11 +38,11 @@ export const EvidenceVaultView: React.FC = () => {
               Cryptographic Audit Ledger
             </h1>
             <span className="px-2.5 py-0.5 rounded text-xs font-semibold bg-bg-interactive text-text-sub border border-divider">
-              {evidence.length} Records
+              {evidence.length} Anomaly Evidence Records
             </span>
           </div>
           <p className="text-sm text-text-sub mt-1">
-            Immutable forensic ledger of routing evaluations with RFC 8785 canonical SHA-256 digests.
+            Immutable forensic ledger preserving RFC 8785 canonical SHA-256 digests and ML-DSA-65 post-quantum signatures for detected routing anomalies. Baseline updates and routine telemetry are archived in the observations log.
           </p>
         </div>
 

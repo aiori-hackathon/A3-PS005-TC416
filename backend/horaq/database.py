@@ -120,6 +120,10 @@ def get_overview_counts(db_path: str) -> Dict[str, Any]:
         active_alerts = conn.execute(
             "SELECT COUNT(*) FROM alerts WHERE status = 'ACTIVE';"
         ).fetchone()[0]
+        evidence_count = conn.execute("SELECT COUNT(*) FROM evidence;").fetchone()[0]
+        signed_evidence = conn.execute(
+            "SELECT COUNT(*) FROM evidence WHERE signer_status = 'SIGNED';"
+        ).fetchone()[0]
         
         latest_row = conn.execute(
             "SELECT observed_at FROM observations ORDER BY id DESC LIMIT 1;"
@@ -131,6 +135,8 @@ def get_overview_counts(db_path: str) -> Dict[str, Any]:
         "total_observations": obs_count,
         "total_alerts": alerts_count,
         "active_alerts": active_alerts,
+        "total_evidence": evidence_count,
+        "signed_evidence": signed_evidence,
         "latest_observation_time": latest_time,
     }
 
