@@ -49,9 +49,12 @@ interface HoraqState {
 }
 
 const getInitialTheme = (): "dark" | "light" | "system" => {
-  if (typeof window === "undefined") return "dark";
+  if (typeof window === "undefined") return "light";
+  const params = new URLSearchParams(window.location.search);
+  const themeParam = params.get("theme") as "dark" | "light" | "system" | null;
+  if (themeParam === "dark" || themeParam === "light" || themeParam === "system") return themeParam;
   const saved = localStorage.getItem("horaq_theme") as "dark" | "light" | "system" | null;
-  return saved || "dark";
+  return saved || "light";
 };
 
 const applyTheme = (theme: "dark" | "light" | "system") => {

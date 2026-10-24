@@ -5,87 +5,91 @@
 /* HORA-Q "Aurora Obsidian" Design System (Google Material 3 Expressive × Apple Refined Depth) */
 
 :root {
-  /* Light Theme — Soft Warm Daylight Slate */
-  --bg-app: #f4f6fa;
-  --bg-header: rgba(255, 255, 255, 0.92);
-  --bg-sidebar: #e9eef7;
+  /* Google Cloud Console Light Theme (Primary Default) */
+  --bg-app: #f8f9fa;
+  --bg-header: #ffffff;
+  --bg-sidebar: #ffffff;
   --bg-card: #ffffff;
-  --bg-elevated: #f8fafd;
-  --bg-interactive: #e2eaf6;
-  --divider: #d6e0ee;
-  --border-card: #d6e0ee;
-  --border-sub: #d6e0ee;
-  --border-item: rgba(0, 0, 0, 0.05);
+  --bg-elevated: #ffffff;
+  --bg-interactive: #f1f3f4;
+  --bg-selected: #e8f0fe;
+  --divider: #dadce0;
+  --border-card: #dadce0;
+  --border-sub: #e8eaed;
+  --border-item: #e8eaed;
   --bg-input: #ffffff;
-  --bg-btn: #eef3fb;
-  --bg-nav-active: #ffffff;
-  --bg-nav-hover: rgba(37, 99, 235, 0.07);
-  --text-main: #0f172a;
-  --text-sub: #475569;
-  --text-dim: #64748b;
-  --bg-hover-row: rgba(37, 99, 235, 0.03);
-  --bg-block-row: rgba(225, 29, 72, 0.08);
-  --border-block-row: rgba(225, 29, 72, 0.22);
-  --badge-green-bg: rgba(22, 163, 74, 0.1);
-  --badge-green-text: #16a34a;
-  --badge-green-border: rgba(22, 163, 74, 0.25);
-  --badge-amber-bg: rgba(217, 119, 6, 0.1);
-  --badge-amber-text: #d97706;
-  --badge-amber-border: rgba(217, 119, 6, 0.25);
-  --badge-idle-bg: rgba(0, 0, 0, 0.06);
-  --badge-idle-text: #64748b;
-  --brand-blue: #2563eb;
-  --accent-cyan: #0284c7;
-  --accent-indigo: #6366f1;
-  --accent-teal: #0d9488;
-  --status-critical: #e11d48;
-  --status-critical-bg: rgba(225, 29, 72, 0.1);
-  --status-warning: #d97706;
-  --status-warning-bg: rgba(217, 119, 6, 0.1);
-  --status-info: #0284c7;
-  --status-info-bg: rgba(2, 132, 199, 0.1);
+  --bg-btn: #f1f3f4;
+  --bg-nav-active: #e8f0fe;
+  --bg-nav-hover: #f1f3f4;
+  --text-main: #202124;
+  --text-sub: #5f6368;
+  --text-dim: #80868b;
+  --bg-hover-row: #f8f9fa;
+  --bg-block-row: #fce8e6;
+  --border-block-row: #fad2cf;
+  --brand-blue: #1a73e8;
+  --brand-blue-hover: #1765cc;
+  --accent-cyan: #007b83;
+  --accent-indigo: #1a73e8;
+  --accent-teal: #007b83;
+  --status-critical: #d93025;
+  --status-critical-bg: #fce8e6;
+  --status-warning: #b06000;
+  --status-warning-bg: #fef7e0;
+  --status-info: #1967d2;
+  --status-info-bg: #e8f0fe;
+  --badge-green-bg: #e6f4ea;
+  --badge-green-text: #137333;
+  --badge-green-border: #ceead6;
+  --badge-amber-bg: #fef7e0;
+  --badge-amber-text: #b06000;
+  --badge-amber-border: #feefc3;
+  --badge-idle-bg: #f1f3f4;
+  --badge-idle-text: #5f6368;
 }
 
 html.dark {
-  /* Dark Theme — Aurora Obsidian */
-  --bg-app: #0b1019;
-  --bg-header: rgba(16, 23, 36, 0.90);
-  --bg-sidebar: #101724;
-  --bg-card: #151e2c;
-  --bg-elevated: #1c2737;
-  --bg-interactive: #243349;
-  --divider: #233144;
-  --border-card: #202d3e;
-  --border-sub: #202d3e;
-  --border-item: rgba(255, 255, 255, 0.06);
-  --bg-input: #101724;
-  --bg-btn: #1c2737;
-  --bg-nav-active: #1a2536;
-  --bg-nav-hover: rgba(98, 168, 255, 0.09);
-  --text-main: #f4f7ff;
-  --text-sub: #b0bcd0;
-  --text-dim: #8795ad;
-  --bg-hover-row: rgba(98, 168, 255, 0.04);
-  --bg-block-row: rgba(255, 113, 133, 0.12);
-  --border-block-row: rgba(255, 113, 133, 0.28);
-  --badge-green-bg: rgba(67, 217, 155, 0.12);
-  --badge-green-text: #43d99b;
-  --badge-green-border: rgba(67, 217, 155, 0.28);
-  --badge-amber-bg: rgba(245, 190, 86, 0.12);
-  --badge-amber-text: #f5be56;
-  --badge-amber-border: rgba(245, 190, 86, 0.28);
-  --badge-idle-bg: rgba(135, 149, 173, 0.12);
-  --badge-idle-text: #8795ad;
-  --brand-blue: #62a8ff;
-  --accent-cyan: #4cd9cf;
-  --accent-indigo: #a49aff;
-  --accent-teal: #4cd9cf;
-  --status-critical: #ff7185;
-  --status-critical-bg: rgba(255, 113, 133, 0.12);
-  --status-warning: #f5be56;
-  --status-warning-bg: rgba(245, 190, 86, 0.12);
-  --status-info: #72b9ff;
-  --status-info-bg: rgba(114, 185, 255, 0.12);
+  /* Google Cloud Console Dark Mode */
+  --bg-app: #18191c;
+  --bg-header: #202124;
+  --bg-sidebar: #202124;
+  --bg-card: #202124;
+  --bg-elevated: #282a2d;
+  --bg-interactive: #2d2f34;
+  --bg-selected: #394457;
+  --divider: #3c4043;
+  --border-card: #3c4043;
+  --border-sub: #303134;
+  --border-item: #303134;
+  --bg-input: #202124;
+  --bg-btn: #2d2f34;
+  --bg-nav-active: #394457;
+  --bg-nav-hover: #2d2f34;
+  --text-main: #e8eaed;
+  --text-sub: #9aa0a6;
+  --text-dim: #80868b;
+  --bg-hover-row: #282a2d;
+  --bg-block-row: rgba(242, 139, 130, 0.12);
+  --border-block-row: rgba(242, 139, 130, 0.28);
+  --brand-blue: #8ab4f8;
+  --brand-blue-hover: #aecbfa;
+  --accent-cyan: #78d9ec;
+  --accent-indigo: #8ab4f8;
+  --accent-teal: #78d9ec;
+  --status-critical: #f28b82;
+  --status-critical-bg: rgba(242, 139, 130, 0.15);
+  --status-warning: #fdd663;
+  --status-warning-bg: rgba(253, 214, 99, 0.15);
+  --status-info: #8ab4f8;
+  --status-info-bg: rgba(138, 180, 248, 0.15);
+  --badge-green-bg: rgba(129, 201, 149, 0.15);
+  --badge-green-text: #81c995;
+  --badge-green-border: rgba(129, 201, 149, 0.3);
+  --badge-amber-bg: rgba(253, 214, 99, 0.15);
+  --badge-amber-text: #fdd663;
+  --badge-amber-border: rgba(253, 214, 99, 0.3);
+  --badge-idle-bg: #2d2f34;
+  --badge-idle-text: #9aa0a6;
 }
 
 @layer base {
@@ -94,7 +98,7 @@ html.dark {
     padding: 0;
     background-color: var(--bg-app);
     color: var(--text-main);
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    font-family: Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     user-select: none;
@@ -103,40 +107,40 @@ html.dark {
     outline: none !important;
   }
 
-  /* Refined subtle scrollbar with navy tint */
+  /* Quiet scrollbar */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(135, 149, 173, 0.25); border-radius: 9999px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(135, 149, 173, 0.45); }
+  ::-webkit-scrollbar-thumb { background: rgba(128, 134, 139, 0.3); border-radius: 9999px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(128, 134, 139, 0.5); }
 }
 
-/* Apple Refinement × Google Expressive Clarity Surfaces */
+/* Google Cloud Console Surfaces */
 .card-panel {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px 0 rgba(60, 64, 67, 0.12), 0 1px 3px 1px rgba(60, 64, 67, 0.08);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .card-panel-elevated {
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-card);
-  border-radius: 12px;
-  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px 0 rgba(60, 64, 67, 0.2);
 }
 
-/* Restrained Ambient Lighting for focused alerts and healthy status */
+/* Restrained ambient status treatments */
 .aurora-ambient-glow {
-  background: radial-gradient(100% 120% at 50% 0%, rgba(78, 149, 255, 0.06) 0%, transparent 100%);
+  background: var(--bg-card);
 }
 
 .aurora-success-glow {
-  background: radial-gradient(100% 120% at 50% 0%, rgba(52, 211, 153, 0.08) 0%, transparent 100%);
+  background: var(--badge-green-bg);
 }
 
 .aurora-critical-glow {
-  background: radial-gradient(100% 120% at 50% 0%, rgba(251, 113, 133, 0.09) 0%, transparent 100%);
+  background: var(--status-critical-bg);
 }
 
 @layer utilities {

@@ -45,10 +45,10 @@ export const Sidebar: React.FC = () => {
 
   const renderNavGroup = (title: string, items: typeof monitorNav) => (
     <div>
-      <div className="px-3 text-[11px] text-text-dim font-semibold uppercase tracking-wider mb-1.5">
+      <div className="px-3 text-[11px] text-text-dim font-bold uppercase tracking-wider mb-1.5">
         {title}
       </div>
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -56,16 +56,13 @@ export const Sidebar: React.FC = () => {
             <button
               key={item.id}
               onClick={() => handleNavClick(item.id)}
-              className={`relative flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
+              className={`flex items-center justify-between px-3 py-2 rounded-r-full text-sm font-medium transition-colors w-full text-left cursor-pointer ${
                 isActive
-                  ? "bg-bg-nav-active border border-brand-blue/25 text-text-main font-semibold shadow-xs"
-                  : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover border border-transparent"
+                  ? "bg-bg-nav-active text-brand-blue font-semibold"
+                  : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
               }`}
             >
-              {isActive && (
-                <span className="absolute left-0 top-2 bottom-2 w-1 bg-brand-blue rounded-r-full shadow-[0_0_8px_rgba(98,168,255,0.7)]" />
-              )}
-              <div className="flex items-center gap-2.5 pl-1">
+              <div className="flex items-center gap-3">
                 <Icon
                   className={`w-4 h-4 shrink-0 transition-colors ${
                     isActive ? "text-brand-blue" : "text-text-dim"
@@ -74,7 +71,7 @@ export const Sidebar: React.FC = () => {
                 <span>{item.label}</span>
               </div>
               {item.badge !== undefined && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-status-red text-white shadow-[0_0_6px_rgba(255,113,133,0.6)]">
+                <span className="px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-status-critical text-white">
                   {item.badge}
                 </span>
               )}
@@ -87,44 +84,36 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside
-      className={`w-56 bg-bg-sidebar border-r border-border-card flex flex-col justify-between p-3 select-none shrink-0 h-[calc(100vh-3.5rem)] transition-all duration-200 z-40 ${
+      className={`w-60 bg-bg-sidebar border-r border-border-card flex flex-col justify-between py-4 pr-3 pl-2 select-none shrink-0 h-[calc(100vh-3.5rem)] transition-all duration-200 z-40 ${
         sidebarOpen
-          ? "fixed top-14 left-0 bottom-0 shadow-2xl md:relative md:top-0"
+          ? "fixed top-14 left-0 bottom-0 shadow-xl md:relative md:top-0"
           : "hidden md:flex"
       }`}
     >
-      {/* Top Navigation: 3 Distinct Groups */}
-      <div className="space-y-5">
-        {renderNavGroup("Monitor", monitorNav)}
-        {renderNavGroup("Investigate", investigateNav)}
-        {renderNavGroup("Evidence & Testing", evidenceNav)}
+      {/* Top Navigation */}
+      <div className="space-y-6">
+        {renderNavGroup("Monitoring", monitorNav)}
+        {renderNavGroup("Investigation", investigateNav)}
+        {renderNavGroup("Evidence & Verification", evidenceNav)}
       </div>
 
-      {/* Bottom: Settings */}
-      <div className="pt-2 border-t border-border-card space-y-2">
+      {/* Bottom Settings Link */}
+      <div className="pt-3 border-t border-divider">
         <button
           onClick={() => handleNavClick("settings")}
-          className={`relative flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all duration-150 w-full text-left cursor-pointer active:scale-[0.99] ${
+          className={`flex items-center gap-3 px-3 py-2 rounded-r-full text-sm font-medium transition-colors w-full text-left cursor-pointer ${
             activeTab === "settings"
-              ? "bg-bg-nav-active border border-brand-blue/25 text-text-main font-semibold shadow-xs"
-              : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover border border-transparent"
+              ? "bg-bg-nav-active text-brand-blue font-semibold"
+              : "text-text-sub hover:text-text-main hover:bg-bg-nav-hover"
           }`}
         >
-          {activeTab === "settings" && (
-            <span className="absolute left-0 top-2 bottom-2 w-1 bg-brand-blue rounded-r-full shadow-[0_0_8px_rgba(98,168,255,0.7)]" />
-          )}
           <Settings
-            className={`w-4 h-4 shrink-0 pl-1 ${
+            className={`w-4 h-4 shrink-0 ${
               activeTab === "settings" ? "text-brand-blue" : "text-text-dim"
             }`}
           />
           <span>Settings</span>
         </button>
-
-        <div className="px-3 pt-1 text-[11px] text-text-dim flex items-center justify-between">
-          <span className="font-semibold text-text-sub">HORA-Q</span>
-          <span className="font-mono text-[10px]">v1.0 (AIORI-3)</span>
-        </div>
       </div>
     </aside>
   );

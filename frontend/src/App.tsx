@@ -87,7 +87,7 @@ export const App: React.FC = () => {
         )}
 
         <Sidebar />
-        <main className="flex-1 overflow-y-auto bg-bg-app p-4 sm:p-6 md:p-8 transition-colors">
+        <main className="flex-1 overflow-y-auto bg-bg-app px-6 py-6 sm:px-10 sm:py-8 transition-colors">
           {activeTab === "overview" && <OverviewView />}
           {activeTab === "alerts" && <AlertsView />}
           {activeTab === "routes" && <RoutesView />}

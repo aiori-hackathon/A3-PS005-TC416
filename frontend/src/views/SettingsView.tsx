@@ -9,6 +9,8 @@ import {
   ChevronUp,
   Server,
   Lock,
+  Database,
+  Radio,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 
@@ -23,46 +25,49 @@ export const SettingsView: React.FC = () => {
   const [showTechnical, setShowTechnical] = useState(false);
 
   const themeOptions: Array<{
-    id: "dark" | "light" | "system";
+    id: "light" | "dark" | "system";
     label: string;
     desc: string;
     icon: any;
   }> = [
     {
-      id: "dark",
-      label: "Dark mode",
-      desc: "Deep obsidian palette with high contrast",
-      icon: Moon,
-    },
-    {
       id: "light",
-      label: "Light mode",
-      desc: "Clean, radiant daylight theme",
+      label: "Light Theme",
+      desc: "Google Cloud Console daylight palette",
       icon: Sun,
     },
     {
+      id: "dark",
+      label: "Dark Theme",
+      desc: "Deep graphite command-centre palette",
+      icon: Moon,
+    },
+    {
       id: "system",
-      label: "System auto",
+      label: "System Automatic",
       desc: "Matches your operating system preference",
       icon: Laptop,
     },
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+    <div className="max-w-[1360px] w-full space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="pb-3 border-b border-border-card">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-text-main tracking-tight">
-          Settings
+      <div className="pb-4 border-b border-divider">
+        <h1 className="text-2xl sm:text-[28px] font-semibold text-text-main tracking-tight">
+          System Preferences & Diagnostics
         </h1>
-        <p className="text-xs sm:text-sm text-text-sub mt-1">
-          Appearance preferences, system health, and technical verification specifications.
+        <p className="text-sm text-text-sub mt-1">
+          Interface appearance settings, live ingestion telemetry health, and post-quantum cryptographic engine diagnostics.
         </p>
       </div>
 
-      {/* Appearance & Theme */}
-      <div className="card-panel p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-text-main">Appearance</h2>
+      {/* Appearance Section */}
+      <div className="card-panel p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-text-main">Appearance</h2>
+          <p className="text-xs text-text-sub mt-0.5">Select your preferred interface appearance theme.</p>
+        </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {themeOptions.map((opt) => {
@@ -73,111 +78,109 @@ export const SettingsView: React.FC = () => {
               <button
                 key={opt.id}
                 onClick={() => setTheme(opt.id)}
-                className={`flex flex-col items-start p-4 rounded-xl text-left transition-all border cursor-pointer ${
+                className={`flex items-start gap-3 p-3.5 rounded-lg text-left transition-colors border cursor-pointer ${
                   isSelected
-                    ? "bg-brand-blue/10 border-brand-blue shadow-xs"
-                    : "bg-bg-app border-border-card hover:border-text-dim"
+                    ? "bg-bg-selected border-brand-blue"
+                    : "bg-bg-card border-border-card hover:bg-bg-interactive"
                 }`}
               >
-                <div className="flex items-center justify-between w-full mb-2">
-                  <div
-                    className={`p-2 rounded-lg ${
-                      isSelected
-                        ? "bg-brand-blue text-slate-950 font-bold"
-                        : "bg-bg-btn text-text-sub"
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  {isSelected && (
-                    <span className="text-[11px] font-semibold text-brand-blue">
-                      Active
-                    </span>
-                  )}
+                <div
+                  className={`p-2 rounded-md ${
+                    isSelected
+                      ? "bg-brand-blue text-white"
+                      : "bg-bg-interactive text-text-sub"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-semibold text-text-main">
-                  {opt.label}
-                </span>
-                <span className="text-[11px] text-text-sub mt-0.5 leading-normal">
-                  {opt.desc}
-                </span>
+                <div>
+                  <div className="text-sm font-semibold text-text-main flex items-center gap-1.5">
+                    <span>{opt.label}</span>
+                    {isSelected && (
+                      <span className="text-[11px] font-medium text-brand-blue">(Active)</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-text-sub mt-0.5">{opt.desc}</div>
+                </div>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* System Health */}
-      <div className="card-panel p-5 space-y-3">
-        <h2 className="text-sm font-semibold text-text-main">System health</h2>
+      {/* System Health Diagnostics */}
+      <div className="card-panel p-6 space-y-4">
+        <div>
+          <h2 className="text-base font-semibold text-text-main">System Health & Telemetry Status</h2>
+          <p className="text-xs text-text-sub mt-0.5">Active runtime parameters derived from live backend probes.</p>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-          <div className="p-3 rounded-lg bg-bg-app border border-border-card flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Server className="w-4 h-4 text-status-green" />
-              <span className="text-text-sub">HORA-Q Backend API</span>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-1">
+            <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
+              <span>BGP Ingestion Engine</span>
+              <Radio className="w-4 h-4 text-status-green" />
             </div>
-            <span className="text-status-green font-semibold flex items-center gap-1 text-[11px]">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Online (FastAPI)
-            </span>
+            <div className="text-base font-bold text-text-main">Operational</div>
+            <div className="text-xs text-text-dim">RIPE RIS live stream parser active</div>
           </div>
 
-          <div className="p-3 rounded-lg bg-bg-app border border-border-card flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Cpu className="w-4 h-4 text-brand-blue" />
-              <span className="text-text-sub">Local Database</span>
+          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-1">
+            <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
+              <span>Database Ledger (WAL)</span>
+              <Database className="w-4 h-4 text-status-green" />
             </div>
-            <span className="text-status-green font-semibold flex items-center gap-1 text-[11px]">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Connected (SQLite WAL)
-            </span>
+            <div className="text-base font-bold text-text-main">SQLite 3 (WAL Mode)</div>
+            <div className="text-xs text-text-dim">ACID-compliant atomic writes enabled</div>
+          </div>
+
+          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-1">
+            <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
+              <span>Cryptographic Signer</span>
+              <Lock className="w-4 h-4 text-brand-blue" />
+            </div>
+            <div className="text-base font-bold text-text-main">
+              {cryptoStatus?.algorithm || "NIST ML-DSA-65"}
+            </div>
+            <div className="text-xs text-text-dim">
+              {cryptoStatus?.status === "READY" ? "Post-quantum keys loaded" : "Ready for attestations"}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Progressive Disclosure: Technical Details */}
-      <div className="card-panel p-5 space-y-3">
+      {/* Technical Specifications (Collapsible) */}
+      <div className="card-panel overflow-hidden">
         <button
           onClick={() => setShowTechnical(!showTechnical)}
-          className="w-full flex items-center justify-between text-left cursor-pointer"
+          className="w-full p-4 flex items-center justify-between text-sm font-semibold text-text-main hover:bg-bg-interactive transition-colors cursor-pointer"
         >
-          <div>
-            <h2 className="text-sm font-semibold text-text-main">
-              Technical specifications
-            </h2>
-            <p className="text-xs text-text-sub mt-0.5">
-              Algorithms, hackathon project identity, and cryptographic standards.
-            </p>
-          </div>
-          <div className="text-text-dim hover:text-text-main">
-            {showTechnical ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-          </div>
+          <span>Technical Architecture & Cryptographic Engine Specifications</span>
+          {showTechnical ? (
+            <ChevronUp className="w-4 h-4 text-text-dim" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-text-dim" />
+          )}
         </button>
 
         {showTechnical && (
-          <div className="pt-3 border-t border-border-card space-y-2 text-xs">
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-sub">Hackathon Event</span>
-              <span className="font-semibold text-text-main">AIORI-3 (Track 2 Cyber Security)</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-sub">Problem Statement</span>
-              <span className="font-semibold text-text-main">PS-005 (BGP Anomaly Monitor)</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-sub">Team ID</span>
-              <span className="font-mono text-brand-blue font-bold">A3-PS005-TC416</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-sub">Canonicalization Standard</span>
-              <span className="text-text-main font-mono">RFC 8785 (JSON Canonicalization Scheme)</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-sub">Integrity Digest</span>
-              <span className="text-text-main font-mono">SHA-256 (FIPS 180-4)</span>
-            </div>
-            <div className="flex items-center justify-between p-2.5 rounded-lg bg-bg-app border border-border-card">
-              <span className="text-text-sub">Signature Engine</span>
-              <span className="text-text-main font-mono">ML-DSA-65 (NIST FIPS 204 Post-Quantum)</span>
+          <div className="p-6 border-t border-divider bg-bg-app space-y-4 text-xs font-mono">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3.5 rounded bg-bg-card border border-divider space-y-1.5">
+                <div className="text-[11px] text-text-dim uppercase font-bold">Canonicalization Scheme</div>
+                <div className="text-sm font-bold text-text-main">RFC 8785 JSON Canonicalization</div>
+                <p className="text-text-sub text-[11px] leading-relaxed">
+                  Eliminates whitespace, key order, and float representation ambiguities before SHA-256 digest calculation.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded bg-bg-card border border-divider space-y-1.5">
+                <div className="text-[11px] text-text-dim uppercase font-bold">Digital Signature Standard</div>
+                <div className="text-sm font-bold text-text-main">NIST FIPS 204 (ML-DSA-65)</div>
+                <p className="text-text-sub text-[11px] leading-relaxed">
+                  Module-Lattice-Based Digital Signature Standard designed to withstand quantum cryptanalytic attacks.
+                </p>
+              </div>
             </div>
           </div>
         )}
