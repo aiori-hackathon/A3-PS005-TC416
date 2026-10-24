@@ -77,8 +77,26 @@ if (typeof window !== "undefined") {
   });
 }
 
+const getInitialTab = (): NavTab => {
+  if (typeof window === "undefined") return "overview";
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get("tab") as NavTab;
+  const validTabs: NavTab[] = [
+    "overview",
+    "alerts",
+    "routes",
+    "scenarios",
+    "evidence",
+    "rpki",
+    "inject",
+    "settings",
+  ];
+  if (tab && validTabs.includes(tab)) return tab;
+  return "overview";
+};
+
 export const useHoraqStore = create<HoraqState>((set, get) => ({
-  activeTab: "overview",
+  activeTab: getInitialTab(),
   theme: getInitialTheme(),
   overview: null,
   alerts: [],
@@ -133,13 +151,19 @@ export const useHoraqStore = create<HoraqState>((set, get) => ({
         api.getCryptoStatus().catch(() => null),
       ]);
 
+      const alerts = alertsRes.items || [];
+      const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+      const modalParam = params?.get("modal");
+      const autoAlert = modalParam && alerts.length > 0 ? alerts[0] : null;
+
       set({
         overview: overview || null,
-        alerts: alertsRes.items || [],
+        alerts,
         routes: routesRes.items || [],
         evidence: evidenceRes.items || [],
         cryptoStatus: crypto || null,
         isLoading: false,
+        ...(autoAlert ? { selectedAlert: autoAlert } : {}),
       });
     } catch (err: any) {
       set({ isLoading: false });

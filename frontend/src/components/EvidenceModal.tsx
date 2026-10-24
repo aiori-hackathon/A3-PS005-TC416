@@ -30,17 +30,33 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 }) => {
   if (!alert && !evidence) return null;
 
+  const isAutoTamper = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("modal") === "tamper";
+
   const [verifyingHash, setVerifyingHash] = useState(false);
   const [hashResult, setHashResult] = useState<{
     valid: boolean;
     computed: string;
-  } | null>(null);
+  } | null>(() => {
+    if (isAutoTamper) {
+      return { valid: false, computed: "a49aff62a8000000000000000000000000000000000000000000000000000000" };
+    }
+    return null;
+  });
 
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
 
-  const [isTampered, setIsTampered] = useState(false);
-  const [tamperedData, setTamperedData] = useState<Record<string, any> | null>(null);
+  const [isTampered, setIsTampered] = useState(isAutoTamper);
+  const [tamperedData, setTamperedData] = useState<Record<string, any> | null>(() => {
+    if (isAutoTamper && evidence?.record) {
+      const cloned = JSON.parse(JSON.stringify(evidence.record));
+      cloned.severity = "LOW";
+      cloned.explanation = "UNAUTHORIZED MUTATION: Security incident severity modified in memory.";
+      cloned.observed_asn = "AS0";
+      return cloned;
+    }
+    return null;
+  });
   const [copied, setCopied] = useState(false);
   const [copiedCli, setCopiedCli] = useState(false);
   const [showTechnicalDetails, setShowTechnicalDetails] = useState(false);
