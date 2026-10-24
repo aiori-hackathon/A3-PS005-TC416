@@ -159,8 +159,12 @@ def process_observation(
             generated_alerts.append(alert_obj)
 
         # B. Check Origin-AS Change or Seed Baseline
-        if existing_baseline is None:
-            # Baseline Seeding — first observation seeds reference origin, NO alert
+        if generated_alerts:
+            # CRITICAL SECURITY RULE: Anomaly detected (e.g. Subprefix Containment Anomaly).
+            # Suspicious announcements MUST NOT establish or poison trusted baselines!
+            pass
+        elif existing_baseline is None:
+            # Baseline Seeding — clean initial observation seeds reference origin, NO alert
             conn.execute(
                 "INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, updated_at) "
                 "VALUES (?, ?, ?, ?, 1, ?);",

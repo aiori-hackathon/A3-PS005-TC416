@@ -109,6 +109,12 @@ def test_subprefix_anomaly_detection(test_db):
     assert alert["parent_prefix"] == "192.0.2.0/24"
     assert alert["observed_asn"] == "AS64500"
 
+    # CRITICAL: Suspicious child subprefix MUST NOT poison or establish a baseline!
+    assert get_baseline_by_prefix(test_db, "192.0.2.128/25") is None
+    parent_base = get_baseline_by_prefix(test_db, "192.0.2.0/24")
+    assert parent_base is not None
+    assert parent_base["origin_asn"] == "AS64496"
+
 
 def test_ipv6_subprefix_anomaly_detection(test_db):
     # 1. Establish parent baseline: 2001:db8::/32
@@ -129,3 +135,50 @@ def test_ipv6_subprefix_anomaly_detection(test_db):
     alert = res["alerts"][0]
     assert alert["kind"] == "SUBPREFIX_ANOMALY"
     assert alert["parent_prefix"] == "2001:db8::/32"
+
+    # CRITICAL: Suspicious IPv6 child subprefix MUST NOT poison or establish a baseline!
+    assert get_baseline_by_prefix(test_db, "2001:db8:1::/48") is None
+    parent_base = get_baseline_by_prefix(test_db, "2001:db8::/32")
+    assert parent_base is not None
+    assert parent_base["origin_asn"] == "AS64496"
+
+
+def test_suspicious_subprefix_does_not_poison_baseline(test_db):
+    """Regression test proving complete baseline preservation against poisoning."""
+    # 1. Establish legitimate baseline
+    r1 = process_observation(
+        db_path=test_db,
+        prefix_raw="8.8.8.0/24",
+        origin_asn_raw=15169,
+        collector="rrc00",
+    )
+    assert r1["alerts_count"] == 0
+
+    # 2. Inject rogue subprefix
+    r2 = process_observation(
+        db_path=test_db,
+        prefix_raw="8.8.8.128/25",
+        origin_asn_raw=66666,
+        collector="rrc03",
+    )
+    assert r2["alerts_count"] == 1
+    assert r2["alerts"][0]["kind"] == "SUBPREFIX_ANOMALY"
+
+    # 3. Baselines table must contain ONLY 8.8.8.0/24, NOT 8.8.8.128/25
+    all_bases = get_all_baselines(test_db)
+    assert len(all_bases) == 1
+    assert all_bases[0]["prefix"] == "8.8.8.0/24"
+    assert all_bases[0]["origin_asn"] == "AS15169"
+    assert get_baseline_by_prefix(test_db, "8.8.8.128/25") is None
+
+    # 4. Subsequent legitimate parent observation increments observation_count
+    r3 = process_observation(
+        db_path=test_db,
+        prefix_raw="8.8.8.0/24",
+        origin_asn_raw=15169,
+        collector="rrc00",
+    )
+    assert r3["alerts_count"] == 0
+    updated_parent = get_baseline_by_prefix(test_db, "8.8.8.0/24")
+    assert updated_parent["observation_count"] == 2
+

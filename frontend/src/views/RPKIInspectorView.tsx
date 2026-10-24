@@ -27,6 +27,8 @@ export const RPKIInspectorView: React.FC = () => {
       setAsn(rpkiTarget.asn);
       handleValidate(rpkiTarget.prefix, rpkiTarget.asn);
       setRpkiTarget(null);
+    } else if (!result) {
+      handleValidate("1.1.1.0/24", "AS13335");
     }
   }, [rpkiTarget]);
 

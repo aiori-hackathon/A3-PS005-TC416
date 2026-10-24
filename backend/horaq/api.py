@@ -504,24 +504,27 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
         # Reset and seed realistic demonstrator data for live presentations
         reset_database(settings.database_path)
 
-        # 1. Establish well-known baseline roots
+        # 1. Establish trusted reference baseline roots
         b1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=13335, collector="rrc00", scenario="demo-seed")
         b2 = process_observation(db_path=settings.database_path, prefix_raw="8.8.8.0/24", origin_asn_raw=15169, collector="rrc00", scenario="demo-seed")
         b3 = process_observation(db_path=settings.database_path, prefix_raw="9.9.9.0/24", origin_asn_raw=19281, collector="rrc01", scenario="demo-seed")
         b4 = process_observation(db_path=settings.database_path, prefix_raw="2001:db8::/32", origin_asn_raw=64496, collector="rrc00", scenario="demo-seed")
+        b5 = process_observation(db_path=settings.database_path, prefix_raw="192.0.2.0/24", origin_asn_raw=64496, collector="rrc00", scenario="demo-seed")
+        b6 = process_observation(db_path=settings.database_path, prefix_raw="198.51.100.0/24", origin_asn_raw=64497, collector="rrc00", scenario="demo-seed")
+        b7 = process_observation(db_path=settings.database_path, prefix_raw="203.0.113.0/24", origin_asn_raw=64499, collector="rrc00", scenario="demo-seed")
 
-        # 2. Inject Origin Conflict Incident
+        # 2. Inject Origin Conflict Incident (Baseline preserved, alert generated)
         a1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=99999, collector="rrc00", scenario="demo-origin-conflict")
 
-        # 3. Inject Subprefix Hijack Incident
+        # 3. Inject Subprefix Hijack Incident (Alert generated, baseline NOT poisoned)
         a2 = process_observation(db_path=settings.database_path, prefix_raw="8.8.8.128/25", origin_asn_raw=66666, collector="rrc03", scenario="demo-subprefix-hijack")
 
-        # 4. Inject IPv6 Subprefix Anomaly
+        # 4. Inject IPv6 Subprefix Anomaly (Alert generated, baseline NOT poisoned)
         a3 = process_observation(db_path=settings.database_path, prefix_raw="2001:db8:1::/48", origin_asn_raw=64505, collector="rrc00", scenario="demo-ipv6-subprefix")
 
         return {
             "scenario": "seed-demo",
-            "description": "Seeded 4 baselines and injected 3 realistic BGP anomaly incidents",
+            "description": "Seeded 7 trusted baselines and injected 3 realistic BGP anomaly incidents (baselines preserved against poisoning)",
             "alerts_generated": a1["alerts_count"] + a2["alerts_count"] + a3["alerts_count"],
             "expected_alerts": 3,
             "success": True,
