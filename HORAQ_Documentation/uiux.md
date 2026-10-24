@@ -1,321 +1,197 @@
-You're right. I interpreted “Google + Apple” as minimalism, and that pushed HORA-Q too far toward a plain, monochrome enterprise dashboard. That's not the product identity you're asking for.
+Exactly. The problem is not just the colours. The entire component language looks AI-generated: identical rounded cards, coloured top borders, repetitive panels, excessive pills, and layouts where everything has the same visual importance.
 
-You want HORA-Q to feel like a premium, carefully art-directed product: rich colour, beautifully layered surfaces, distinctive controls, confident typography and a memorable visual identity—while still being a serious cybersecurity tool.
+We need to patch HORA-Q as a product-design system inspired by Apple's restraint + Google's expressive clarity + our own distinctive cybersecurity identity. Not another generic dashboard reskin.
 
-## The correct design direction: expressive colour + premium depth
+## HORA-Q — Product Design Patch
 
-The research supports this direction. Google's Material 3 Expressive deliberately uses colour, shape, size, motion and containment to create a more distinctive interface and draw attention to important actions. Apple's interface guidance uses layered materials for depth and reserves strong colour for meaningful emphasis. The combination is more interesting than simply making everything grey and adding blue buttons.&#x20;
+[Using NAS with Apple macOS - ASUSTOR NAS](https://images.openai.com/static-rsc-4/evNG1d2qImBQs9VVjDFq8CCuUQod1ueNHtM8BaEuvWewVnosx8ME7i8WV1CII1umLbixkH2DlXOCWaRKsCFobW4evpBN-xqcnTxj8QwLy0iPHo4r5GTiHW8g-clcLE_GC9Wh0vYOhlie1nk8qMz7bb1Bk8l5cmG23HU1nBOStQg?purpose=inline)
 
-[image](https://www.google.com/s2/favicons?domain=https://design.google\&sz=32)
+1\. Apple — craftsmanship
 
-Google Design
+Natural hierarchy, precise typography, quiet surfaces, deliberate spacing, restrained translucency and dialogs that feel like part of the operating system.
 
-+2
+[La caída de características del Google Pixel añade Material 3 Expressive y nuevas funciones al Pixel 6 y modelos posteriores - NotebookCheck.org News](https://images.openai.com/static-rsc-4/h9wwCUhMezE2KKXBpwQs3QVpaNOwBMtfXBI1oFrcYd0yb4cp3dhv9qdAhIZRUVG60U13i76R8KFiaHFi9eJciifdVDOiFfdHKCy9HuubAPvOL6ChybYQ9pRgvZK5k0DcXZFik-7JkJ22IMGCmWkMK0noEXtxYKbTgLEG2h4Od-E?purpose=inline)
 
+2\. Google — expressive clarity
 
+Purposeful colour, clear interaction states, confident typography and components that adapt to their content instead of repeating one template everywhere.
 
-For HORA-Q, I recommend a bespoke visual direction called Aurora Obsidian: deep midnight surfaces, electric blue and indigo accents, a controlled teal highlight, rich semantic status colours and subtle ambient lighting. This is a proposed design direction for your product, not an official Apple or Google theme.
+[Nakwagala Edgar Lambert | Web Developer & Cybersecurity Practitioner](https://images.openai.com/static-rsc-4/h5f1-rHd6DYrfeSBHTnD0gHy5lwezEUUEDY3A_4c3A953YN97jRHrGm0uiNMLPKamv0Jit26zLo-X1sIOjPh4U3IqZkv2tYZObrZxQx50Ln4LG1YtO0WFfMg_WwD_miidWxk4MCvdGfh5p9qeeqxM4EZfi84tfl3Wgc4jgw4oWc?purpose=inline)
 
-## Copy-paste prompt for your coding agent
+3\. HORA-Q — technical character
 
-# HORA-Q — AURORA OBSIDIAN
+Dense, credible routing intelligence; real incident tables; distinctive evidence inspection; precise data typography; and a calm command-centre atmosphere.
 
-## Premium Product Visual Redesign: Google × Apple Design Philosophy
+## The actual patch prompt
 
-### Your role
+Use this with your coding agent inside the existing `D:\HORA-Q` project. It explicitly tells the agent to redesign the components and layouts, not simply change CSS colours.
 
-Act as a world-class product design director, visual design specialist and senior frontend engineer.
+# HORA-Q — PRODUCT-LEVEL UI RECONSTRUCTION PATCH
 
-Your task is to elevate the EXISTING HORA-Q application into a distinctive, premium, visually expressive cybersecurity product. Draw inspiration from the visual refinement and depth of Apple products and the expressive colour, familiar interaction patterns and clarity of Google's Material Design.
+## Design direction: Apple craftsmanship × Google expressive clarity × original HORA-Q identity
 
-Do not copy either company's interface. Establish an original design identity that belongs to HORA-Q.
+You are modifying the EXISTING HORA-Q application. The current interface looks AI-generated because its components rely on repetitive rounded cards, arbitrary coloured borders, excessive pills, generic empty states, uniform spacing and nested containers.
 
-## 1. THE MOST IMPORTANT REQUIREMENT
+This is not a colour-refresh task. Reconstruct the visual design language and page composition so the application feels intentionally designed by a senior product-design team.
 
-The previous redesign became too plain, too monochromatic and too minimal.
+Do not return a proposal. Inspect the codebase, implement the patch, run the application and validate the rendered pages.
 
-**DO NOT SIMPLIFY THE VISUAL DESIGN FURTHER. DO NOT REMOVE CARDS JUST TO MAKE THE INTERFACE LOOK MINIMAL.**
+## A. Establish the product identity
 
-The application now has a better information architecture, more understandable labels, grouped incidents and expandable technical evidence. Preserve those improvements.
+Create an original visual language with these influences:
 
-What needs to change now is the product's visual personality.
+- Apple: restraint, typographic precision, material quality, carefully composed dialogs and polished interactions.
+- Google: purposeful colour, expressive but controlled emphasis, excellent interaction feedback and adaptive components.
+- HORA-Q: authoritative BGP intelligence, forensic evidence, routing telemetry and serious security operations.
 
-The current design uses too many similar charcoal surfaces, muted gray cards and isolated cyan buttons. It lacks a distinctive colour system, visual richness, intentional lighting and the polished sense of depth found in exceptional consumer products.
+Do not copy either company's interface, branding, proprietary assets or exact layouts. Do not produce a generic shadcn dashboard, a template admin panel or a neon gaming interface.
 
-Make the interface feel:
+## B. Eliminate the AI-generated card aesthetic
 
-- Premium and deliberately art-directed.
-- Rich in colour without becoming chaotic.
-- Technical and credible without feeling sterile.
-- Modern and expressive without resembling a gaming dashboard.
-- Sophisticated enough for a cybersecurity evaluator.
-- Beautiful at first sight, with every visual element serving a purpose.
+Remove the assumption that every piece of information belongs in a rounded card.
 
-The desired balance is approximately **Apple's refinement and material depth + Google's expressive colour and interaction design + the precision of a professional security product**.
+Audit every page and replace repetitive card grids with the most appropriate information structure:
 
-This is a visual identity redesign, not a new application.
+- Overview: editorial heading, concise monitoring-state indicator, prominent operational summary, compact metric strip and a proper incident ledger.
+- Alerts: a strong incident list or table, clear severity hierarchy, useful filtering and meaningful incident details. Use an empty state only when the active filter genuinely has no results.
+- Route baselines: a clean, information-dense table on desktop; compact structured rows on mobile. Avoid turning every baseline into an oversized floating card.
+- Scenarios: a structured test-suite list with clear expected outcomes, execution state and individual run controls. Do not give every scenario a decorative red top border.
+- Audit history: a forensic ledger with timestamp, event, resource, integrity digest and signature state. Hashes should be legible, compact and copyable.
+- RPKI inspector: a focused form and a clear result area, with the validation outcome and supporting evidence given appropriate hierarchy.
+- Route injection: a practical form with grouped advanced parameters, useful validation and a clear explanation that it injects a test observation rather than changing Internet routing.
+- Evidence dialog: a refined forensic inspector, not a stack of identical cards.
 
-## 2. Establish HORA-Q's signature colour identity
+Remove redundant wrappers, unnecessary nested panels, decorative accent strips, oversized empty areas, excessive badges and redundant labels. Use borders only when they communicate grouping or separation.
 
-Use the art direction "Aurora Obsidian".
+## C. Build a real design system
 
-The foundation is deep midnight blue rather than pure black or generic gray. Introduce layered navy surfaces, subtle colour transitions and carefully placed blue, indigo and teal accents.
+First inspect the current CSS, component library and existing design tokens. Consolidate them rather than layering another patch on top of conflicting rules.
 
-Use the following as initial design tokens and refine them through browser rendering.
+Use a coherent dark palette:
 
-### Dark theme
+- Base: deep midnight graphite, not pure black everywhere.
+- Main surfaces: subtle tonal differences between canvas, navigation, content and raised dialogs.
+- Primary accent: refined azure for primary actions, selection and interactive links.
+- Secondary accent: restrained teal for meaningful telemetry emphasis.
+- Semantic colours: green for verified/healthy, amber for warning/review and red for actual critical or failed states.
+- Text: strong primary contrast, readable secondary text and subdued tertiary metadata.
 
-- App canvas: #0B1019
-- Navigation surface: #101724
-- Primary content surface: #151E2C
-- Elevated surface: #1C2737
-- Interactive surface: #243349
-- Divider: #2D3B4F
-- Primary text: #F4F7FF
-- Secondary text: #B0BCD0
-- Muted metadata: #8795AD
-- Primary action / focus: #62A8FF
-- Secondary accent: #A49AFF
-- Tertiary accent: #4CD9CF
-- Success: #43D99B
-- Warning: #F5BE56
-- Critical: #FF7185
-- Informational: #72B9FF
+Use colour to explain information, not decorate every component. Remove the global blue edge glow, excessive box-shadows, rainbow KPI borders and gratuitous gradients.
 
-These values are starting points, not unchangeable rules. Validate all foreground/background combinations for readability.
+Establish consistent typography, spacing, radii, icon sizes, focus states and motion. Use the existing icon system consistently. Do not use emoji as interface icons.
 
-### Use colour with intention
+Typography should distinguish page titles, section headings, operational values, body copy, metadata and technical identifiers. Use tabular numerals for counts and timestamps, and a suitable monospace treatment for ASNs, CIDRs, hashes and machine-readable identifiers.
 
-The colour system must appear throughout the product, not just on buttons.
+## D. Replace generic KPI cards
 
-- Use electric blue for primary navigation emphasis, links, focus states and primary actions.
-- Use indigo sparingly for advanced analysis and technical or cryptographic contexts when it has a clear purpose.
-- Use teal for supporting information, selected secondary indicators and appropriate network-related visualizations.
-- Use green for verified success and healthy states.
-- Use amber for pending review or caution.
-- Use coral-red for actual critical alerts and integrity failures.
+Do not merely restyle the existing four cards.
 
-Do not make every element colorful. Build contrast between expressive highlights and carefully controlled neutral surfaces.
+Design a compact operational metric system with a clear relationship between:
 
-### Avoid the previous mistakes
+- Active anomalies
+- Prefixes tracked
+- Updates evaluated
+- Connected peers
 
-- No large areas of pure black that disconnect from the rest of the interface.
-- No endless identical gray cards.
-- No neon outlines on every component.
-- No massive electric-blue glow around the entire screen.
-- No random gradients that have nothing to do with application state.
-- No green styling for a condition that has not been verified.
-- No bright red styling for resolved incidents.
-- No rainbow-coloured interface.
+Prefer a unified metric row or carefully aligned metric columns, separated through spacing or subtle dividers. Use accent colour sparingly. Each metric must have a clear label, value and concise contextual description.
 
-The interface should feel rich and luminous, not oversaturated.
+The metric layout must adapt gracefully to mobile without creating oversized, repetitive tiles.
 
-## 3. Create visual depth, not flat monochrome surfaces
+Never invent sparklines, percentages, trend arrows or historical comparisons when the application does not supply the underlying data.
 
-Use an intentional three-level surface hierarchy:
+## E. Redesign the overview composition
 
-1. A deep midnight application canvas.
-2. Navy-tinted content surfaces with subtle separation.
-3. Elevated layers for dialogs, menus, selected controls and other genuinely foreground elements.
+Create a deliberate reading sequence:
 
-Allow different pages to have subtle tonal personalities while preserving a coherent design system.
+1. Product page heading and one concise description.
+2. A compact live/replay state indicator driven by actual runtime state.
+3. A monitoring summary that communicates the real operational condition without consuming an entire screen.
+4. A cohesive, compact metric strip.
+5. A well-designed recent-incidents ledger with useful details and a clear route to the full incident view.
 
-For example, the Overview can have a restrained blue-to-indigo ambient treatment behind its primary monitoring area. The evidence dialog can use a slightly elevated blue-gray surface with refined separation from its backdrop. The navigation may have restrained translucency or a material-like treatment where it improves hierarchy.
+Avoid multiple competing status pills. Do not repeat "Monitoring active" in three locations when one clear status indicator will do.
 
-Keep content surfaces sufficiently opaque for legibility. Do not put blur and transparency on every card.
+At desktop widths, use available space intelligently. Avoid an oversized centred content column surrounded by unnecessary empty space. Preserve comfortable reading widths.
 
-Use localized ambient lighting and restrained gradients behind important areas—not a bright, continuous frame around the entire screen.
+## F. Give the incident interface a real hierarchy
 
-Shadows should provide depth and separation. Avoid large, blurry shadows that dominate the layout.
+Incidents are the product's core content.
 
-## 4. Give HORA-Q a distinctive product identity
+Present the prefix, incident type, observed origin, baseline origin, severity, last-seen time and lifecycle status in a consistent hierarchy. The important anomaly should be immediately identifiable without a row of competing badges.
 
-The current design looks like a generic dashboard that could belong to any application. Give it recognisable product-specific details.
+Use red for actual critical severity, not as a default card accent. Acknowledged and resolved states must remain visually distinct without appearing to be active failures.
 
-### Navigation
+Preserve incident grouping, filters, expansion, evidence access and lifecycle actions. Empty states must reflect the actual selected filter and backend response.
 
-- Retain the current logical navigation groups and working routes.
-- Give the HORA-Q brand a refined typographic treatment.
-- Add subtle colour identity to navigation icons and active states.
-- Use a tinted, layered selected-item background with a clear accent indicator.
-- Keep inactive icons restrained and legible.
-- Keep the sidebar distinct from the main content without a heavy separator.
-- Avoid oversized logo treatments and excessive decoration.
+## G. Reconstruct the evidence inspector
 
-### Top toolbar
+Treat cryptographic evidence as a specialised forensic workspace.
 
-Polish the toolbar with a refined surface, consistent control dimensions and meaningful state indicators.
+The dialog should have:
 
-The monitoring state should have a subtle coloured indicator and a readable label. Search, appearance and notification controls should feel designed as one family.
+- A compact, well-composed header with evidence ID.
+- A concise associated-incident summary.
+- Clearly distinguished integrity verification and digital-signature states.
+- A logically grouped forensic action area.
+- A collapsible technical section containing the canonical payload and full digest.
+- Copy and export actions that fit cleanly without awkward wrapping.
 
-If a floating or translucent toolbar treatment is used, ensure it does not compromise readability or resemble a bright glass strip.
+Display shortened hashes in summary views and preserve access to full hashes. On narrow screens, stack controls intentionally rather than letting buttons wrap unpredictably.
 
-### Buttons and controls
+Keep the distinction between a valid content-integrity digest and an applied digital signature. A recorded SHA-256 digest does not mean that a digital signature exists.
 
-Use an intentional visual hierarchy:
+The tamper demonstration must continue to show the actual verification result and mutation state. Never hardcode a successful verification result.
 
-- Primary actions: confidently coloured blue or blue-gradient backgrounds where appropriate.
-- Secondary actions: tonal navy surfaces and restrained borders.
-- Tertiary actions: clean text buttons with clear hover and focus states.
-- Destructive actions: semantic warning/error treatment.
-- Selected filters: visibly selected tinted surfaces rather than indistinguishable gray pills.
+## H. Correct visual semantics and inconsistencies
 
-Do not give every button a coloured fill. Save the strongest emphasis for the most important action.
+A clean baseline seeding scenario expecting zero alerts must not look like a critical failure. Semantic colours must represent actual state, not be selected as decoration.
 
-Use consistent hover, pressed, focus, disabled, loading and success states. Motion should be subtle, fast and purposeful.
+Distinguish live RIPE RIS collection, replay mode and synthetic demo observations according to the actual application state. Do not claim live monitoring merely because the backend is running.
 
-## 5. Make the dashboard feel like a premium security product
+Ensure the same incident has consistent status, severity and origin data throughout Overview, Alerts, Audit History and Evidence.
 
-### Overview
+Preserve all real backend-derived values. Do not manufacture connected-peer counts, monitoring results, verification outcomes or RPKI statuses.
 
-Retain the clear structure from the current redesign.
+## I. Interaction and responsive quality
 
-Enhance its appearance using a refined status banner, deliberate accent placement and sophisticated metric presentation.
+Keep all existing routes and working functionality. Verify:
 
-Metric tiles may use subtle individual tonal variations or a small accent edge to create distinction. Keep the numbers and labels readable.
+- Sidebar navigation and mobile navigation.
+- Search and incident filters.
+- Scenario execution and expected outcomes.
+- Baseline filtering and RPKI checks.
+- Test-observation submission and validation.
+- Evidence opening, integrity verification, tamper simulation, reset, signing and export.
+- Theme switching and settings.
+- Empty, loading, error and success states.
 
-Use chart or trend visualizations only if meaningful underlying data exists. Never invent sparklines, percentages or trends.
+Use subtle, purposeful transitions. Respect reduced-motion preferences. Make keyboard focus visible and ensure adequate contrast.
 
-The monitoring-status area should feel confident and polished rather than empty or overly dramatic.
+At mobile widths, redesign the composition rather than merely shrinking desktop components. Prevent horizontal overflow, clipped dialogs, overlapping controls and broken tables.
 
-### Alerts
+## J. Implementation constraints
 
-Keep the existing grouped-incident model and filters.
+Before editing:
 
-Introduce a more expressive severity system, clear incident grouping and refined interaction states. The severity label, affected prefix and observed-versus-baseline comparison must remain immediately readable.
+1. Inspect the actual frontend framework, existing components, CSS, routes and package scripts.
+2. Identify the current design tokens and conflicting styles.
+3. Map each page to its existing data sources and interactions.
 
-Use colour to direct attention to the actual severity, not to turn each incident row into a red or neon panel.
+Implement shared reusable primitives where useful, but do not force every page into the same component template.
 
-Keep acknowledged and resolved incidents visually distinct from active incidents.
+Do not rewrite backend logic, detection rules, database schemas or API contracts for visual reasons. Do not remove functional features to make screenshots simpler. Do not fabricate data. Do not introduce an unnecessary UI framework or a large dependency merely to achieve the design.
 
-### Evidence and cryptographic verification
+After editing:
 
-Give the evidence dialog a polished, layered foreground treatment.
+1. Run the frontend production build.
+2. Run relevant regression tests.
+3. Launch the actual application.
+4. Inspect screenshots of every page at desktop and mobile widths.
+5. Correct visual defects discovered in the screenshots.
+6. Report files changed, checks actually executed, any failures and any functionality not verified.
 
-Use the colour system to distinguish:
+Acceptance criterion: the finished application must no longer look like a generic AI-generated card dashboard. Its composition, typography, information hierarchy, data density, controls and details must all express a coherent premium product identity.
 
-- Integrity recorded or verified.
-- Integrity mismatch.
-- Signature valid.
-- Unsigned or unavailable.
-- Simulated tampering.
+Implement the changes directly in the current project. Do not stop after changing the palette or producing a design specification.
 
-Keep integrity status and digital-signature status separate.
-
-Make verification results visually meaningful without presenting a hash as proof of authenticity. Never indicate that signing succeeded unless the operation actually succeeded.
-
-Preserve the advanced-details disclosure and raw evidence access.
-
-### Route baselines and audit history
-
-Use clean, carefully aligned data tables with subtle tonal hover states, readable technical typography and consistent focus treatment.
-
-Use blue and teal selectively to distinguish route values and interactive metadata.
-
-Keep full hashes available while displaying readable shortened representations where appropriate.
-
-### Scenarios
-
-Give the scenario workspace a little more visual character through refined scenario markers, subtle tonal differentiation and distinct primary execution controls.
-
-Keep advanced technical criteria behind the existing disclosure controls.
-
-Do not remove useful information to make the page sparse.
-
-### RPKI inspector and manual route test
-
-Keep both workflows straightforward, but visually elevate the forms with refined field backgrounds, clear labels, visible focus states and intentional button hierarchy.
-
-Use distinct, understandable result states for valid, invalid and unavailable checks.
-
-Do not represent preset values as successful live results.
-
-### Settings
-
-Preserve the existing sections and controls. Improve theme previews so Dark, Light and System appear as polished, selectable theme choices rather than three unrelated boxes.
-
-Keep system health, appearance settings and technical information visually connected through shared design tokens.
-
-## 6. Develop a complete light theme too
-
-The Light theme must have its own considered colour palette, not simply invert the dark theme.
-
-Use warm-white or softly tinted neutral surfaces, blue/indigo accents and the same consistent semantic status colours.
-
-Ensure both themes share:
-
-- The same spacing and typography.
-- The same component hierarchy.
-- The same meaning for status colours.
-- Consistent active-navigation and focus states.
-- Equivalent readability and contrast.
-
-Preserve the existing theme-selection behavior and inspect whether the current System option genuinely follows system preference.
-
-## 7. Design quality requirements
-
-Apply colour, typography, shape and depth in a coordinated way.
-
-Use a consistent font scale, strong page titles, refined body copy, legible metadata and monospaced technical values.
-
-Use carefully chosen corner radii, consistent control heights, predictable spacing and aligned edges. Do not use excessive rounding on every surface.
-
-Add subtle transitions for navigation selection, dialog entry, status changes and hover states. Respect reduced-motion preferences.
-
-Use an existing icon set consistently. Avoid mixing multiple icon styles.
-
-Maintain keyboard accessibility and WCAG 2.2 AA text contrast where applicable.
-
-Do not introduce unnecessary new dependencies, external font requirements or decorative graphics.
-
-## 8. Work in the existing source code
-
-First inspect the actual frontend, global stylesheet, theme definitions, shared components, component variants and responsive behavior.
-
-Identify the source of the current colour tokens and global background effects.
-
-Implement the new design system in the existing application instead of adding another parallel stylesheet or applying scattered CSS overrides.
-
-Preserve all functionality, API calls, database records, routing, alert grouping, baseline rules, scenario execution, RPKI checks, evidence generation, cryptographic verification and existing navigation.
-
-Do not change backend logic simply to improve presentation.
-
-Do not hardcode metrics, monitoring states, signatures, validation results or system-health labels.
-
-After implementation, inspect all ten supplied screenshots against the rendered result.
-
-Capture fresh screenshots of the Overview, Alerts, Evidence modal, tamper-verification state, Baselines, Scenarios, Audit history, RPKI inspector, route-test form and Settings.
-
-Check both dark and light themes and verify that responsive layouts remain usable.
-
-Run the existing frontend type-check, production build and relevant tests. Report actual results.
-
-## Acceptance standard
-
-The finished product should no longer look like a flat, monochrome dashboard.
-
-It should have a recognisable HORA-Q visual identity, expressive but disciplined colour, premium material depth, confident typography, purposeful interaction states and a coherent look across every page.
-
-It must preserve the improved information architecture without becoming either oversimplified or visually cluttered.
-
-**Do not mistake minimalism for quality. Deliver colour, depth, refinement and personality while maintaining technical clarity.**
-
-Implement the redesign directly in the existing project. Do not stop after creating a design proposal or changing a handful of CSS variables.
-
-## The visual reference to keep in mind
-
-[Supporting Dark Mode in your interface | Apple Developer Documentation](https://images.openai.com/static-rsc-4/r4tzDgG92VvzE9GbDYX7Mr9f9KjITgyIs5q37sAtt81vabOqwJCWFRnVmzuIq4I84iEcI1ZdwS7JbbPCGXQydMJq5gKAcE-yy8QHDe6Ytm6McFcUAzo31ElL7LFNasmtkpV7qwSqnoNTRPcfn0U1Au8c-iu-D_QQmTPHSnhgbJY?purpose=inline)
-
-Apple-inspired refinement
-
-Layered surfaces, considered spacing, controlled lighting and elegant foreground controls.
-
-[Adiós al gris: Android 16 prueba un rediseño con íconos coloridos en los ajustes](https://images.openai.com/static-rsc-4/6Pc6j12ghiqW8uLs3BreQYIaiGt2POzuQGUkzrHoWTnG8LVDlL77gjRP7_M9GZvWfGSbMIikymfTpI1nMvtadmmbXtffqrf5GJUhqlQX6AXWOwyf3H7LzZCq4w3o1pp2ey-ETepY5pGx_eimXSGYp5FLYHXOVYp2rW3hJk3kQhU?purpose=inline)
-
-Google-inspired expressiveness
-
-Purposeful colour, distinctive selected states, recognizable components and personality.
-
-The distinction is important: HORA-Q should not look like a copy of macOS or Android settings. It should have Apple's polish and Google's colour intelligence, expressed through a professional routing-security interface.
-
-Use the prompt above for the next pass. It specifically corrects the mistake of making the application visually plain while retaining the usability improvements you've already achieved.
+My strongest recommendation: judge the next version by the Overview, Alerts and Evidence inspector together. If all three still look like the same card template with different content, the patch has failed—even if the colours are beautiful.

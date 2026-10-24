@@ -3,7 +3,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   Check,
-  Clock,
   Lock,
   ChevronDown,
   ChevronUp,
@@ -11,6 +10,7 @@ import {
   Ban,
   Layers,
   History,
+  ShieldCheck,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
@@ -117,7 +117,7 @@ export const AlertsView: React.FC = () => {
           <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               onClick={() => dismissAllAlerts()}
-              className="px-3.5 py-1.5 rounded-xl bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-text-sub hover:text-text-main text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              className="px-3.5 py-1.5 rounded-xl bg-bg-btn border border-border-card hover:bg-bg-nav-hover text-text-sub hover:text-text-main text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
             >
               <CheckCircle2 className="w-3.5 h-3.5 text-status-green" />
               <span>Acknowledge all active</span>
@@ -133,14 +133,14 @@ export const AlertsView: React.FC = () => {
         </div>
       )}
 
-      {/* Expressive Segmented Filter Control */}
+      {/* Segmented Filter Control */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="inline-flex p-1 rounded-xl bg-bg-interactive border border-border-card text-xs shadow-xs">
+        <div className="inline-flex p-1 rounded-xl bg-bg-card border border-border-card text-xs">
           <button
             onClick={() => setFilterSeverity("active")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               filterSeverity === "active"
-                ? "bg-bg-card text-brand-blue border border-brand-blue/35 shadow-sm"
+                ? "bg-bg-interactive text-brand-blue border border-border-card"
                 : "text-text-sub hover:text-text-main"
             }`}
           >
@@ -150,7 +150,7 @@ export const AlertsView: React.FC = () => {
             onClick={() => setFilterSeverity("all")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               filterSeverity === "all"
-                ? "bg-bg-card text-brand-blue border border-brand-blue/35 shadow-sm"
+                ? "bg-bg-interactive text-brand-blue border border-border-card"
                 : "text-text-sub hover:text-text-main"
             }`}
           >
@@ -160,7 +160,7 @@ export const AlertsView: React.FC = () => {
             onClick={() => setFilterSeverity("high")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               filterSeverity === "high"
-                ? "bg-bg-card text-status-red border border-red-500/35 shadow-sm"
+                ? "bg-bg-interactive text-status-red border border-border-card"
                 : "text-text-sub hover:text-text-main"
             }`}
           >
@@ -170,7 +170,7 @@ export const AlertsView: React.FC = () => {
             onClick={() => setFilterSeverity("medium")}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               filterSeverity === "medium"
-                ? "bg-bg-card text-status-amber border border-amber-500/35 shadow-sm"
+                ? "bg-bg-interactive text-status-amber border border-border-card"
                 : "text-text-sub hover:text-text-main"
             }`}
           >
@@ -190,9 +190,9 @@ export const AlertsView: React.FC = () => {
 
       {/* Incident List */}
       {filteredIncidents.length === 0 ? (
-        <div className="card-panel p-10 text-center space-y-3 aurora-ambient-glow">
-          <div className="w-12 h-12 rounded-full bg-status-green-bg text-status-green flex items-center justify-center mx-auto border border-emerald-500/30 shadow-xs">
-            <CheckCircle2 className="w-6 h-6" />
+        <div className="card-panel p-10 text-center space-y-3">
+          <div className="w-10 h-10 rounded-full bg-status-green-bg text-status-green flex items-center justify-center mx-auto border border-emerald-500/30">
+            <CheckCircle2 className="w-5 h-5" />
           </div>
           <div>
             <h2 className="text-sm font-bold text-text-main">
@@ -218,9 +218,7 @@ export const AlertsView: React.FC = () => {
             return (
               <div
                 key={inc.id}
-                className={`card-panel overflow-hidden transition-all duration-150 hover:border-brand-blue/30 ${
-                  isActive ? "border-l-4 border-l-status-red" : ""
-                }`}
+                className="card-panel overflow-hidden transition-all duration-150 hover:border-brand-blue/30"
               >
                 {/* Main Incident Row */}
                 <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -228,8 +226,8 @@ export const AlertsView: React.FC = () => {
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider shrink-0 ${
                         isHigh
-                          ? "bg-red-500/20 text-status-red border border-red-500/35 shadow-xs"
-                          : "bg-amber-500/20 text-status-amber border border-amber-500/35 shadow-xs"
+                          ? "bg-red-500/15 text-status-red border border-red-500/30"
+                          : "bg-amber-500/15 text-status-amber border border-amber-500/30"
                       }`}
                     >
                       {inc.severity}
@@ -240,12 +238,12 @@ export const AlertsView: React.FC = () => {
                         <span className="text-xs font-bold text-text-main">
                           {inc.title}
                         </span>
-                        <span className="font-mono text-xs font-bold text-brand-blue bg-brand-blue/15 border border-brand-blue/30 px-1.5 py-0.5 rounded">
+                        <span className="font-mono text-xs font-bold text-text-main bg-bg-interactive border border-border-card px-2 py-0.5 rounded">
                           {inc.prefix}
                         </span>
                         {inc.occurrenceCount > 1 && (
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-accent-indigo/15 text-accent-indigo border border-accent-indigo/30">
-                            <Layers className="w-2.5 h-2.5" />
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-bg-interactive text-text-sub border border-border-card">
+                            <Layers className="w-2.5 h-2.5 text-brand-blue" />
                             {inc.occurrenceCount} observations
                           </span>
                         )}
@@ -259,7 +257,7 @@ export const AlertsView: React.FC = () => {
                           <>
                             <span>•</span>
                             <span>
-                              Baseline: <span className="font-mono text-status-green font-semibold">{inc.baseline_asn}</span>
+                              Baseline: <span className="font-mono text-text-main font-semibold">{inc.baseline_asn}</span>
                             </span>
                           </>
                         )}
@@ -281,9 +279,9 @@ export const AlertsView: React.FC = () => {
                   <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                     {/* Status Badge */}
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${
                         isActive
-                          ? "bg-status-red-bg text-status-red border border-red-500/35 shadow-xs"
+                          ? "bg-status-red-bg text-status-red border border-red-500/35"
                           : isAck
                           ? "bg-bg-interactive text-text-sub border border-border-card"
                           : "bg-status-green-bg text-status-green border border-emerald-500/30"
@@ -341,8 +339,8 @@ export const AlertsView: React.FC = () => {
                     {/* Timeline of Individual Preserved Observations */}
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] text-text-dim font-bold uppercase tracking-wider">
-                        <span className="flex items-center gap-1 text-accent-indigo">
-                          <History className="w-3 h-3" />
+                        <span className="flex items-center gap-1 text-text-sub">
+                          <History className="w-3 h-3 text-brand-blue" />
                           Individual Preserved Observations ({inc.observations.length})
                         </span>
                         <span className="text-[10px] text-text-dim">All raw evidence records intact</span>
@@ -384,9 +382,9 @@ export const AlertsView: React.FC = () => {
                                 </span>
                                 <button
                                   onClick={() => setSelectedAlert(obs)}
-                                  className="text-brand-blue hover:text-blue-400 font-semibold cursor-pointer text-[10px] hover:underline"
+                                  className="text-brand-blue hover:underline text-[10px]"
                                 >
-                                  View Evidence
+                                  Hash
                                 </button>
                               </div>
                             </div>
@@ -395,38 +393,30 @@ export const AlertsView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Action Bar */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-card">
+                    {/* Operator Remediation Tools */}
+                    <div className="flex items-center justify-between flex-wrap gap-2 pt-1 border-t border-border-item">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleCheckRpki(inc.primaryAlert)}
-                          className="px-2.5 py-1 rounded-lg bg-bg-btn border border-border-card hover:border-brand-blue/40 text-[11px] font-semibold text-text-sub hover:text-text-main flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                          className="px-3 py-1.5 rounded-lg bg-bg-card border border-border-card hover:border-brand-blue/40 text-xs font-semibold text-text-main flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                         >
-                          <SearchCheck className="w-3 h-3 text-brand-blue" />
-                          <span>Check RPKI</span>
+                          <SearchCheck className="w-3.5 h-3.5 text-brand-blue" />
+                          <span>Check RPKI / ROA</span>
                         </button>
-
-                        <button
-                          onClick={() => handleRecordSuppression(inc.primaryAlert)}
-                          className="px-2.5 py-1 rounded-lg bg-red-500/15 border border-red-500/30 hover:bg-red-500/25 text-status-red text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                          title="Record route suppression policy"
-                        >
-                          <Ban className="w-3 h-3" />
-                          <span>Suppress route</span>
-                        </button>
-
                         <button
                           onClick={() => handleAuthorizeOrigin(inc.primaryAlert)}
-                          className="px-2.5 py-1 rounded-lg bg-bg-btn border border-border-card hover:border-emerald-500/40 text-[11px] font-semibold text-text-sub hover:text-text-main flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
-                          title="Authorize origin exception"
+                          className="px-3 py-1.5 rounded-lg bg-bg-card border border-border-card hover:border-emerald-500/40 text-xs font-semibold text-text-main flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
                         >
-                          <Check className="w-3 h-3 text-status-green" />
-                          <span>Authorize origin</span>
+                          <ShieldCheck className="w-3.5 h-3.5 text-status-green" />
+                          <span>Authorize Origin</span>
                         </button>
-                      </div>
-
-                      <div className="text-[11px] text-text-dim font-mono">
-                        Rule: <span className="text-accent-teal">{inc.kind || "ORIGIN_CHANGE"}</span>
+                        <button
+                          onClick={() => handleRecordSuppression(inc.primaryAlert)}
+                          className="px-3 py-1.5 rounded-lg bg-bg-card border border-border-card hover:border-amber-500/40 text-xs font-semibold text-text-main flex items-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
+                        >
+                          <Ban className="w-3.5 h-3.5 text-status-amber" />
+                          <span>Suppress Policy</span>
+                        </button>
                       </div>
                     </div>
                   </div>

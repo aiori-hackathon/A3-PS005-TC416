@@ -110,41 +110,34 @@ html.dark {
   ::-webkit-scrollbar-thumb:hover { background: rgba(135, 149, 173, 0.45); }
 }
 
-/* Material 3 Expressive & Apple Surface Depth */
+/* Apple Refinement × Google Expressive Clarity Surfaces */
 .card-panel {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 14px;
-  box-shadow: 0 4px 18px -2px rgba(3, 7, 18, 0.35), 0 1px 2px rgba(3, 7, 18, 0.2);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.25);
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .card-panel-elevated {
   background-color: var(--bg-elevated);
   border: 1px solid var(--border-card);
-  border-radius: 14px;
-  box-shadow: 0 8px 30px -4px rgba(3, 7, 18, 0.5), 0 2px 4px rgba(3, 7, 18, 0.25);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px -4px rgba(0, 0, 0, 0.45);
 }
 
-/* Localized Ambient Lighting Gradients */
+/* Restrained Ambient Lighting for focused alerts and healthy status */
 .aurora-ambient-glow {
-  background: radial-gradient(100% 120% at 50% 0%, rgba(98, 168, 255, 0.09) 0%, rgba(164, 154, 255, 0.05) 50%, transparent 100%);
+  background: radial-gradient(100% 120% at 50% 0%, rgba(78, 149, 255, 0.06) 0%, transparent 100%);
 }
 
 .aurora-success-glow {
-  background: radial-gradient(100% 120% at 50% 0%, rgba(67, 217, 155, 0.10) 0%, rgba(76, 217, 207, 0.05) 50%, transparent 100%);
+  background: radial-gradient(100% 120% at 50% 0%, rgba(52, 211, 153, 0.08) 0%, transparent 100%);
 }
 
 .aurora-critical-glow {
-  background: radial-gradient(100% 120% at 50% 0%, rgba(255, 113, 133, 0.12) 0%, rgba(245, 190, 86, 0.04) 50%, transparent 100%);
+  background: radial-gradient(100% 120% at 50% 0%, rgba(251, 113, 133, 0.09) 0%, transparent 100%);
 }
-
-/* Accent top edges for cards */
-.accent-top-blue { border-top: 2px solid #62a8ff; }
-.accent-top-indigo { border-top: 2px solid #a49aff; }
-.accent-top-teal { border-top: 2px solid #4cd9cf; }
-.accent-top-green { border-top: 2px solid #43d99b; }
-.accent-top-coral { border-top: 2px solid #ff7185; }
 
 @layer utilities {
   .bg-bg-app, .bg-app { background-color: var(--bg-app) !important; }
