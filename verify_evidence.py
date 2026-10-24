@@ -10,10 +10,16 @@ Provides an independent verification path outside the browser:
 
 import argparse
 import base64
+import importlib
 import json
 import os
 import sys
 from typing import Any, Dict, Tuple
+
+# Automatically detect local backend virtualenv if run from system Python
+_venv_site = os.path.join(os.path.dirname(__file__), "backend", ".venv", "Lib", "site-packages")
+if os.path.exists(_venv_site) and _venv_site not in sys.path:
+    sys.path.insert(0, _venv_site)
 
 
 def canonicalize_json(data: Any) -> bytes:
@@ -43,18 +49,19 @@ def verify_mldsa_signature(data_bytes: bytes, signature_b64: str, public_key_b64
     except Exception as err:
         return False, f"Malformed base64: {err}"
 
-    # Try dilithium-py
+    # Try dilithium-py (FIPS 204 ML-DSA-65 / Dilithium3)
     try:
-        from dilithium_py.dilithium import Dilithium3
+        dilithium_mod = importlib.import_module("dilithium_py.dilithium")
+        Dilithium3 = getattr(dilithium_mod, "Dilithium3")
         valid = Dilithium3.verify(pub_bytes, data_bytes, sig_bytes)
         return valid, "Verified with dilithium-py (FIPS 204 ML-DSA-65 / Dilithium3)"
-    except ImportError:
+    except Exception:
         pass
 
     # Try liboqs
     try:
-        import oqs
-        with oqs.Signature("ML-DSA-65") as verifier:
+        oqs_mod = importlib.import_module("oqs")
+        with oqs_mod.Signature("ML-DSA-65") as verifier:
             valid = verifier.verify(data_bytes, sig_bytes, pub_bytes)
             return valid, "Verified with liboqs (ML-DSA-65)"
     except Exception as err:
