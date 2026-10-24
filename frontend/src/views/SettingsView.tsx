@@ -143,7 +143,9 @@ export const SettingsView: React.FC = () => {
               {cryptoStatus?.algorithm || "NIST ML-DSA-65"}
             </div>
             <div className="text-xs text-text-dim">
-              {cryptoStatus?.status === "READY" ? "Post-quantum keys loaded" : "Ready for attestations"}
+              {cryptoStatus?.status === "READY"
+                ? `Active (${cryptoStatus.provider || "dilithium-py"})`
+                : (cryptoStatus?.message || "Provider Unavailable")}
             </div>
           </div>
         </div>

@@ -29,7 +29,8 @@ export const OverviewView: React.FC = () => {
 
   const prefixesTracked = overview?.tracked_routes || routes.length || 0;
   const updatesEvaluated = (overview?.total_observations || 0) + alerts.length;
-  const connectedPeers = "3 Tier-1";
+  const risFeedsCount = "3 Collectors";
+  const risFeedNames = "rrc00, rrc01, rrc03 (RIPE RIS)";
 
   const recentIncidents = groupedIncidents.slice(0, 7);
 
@@ -74,9 +75,13 @@ export const OverviewView: React.FC = () => {
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-bg-interactive border border-divider text-xs text-text-sub">
             <span className="w-2 h-2 rounded-full bg-status-green" />
-            <span className="font-medium text-text-main">Evaluation Replay Mode</span>
+            <span className="font-medium text-text-main">
+              {overview?.data_mode === "LIVE_TELEMETRY" ? "RIPE RIS Live Stream" : "Evaluation Benchmark Mode"}
+            </span>
             <span className="text-text-dim">•</span>
-            <span className="text-text-dim">RIPE RIS Telemetry</span>
+            <span className="text-text-dim">
+              {overview?.data_mode === "LIVE_TELEMETRY" ? "Active Ingestion" : "RIPE RIS Telemetry & Replay"}
+            </span>
           </div>
         </div>
       </div>
@@ -195,17 +200,17 @@ export const OverviewView: React.FC = () => {
             </div>
           </div>
 
-          {/* Connected Peers */}
+          {/* RIPE RIS Ingestion Feeds */}
           <div className="p-5 space-y-1">
             <div className="text-xs font-medium text-text-sub flex items-center justify-between">
-              <span>Connected peers</span>
+              <span>RIPE RIS Feeds</span>
               <Server className="w-4 h-4 text-text-dim" />
             </div>
             <div className="text-3xl font-bold font-mono text-text-main tracking-tight">
-              {connectedPeers}
+              {risFeedsCount}
             </div>
             <div className="text-xs text-text-dim">
-              RIPE RIS collectors
+              {risFeedNames}
             </div>
           </div>
         </div>

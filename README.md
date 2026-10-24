@@ -1,33 +1,46 @@
 # HORA-Q — Explainable BGP Origin and Subprefix Anomaly Monitor
 
-[![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-indigo.svg)](file:///d:/HORA-Q)
-[![Track](https://img.shields.io/badge/AIORI--3-Track%202%20Cyber%20Security%20(PS--005)-cyan.svg)](file:///d:/HORA-Q)
+[![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-indigo.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
+[![Track](https://img.shields.io/badge/AIORI--3-Track%202%20Cyber%20Security%20(PS--005)-cyan.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
 [![Tests](https://img.shields.io/badge/Tests-36%20Passed%20(100%25)-emerald.svg)](file:///d:/HORA-Q/backend/tests)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](file:///d:/HORA-Q)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](file:///d:/HORA-Q/LICENSE)
 
-**HORA-Q** is an Explainable BGP Origin and Subprefix Anomaly Monitoring system built for **AIORI-3, Track 2 Cyber Security, problem PS-005, team A3-PS005-TC416**.
-
-It normalizes BGP route announcements, maintains per-prefix baselines, flags origin-AS discrepancies and strict more-specific subprefix announcements, binds findings to tamper-evident cryptographic evidence records (SHA-256 canonical hashing + post-quantum ML-DSA-65 signatures), and provides clear human-understandable explanations for network operations and security analysts.
+**AIORI-3 Hackathon · Problem PS-005 · Track 2 Cyber Security**  
+**Team Code:** `A3-PS005-TC416` | **Institution:** Al-Ameen College  
+**Team Members:** Sankardev VS (Team Lead), Adarsh A (Team Member) | **Faculty Mentor:** Dr. Jyothy Joseph  
+**Team Introduction Video:** [https://youtu.be/oKoHllmyCMQ](https://youtu.be/oKoHllmyCMQ)  
+**Project Proposal:** [HORA Q — Explainable BGP Anomaly Monitor (AIORI-3 Proposal).pdf](file:///d:/HORA-Q/HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20(AIORI-3%20Proposal).pdf) | [Proposed-structure-hackathon.pdf](file:///d:/HORA-Q/Proposed-structure-hackathon.pdf)
 
 ---
 
-## ⚡ Key Capabilities
+**HORA-Q** is a production-grade, explainable BGP origin and subprefix anomaly monitoring platform. It normalizes live and replayed BGP route announcements, maintains immutable per-prefix baselines, detects origin-AS conflicts and strict more-specific subprefix announcements without baseline poisoning, binds forensic findings into tamper-evident canonical evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
 
-1. **Deterministic BGP Detection Engine**:
-   - **Baseline Seeding**: Initial observation seeds reference origin; does not trigger false alerts.
-   - **Origin-AS Conflict Detection**: Identifies origin changes while strictly forbidding silent baseline overwrites.
-   - **Subprefix / More-Specific Containment**: Evaluates strict subnet containment across address families (IPv4 and IPv6) with longest-prefix match awareness.
+---
+
+## ⚡ Verified Technical Capabilities
+
+1. **Deterministic BGP Anomaly Detection Engine**:
+   - **Baseline Seeding**: Initial observation seeds reference origin without false positives.
+   - **Origin-AS Conflict Detection**: Flags unauthorized origin announcements while strictly preventing baseline poisoning.
+   - **Subprefix Containment Detection**: Flags more-specific announcements (/25 under /24, /48 under /32) across both IPv4 and IPv6 families.
+   - **Observation Grouping**: Deduplicates repeated telemetry updates, preserving genuine observation counts.
+
 2. **Explainable Root Cause Reasoning**:
-   - Generates transparent, human-readable explanations detailing comparison values and distinguishing between potential malicious hijacking, legitimate multi-homing/migration, DDoS scrubbing, and route leaks.
-3. **Cryptographic Evidence Vault**:
-   - Canonical JSON serialization (RFC 8785 compatible).
-   - SHA-256 content integrity digest verification with live tamper detection demonstration.
-   - **ML-DSA-65 Post-Quantum Signature** integration (FIPS 204), adhering to strict no-fallback rules (honest provider status without silent downgrade to classical cryptography).
+   - Generates transparent, human-readable forensic explanations distinguishing unauthorized route hijacking, dual-origin provider migration, DDoS scrubbing, and route leaks.
+
+3. **Post-Quantum Cryptography & Tamper-Evident Evidence**:
+   - **RFC 8785 Canonical JSON**: Deterministic key sorting and whitespace-free encoding.
+   - **SHA-256 Digest**: Immutable content integrity binding.
+   - **FIPS 204 ML-DSA-65 Post-Quantum Signatures**: Real cryptographic key generation, signing, and verification via `dilithium-py` / `liboqs` with strict no-fallback enforcement.
+   - **Independent CLI Verifier** (`verify_evidence.py`): External verification outside the browser that validates hashes, verifies post-quantum signatures, and reliably catches tampered records.
+
 4. **RPKI Context & RIPEstat Integration**:
-   - Live query of cryptographic Route Origin Authorizations (ROAs).
-   - Explicit `VALID`, `INVALID`, `UNKNOWN`, and `UNAVAILABLE` state reporting without inventing verdicts on network timeouts.
-5. **Interactive Operations Center**:
-   - High-contrast cyber dark dashboard with live KPI metrics, synthetic scenario launchers, manual route injection, and evidence inspection dialogs.
+   - Evaluates cryptographic Route Origin Authorizations (ROAs) with transparent `VALID`, `INVALID`, `UNKNOWN`, and `UNAVAILABLE` statuses.
+
+5. **Google Cloud Console × Apple Craftsmanship Operations Center**:
+   - Light-first daylight palette (`#F8F9FA` canvas, `#FFFFFF` surfaces, `#1A73E8` blue) with dark mode toggle.
+   - Full 1360px desktop workspace scale with structured tabular ledgers instead of nested cards.
+
 
 ---
 
@@ -156,11 +169,24 @@ The system includes pre-configured reproducible synthetic evaluation scenarios p
 
 ---
 
-## 🔐 Cryptography & Evidence Standards
+## 🔐 Independent Evidence Verification (CLI)
 
-- **Canonical JSON Serialization**: Adheres to RFC 8785 principles with recursive alphanumeric key sorting and compact delimiters.
-- **SHA-256 Digest**: Computed over UTF-8 canonical bytes for content tamper-evidence.
-- **Post-Quantum Signatures (ML-DSA-65)**: Native integration with FIPS 204. If the underlying environment does not have `liboqs` compiled, HORA-Q explicitly reports `PROVIDER_UNAVAILABLE` rather than dangerously and silently falling back to insecure or unapproved algorithms.
+HORA-Q provides an independent command-line verifier (`verify_evidence.py`) enabling external evaluators to cryptographically inspect and verify evidence records outside the browser:
+
+```bash
+# Verify authentic ML-DSA-65 signed evidence record:
+python verify_evidence.py audit/sample_evidence_signed.json
+
+# Demonstrate tamper detection (mutates in-memory record to prove rejection):
+python verify_evidence.py audit/sample_evidence_signed.json --tamper
+```
+
+**Verification Guarantees**:
+- **RFC 8785 Canonical JSON**: Independent key sorting and byte canonicalization.
+- **SHA-256 Digest Match**: Verifies byte-level integrity against the attested record hash.
+- **NIST FIPS 204 ML-DSA-65**: Mathematical verification of lattice-based post-quantum signatures using `dilithium-py` or `liboqs`.
+- **Tamper Rejection**: Any modification to prefix, origin ASN, timestamp, or severity immediately results in `[FAIL] TAMPER DETECTED` with exit code `1`.
+
 
 ---
 

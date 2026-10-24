@@ -15,6 +15,8 @@ export interface OverviewStats {
   latest_observation_time: string | null;
   crypto_status: CryptoStatus;
   database: string;
+  data_mode?: string;
+  mode_label?: string;
 }
 
 export interface RouteBaseline {
