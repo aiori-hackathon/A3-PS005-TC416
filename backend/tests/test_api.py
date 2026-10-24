@@ -122,3 +122,17 @@ def test_evidence_verify_hash_endpoint(client):
     data = resp.json()
     assert data["valid"] is True
     assert data["integrity_verified"] is True
+
+
+def test_crypto_public_key_endpoint(client):
+    resp = client.get("/api/v1/crypto/public-key")
+    if resp.status_code == 503:
+        pytest.skip("ML-DSA provider not available")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["algorithm"] == "ML-DSA-65"
+    assert "public_key" in data
+    assert len(data["public_key"]) > 100
+    assert "fingerprint" in data
+    assert len(data["fingerprint"]) == 64
+

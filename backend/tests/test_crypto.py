@@ -67,3 +67,50 @@ def test_corrupted_signature_rejected():
     # 3. Must be mathematically rejected
     assert verify_signature(test_data, corrupted_sig_b64, pub_b64) is False
 
+
+def test_persistent_authority_key_lifecycle():
+    """Verify that sign_data uses the durable persistent authority key rather than ephemeral keys."""
+    if not is_mldsa_available():
+        pytest.skip("ML-DSA provider not available in environment")
+
+    from horaq.crypto import get_authority_public_key, get_authority_key_fingerprint
+    import hashlib
+
+    # 1. Inspect authority key
+    auth_pub_b64 = get_authority_public_key()
+    fingerprint = get_authority_key_fingerprint()
+    pub_bytes = base64.b64decode(auth_pub_b64)
+    assert hashlib.sha256(pub_bytes).hexdigest() == fingerprint
+
+    # 2. Sign two distinct payloads
+    p1 = b"Payload 1"
+    p2 = b"Payload 2"
+    sig1, pk1 = sign_data(p1)
+    sig2, pk2 = sign_data(p2)
+
+    # 3. Public key must remain durable and identical across both signings
+    assert pk1 == auth_pub_b64
+    assert pk2 == auth_pub_b64
+    assert pk1 == pk2
+
+    # 4. Both signatures verify against the same persistent authority public key
+    assert verify_signature(p1, sig1, auth_pub_b64) is True
+    assert verify_signature(p2, sig2, auth_pub_b64) is True
+
+
+def test_custom_secret_key_requires_public_key():
+    """Verify that supplying a secret_key without public_key raises ValueError."""
+    if not is_mldsa_available():
+        pytest.skip("ML-DSA provider not available in environment")
+
+    from horaq.crypto import generate_keypair
+    pk, sk = generate_keypair()
+
+    # Must raise ValueError if public_key is omitted
+    with pytest.raises(ValueError, match="matching public_key must also be provided"):
+        sign_data(b"test", secret_key=sk, public_key=None)
+
+    # Must succeed when both are supplied
+    sig_b64, pub_b64 = sign_data(b"test", secret_key=sk, public_key=pk)
+    assert verify_signature(b"test", sig_b64, pub_b64) is True
+

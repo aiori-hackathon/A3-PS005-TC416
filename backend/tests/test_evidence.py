@@ -61,3 +61,20 @@ def test_verify_evidence_hash_detects_tampering():
     is_valid, computed = verify_evidence_hash(tampered_record, digest)
     assert is_valid is False
     assert computed != digest
+
+
+def test_rfc8785_canonicalization_compliance():
+    """Verify compliance with RFC 8785 JSON Canonicalization Scheme (JCS)."""
+    # 1. UTF-16 code unit ordering for property names
+    d = {"\u00e9": 1, "e": 2, "a": 3}
+    # In UTF-16 code units: 'a' (0x61) < 'e' (0x65) < '\u00e9' (0xE9)
+    canon = canonicalize_json(d)
+    assert canon == b'{"a":3,"e":2,"\xc3\xa9":1}'
+
+    # 2. Unicode characters preserved in UTF-8 without unnecessary escapes
+    d_unicode = {"text": "BGP-Monitoring-\u2014-Safe"}
+    assert canonicalize_json(d_unicode) == b'{"text":"BGP-Monitoring-\xe2\x80\x94-Safe"}'
+
+    # 3. Compact delimiters without any whitespace
+    d_nested = {"arr": [1, 2, {"k": "v"}], "flag": True, "empty": None}
+    assert canonicalize_json(d_nested) == b'{"arr":[1,2,{"k":"v"}],"empty":null,"flag":true}'

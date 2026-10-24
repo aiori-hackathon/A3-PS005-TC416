@@ -55,7 +55,9 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Environment variables
+# Environment variables & Private Keys
 .env
 .env.local
 .env.*.local
+*authority_key.json
+horaq_authority_key.json

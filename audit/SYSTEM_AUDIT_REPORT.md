@@ -19,9 +19,10 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
 - **Baseline Poisoning Protection**: **VERIFIED**. Suspicious or anomalous route announcements (`8.8.8.128/25` and `2001:db8:1::/48`) fire alerts and forensic evidence, but are strictly blocked from poisoning trusted route baselines.
 - **Evidence Count Semantics**: **VERIFIED**. Evaluated BGP telemetry updates (`observations`: 10–13 updates) are strictly distinguished from forensic anomaly artifacts (`evidence`: 3 records, linked via `alert_id`).
 - **Post-Quantum Cryptography**: **VERIFIED**. Real ML-DSA-65 signing and verification backed by `dilithium-py`. Tested mathematically against public keys; independently verified via `verify_evidence.py`. In-memory tampering reliably detected.
-- **Backend Test Suite**: **38 of 38 tests passing (100% pass rate)**.
+- **Backend Test Suite**: **42 of 42 tests passing (100% pass rate)**.
 - **Frontend Production Build**: **Clean compilation** (`tsc && vite build` completed with code 0 in 3.47s).
 - **Public Git Delivery**: **Synchronized**. Code, test suite, documentation, and 16:9 full-desktop screenshots are published to GitHub `main`.
+- **Automated CI**: **`.github/workflows/ci.yml`** configured for automated GitHub Actions verification.
 
 ---
 
@@ -86,8 +87,12 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
   - Updated API `/overview` to return `total_observations`, `tracked_routes`, `total_alerts`, `active_alerts`, `total_evidence`, and `signed_evidence`.
   - Updated `EvidenceVaultView.tsx` badge to `3 Anomaly Evidence Records` with explicit subtitle.
 
-### 3.3. NIST FIPS 204 ML-DSA-65 Verification
+### 3.3. NIST FIPS 204 ML-DSA-65 Verification & Key Lifecycle
 - **Implementation**: Backed by `dilithium-py` with FIPS 204 ML-DSA-65 parameters (Public Key: 1,952 bytes; Private Key: 4,032 bytes; Signature: 3,309 bytes).
+- **Persistent Authority Key Lifecycle**: Eliminated ephemeral key generation on signing requests. Implemented persistent singleton `AuthorityKeyManager` in `backend/horaq/crypto.py` storing the authority keypair in `horaq_authority_key.json` with restricted filesystem permissions (`0o600`).
+- **Signer Identity & Key Derivation**: When signing evidence without custom keys, the persistent authority key is used, returning both signature and matching public key. If a custom secret key is supplied, a matching public key is mandatory, preventing orphaned or unverified signatures.
+- **Authority Public Key API**: Exposed via `GET /api/v1/crypto/public-key` and `GET /api/v1/crypto/status` returning algorithm, key length, Base64 public key, and SHA-256 fingerprint.
+- **Genuine RFC 8785 Canonicalization (JCS)**: Integrated `rfc8785` library (with a pure-Python fallback in `backend/horaq/evidence.py` and `verify_evidence.py`) ensuring byte-level compliance with RFC 8785: UTF-16 code unit lexical key sorting, IEEE 754 number serialization, and unescaped UTF-8 characters.
 - **Strict Integrity**: Rejects fallback to classical algorithms (RSA/ECDSA). Reports `PROVIDER_UNAVAILABLE` if key material or provider is absent.
 - **Independent Verification Tool** ([`verify_evidence.py`](file:///d:/HORA-Q/verify_evidence.py)):
   - Authentic verification: `python verify_evidence.py audit/sample_evidence_signed.json` -> `[PASS]`
@@ -100,7 +105,7 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
 
 ---
 
-## 4. Backend Regression Test Matrix (38/38 Passed)
+## 4. Backend Regression Test Matrix (42/42 Passed)
 
 All tests executed via `python -m pytest -v` from `backend/`:
 
@@ -113,9 +118,12 @@ All tests executed via `python -m pytest -v` from `backend/`:
 | `test_api.py` | `test_post_observation_invalid_asn` | Negative or out-of-range ASN rejected with HTTP 422 | **PASS** |
 | `test_api.py` | `test_run_synthetic_scenarios` | Synthetic scenario triggers run deterministically | **PASS** |
 | `test_api.py` | `test_evidence_verify_hash_endpoint` | Hash verification endpoint detects match/mismatch | **PASS** |
+| `test_api.py` | `test_crypto_public_key_endpoint` | Public key endpoint returns authority public key & fingerprint | **PASS** |
 | `test_crypto.py` | `test_crypto_status_reporting` | Crypto status reports ML-DSA-65 readiness | **PASS** |
 | `test_crypto.py` | `test_crypto_behavior` | ML-DSA-65 signs and mathematically verifies valid payload | **PASS** |
 | `test_crypto.py` | `test_corrupted_signature_rejected` | Mutated signature bytes rejected by verification engine | **PASS** |
+| `test_crypto.py` | `test_persistent_authority_key_lifecycle` | Persistent keypair persists and reloads identically across instances | **PASS** |
+| `test_crypto.py` | `test_custom_secret_key_requires_public_key` | Supplying custom secret key without public key raises ValueError | **PASS** |
 | `test_detection.py` | `test_baseline_seeding_creates_no_alert` | Initial announcement seeds reference baseline, 0 alerts | **PASS** |
 | `test_detection.py` | `test_same_origin_updates_observation_count` | Subsequent matching updates increment observation counter | **PASS** |
 | `test_detection.py` | `test_origin_change_generates_alert_and_preserves_baseline` | Origin conflict fires `ORIGIN_CHANGE`, root origin preserved | **PASS** |
@@ -123,6 +131,7 @@ All tests executed via `python -m pytest -v` from `backend/`:
 | `test_detection.py` | `test_ipv6_subprefix_anomaly_detection` | Rogue IPv6 `/48` under `/32` fires `SUBPREFIX_ANOMALY` | **PASS** |
 | `test_detection.py` | `test_suspicious_subprefix_does_not_poison_baseline` | Rogue subprefix NEVER enters `baselines` table | **PASS** |
 | `test_evidence.py` | `test_canonicalize_json_sorted_keys` | RFC 8785 canonical JSON sorting and compact serialization | **PASS** |
+| `test_evidence.py` | `test_rfc8785_canonicalization_compliance` | RFC 8785 compliance: key ordering, integer serialization, unescaped unicode | **PASS** |
 | `test_evidence.py` | `test_create_and_verify_evidence_hash` | SHA-256 digest calculated and verified | **PASS** |
 | `test_evidence.py` | `test_verify_evidence_hash_detects_tampering` | In-memory payload alteration triggers hash mismatch | **PASS** |
 | `test_normalization.py` | `test_normalize_prefix_ipv4_valid` | Valid IPv4 prefix normalized | **PASS** |

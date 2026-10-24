@@ -14,6 +14,8 @@ from pydantic import BaseModel, Field
 from horaq.config import settings
 from horaq.crypto import (
     ALGORITHM_NAME,
+    get_authority_key_fingerprint,
+    get_authority_public_key,
     get_crypto_status,
     is_mldsa_available,
     sign_data,
@@ -315,8 +317,25 @@ async def verify_signature_endpoint(payload: SignatureVerifyRequest) -> Dict[str
 
 @router.get("/crypto/status")
 async def get_crypto_status_endpoint() -> Dict[str, Any]:
-    """Report availability of ML-DSA-65 post-quantum signature engine."""
+    """Report availability of ML-DSA-65 post-quantum signature engine and authority key."""
     return get_crypto_status()
+
+
+@router.get("/crypto/public-key")
+async def get_crypto_public_key_endpoint() -> Dict[str, Any]:
+    """Retrieve the persistent ML-DSA-65 authority public key and fingerprint."""
+    if not is_mldsa_available():
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="ML-DSA-65 provider unavailable.",
+        )
+    return {
+        "algorithm": ALGORITHM_NAME,
+        "public_key": get_authority_public_key(),
+        "fingerprint": get_authority_key_fingerprint(),
+        "key_lifecycle": "PERSISTENT_AUTHORITY_KEY",
+        "format": "BASE64_RAW_BYTES",
+    }
 
 
 @router.get("/rpki/validate")

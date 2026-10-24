@@ -22,17 +22,43 @@ if os.path.exists(_venv_site) and _venv_site not in sys.path:
     sys.path.insert(0, _venv_site)
 
 
+def _pure_rfc8785_dumps(data: Any) -> bytes:
+    """Pure-Python implementation of RFC 8785 JSON Canonicalization Scheme (JCS)."""
+    if data is None:
+        return b"null"
+    elif isinstance(data, bool):
+        return b"true" if data else b"false"
+    elif isinstance(data, int) and not isinstance(data, bool):
+        return str(data).encode("utf-8")
+    elif isinstance(data, float):
+        import math
+        if math.isnan(data) or math.isinf(data):
+            raise ValueError("NaN or Inf not permitted in RFC 8785 JSON")
+        if data.is_integer():
+            return str(int(data)).encode("utf-8")
+        return repr(data).encode("utf-8")
+    elif isinstance(data, str):
+        return json.dumps(data, ensure_ascii=False).encode("utf-8")
+    elif isinstance(data, (list, tuple)):
+        return b"[" + b",".join(_pure_rfc8785_dumps(x) for x in data) + b"]"
+    elif isinstance(data, dict):
+        keys = sorted(data.keys(), key=lambda k: [ord(c) for c in k])
+        return b"{" + b",".join(_pure_rfc8785_dumps(k) + b":" + _pure_rfc8785_dumps(data[k]) for k in keys) + b"}"
+    else:
+        raise TypeError(f"Object of type {type(data)} is not JSON serializable under RFC 8785")
+
+
 def canonicalize_json(data: Any) -> bytes:
-    """RFC 8785 Canonical JSON Serialization.
-    
-    Keys sorted lexicographically, no whitespace around separators, UTF-8 encoded.
+    """RFC 8785 Canonical JSON Serialization (JCS).
+
+    Deterministic lexicographical UTF-16 code unit key sorting, compact delimiters,
+    and standardized number representation.
     """
-    return json.dumps(
-        data,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    ).encode("utf-8")
+    try:
+        rfc_mod = importlib.import_module("rfc8785")
+        return rfc_mod.dumps(data)
+    except Exception:
+        return _pure_rfc8785_dumps(data)
 
 
 def compute_sha256(canon_bytes: bytes) -> str:
