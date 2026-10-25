@@ -1,21 +1,21 @@
 {
   "test_name": "RIPE_RIS_LIVE_INGESTION",
-  "timestamp_utc": "2026-10-25T06:00:20.582886+00:00",
+  "timestamp_utc": "2026-10-25T11:03:30.518741+00:00",
   "target_url": "wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416",
-  "duration_seconds": 26.16,
+  "duration_seconds": 12.22,
   "telemetry": {
     "enabled": true,
     "running": false,
     "connected": false,
     "url": "wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416",
-    "messages_received": 144,
-    "messages_parsed": 1523,
+    "messages_received": 113,
+    "messages_parsed": 195,
     "messages_skipped": 0,
     "withdrawals_received": 0,
     "as_set_handled": 0,
     "as_set_skipped": 0,
     "reconnect_count": 0,
-    "last_message_at": "2026-10-25T06:00:10.557097Z",
+    "last_message_at": "2026-10-25T11:03:20.498039Z",
     "last_skipped_reason": null,
     "last_error": null
   },
@@ -23,12 +23,14 @@
     {
       "raw_sample_id": 1,
       "type": "ris_message",
-      "peer": "2a09:4c0:f00:8ff6::b3e8",
-      "host": "rrc00.ripe.net",
+      "peer": "80.249.211.237",
+      "host": "rrc03.ripe.net",
       "path": [
-        61218,
-        29632,
-        28458
+        199938,
+        3462,
+        3462,
+        17408,
+        57976
       ],
       "announcements_count": 1,
       "withdrawals_count": 0
@@ -36,13 +38,13 @@
     {
       "raw_sample_id": 2,
       "type": "ris_message",
-      "peer": "195.90.96.2",
-      "host": "rrc00.ripe.net",
+      "peer": "2001:7f8:1:0:a500:19:9938:1",
+      "host": "rrc03.ripe.net",
       "path": [
-        48185,
-        37100,
-        37239,
-        329289
+        199938,
+        34696,
+        205697,
+        29269
       ],
       "announcements_count": 1,
       "withdrawals_count": 0
@@ -50,14 +52,12 @@
     {
       "raw_sample_id": 3,
       "type": "ris_message",
-      "peer": "2a02:2b8::195:90:96:2",
-      "host": "rrc00.ripe.net",
+      "peer": "2001:7f8:1::a500:6461:1",
+      "host": "rrc03.ripe.net",
       "path": [
-        48185,
-        33891,
-        12912,
-        47755,
-        47755
+        6461,
+        29632,
+        139216
       ],
       "announcements_count": 1,
       "withdrawals_count": 0
@@ -65,15 +65,14 @@
     {
       "raw_sample_id": 4,
       "type": "ris_message",
-      "peer": "2405:aa00:1::8",
-      "host": "rrc00.ripe.net",
+      "peer": "2001:7f8:13::a520:9650:1",
+      "host": "rrc03.ripe.net",
       "path": [
-        6939,
-        202365,
-        202365,
-        202365,
-        202365,
-        51559
+        209650,
+        34927,
+        263444,
+        22381,
+        28209
       ],
       "announcements_count": 1,
       "withdrawals_count": 0
@@ -81,16 +80,14 @@
     {
       "raw_sample_id": 5,
       "type": "ris_message",
-      "peer": "84.54.49.1",
-      "host": "rrc00.ripe.net",
+      "peer": "2001:7f8:1::a500:6461:1",
+      "host": "rrc03.ripe.net",
       "path": [
-        216285,
-        8280,
-        6762,
-        37100,
-        37239,
-        37239,
-        329289
+        6461,
+        33891,
+        50673,
+        34872,
+        215887
       ],
       "announcements_count": 1,
       "withdrawals_count": 0

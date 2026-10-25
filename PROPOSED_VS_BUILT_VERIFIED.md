@@ -6,58 +6,72 @@
 **Team**: `A3-PS005-TC416`  
 **Repository**: [https://github.com/aiori-hackathon/A3-PS005-TC416](https://github.com/aiori-hackathon/A3-PS005-TC416)  
 **Verification Date**: October 25, 2026  
-**Status**: Real-World Validated (Live RIPE RIS Ingestion, Real RPKI Validation, Historical Replay, 72 Automated Tests)
+**Status**: Real-World Validated (Live RIPE RIS Ingestion, Real RPKI Validation, Documented Historical Incident Replays, 73 Automated Tests)
 
 ---
 
 ## 1. Executive Summary & AIORI-3 Criteria Alignment
 
-The AIORI-3 evaluation framework emphasizes four fundamental criteria:
-1. **Technical Innovation**: Explainable BGP routing anomaly detection coupled with FIPS 204 post-quantum digital signatures (ML-DSA-65) and deterministic RFC 8785 canonicalization.
-2. **Practical Feasibility**: Operational integration with live RIPE RIS WebSocket streams, on-demand RPKI validation via RIPEstat, and standalone verifiable evidence records.
-3. **Architectural Rigour**: Strict anti-poisoning baseline invariants (suspicious announcements can never corrupt reference routing policies), persistent cryptographic authority key lifecycles, and resilient input sanitization.
-4. **Alignment with Internet Infrastructure Challenges**: Direct mitigation of BGP's lack of origin authentication and longest-prefix-match subprefix interception, backed by reproducible historical incident replays (e.g., YouTube PTCL hijack, Indosat leak, Rostelecom leak).
+The AIORI-3 evaluation framework emphasizes four fundamental considerations:
+1. **Technical Innovation**: Explainable BGP routing anomaly detection coupled with FIPS 204 post-quantum digital signatures (ML-DSA-65) and deterministic RFC 8785 JSON Canonicalization (JCS).
+2. **Practical Feasibility**: Operational integration with live RIPE RIS WebSocket streams, on-demand RPKI validation via RIPEstat, and standalone verifiable cryptographic evidence records.
+3. **Architectural Rigour**: Strict anti-poisoning baseline invariants (suspicious announcements cannot corrupt reference routing policies), persistent cryptographic authority key lifecycles, and hardened public demo mode protections preventing unauthenticated data destruction.
+4. **Alignment with Internet Infrastructure Challenges**: Direct mitigation of BGP's lack of origin authentication and longest-prefix-match subprefix interception, backed by reproducible historical incident replays with documented ground truth (e.g., YouTube PTCL hijack, Indosat Google DNS hijack, RTComm Twitter hijack).
 
 ---
 
-## 2. Traceability Matrix: Proposed vs. Built vs. Verified
+## 2. Validation Tiers: What Is and Is Not Claimed
+
+To ensure complete scientific integrity and truthful claims for evaluators, HORA-Q distinguishes between five validation levels:
+
+| Validation Level | Scope & Method | Current Evidence Status | What Is Claimed | What Is NOT Claimed |
+|---|---|---|---|---|
+| **Tier 1: Software Correctness** | 73 automated unit & integration tests; RFC 8785 JCS test vectors; tamper injection | **`VERIFIED`** (CI Passed) | Engine correctness, memory safety, reproducible builds | Does not guarantee real-world Internet data accuracy on its own |
+| **Tier 2: Live Ingestion** | Live WebSocket connection to RIPE NCC RIS Live (`wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416`) | **`VERIFIED`** ([`audit/live_ris_telemetry.json`](audit/live_ris_telemetry.json)) | Collector connects, handles terminal `AS_SET`s, tracks withdrawals, and ingests live BGP updates | Does not claim 24/7 continuous production multi-collector deployment (opt-in by design) |
+| **Tier 3: Live External RPKI** | Live HTTP queries to RIPEstat RPKI Validation API (`stat.ripe.net`) | **`VERIFIED`** ([`audit/live_rpki_evidence.json`](audit/live_rpki_evidence.json)) | Validated external `VALID`, `INVALID`, and `UNKNOWN` responses with raw payload preservation | RPKI is an on-demand inspection tool, not an inline gate in the detection loop |
+| **Tier 4: Documented Historical Incidents** | Replay of documented incident parameters against ground-truth baselines | **`VERIFIED`** ([`audit/historical_replay_evidence.json`](audit/historical_replay_evidence.json)) | Verified detection on documented historical cases (PTCL, Indosat, RTComm) and 0% false positives on controls | Does NOT stream raw binary MRT archive files or historical BGP PCAP packet traces |
+| **Tier 5: Scope & Detection Capability** | Origin-AS conflict and more-specific subprefix anomaly detection | **`VERIFIED`** | Accurately identifies origin mismatches and subnet containment violations | Does NOT evaluate full AS-path valley-free / AS-relationship routing policy graphs (RFC 7908) |
+
+---
+
+## 3. Traceability Matrix: Proposed vs. Built vs. Verified
 
 Status categories:
 - **`VERIFIED`**: Implemented, backed by passing deterministic automated tests or live Internet evidence.
-- **`PARTIALLY VERIFIED`**: Implemented and functionally validated, but with specific operational constraints or opt-in configuration.
+- **`PARTIALLY VERIFIED`**: Implemented and functionally validated, with documented architectural boundaries.
 - **`NOT VERIFIED`**: Code present but not yet verified against live infrastructure.
-- **`NOT IMPLEMENTED`**: Planned or proposed capability not built in the current release.
+- **`NOT IMPLEMENTED`**: Planned capability not built in the current release.
 
-| Proposed Capability / Requirement | Scope & Specification | Implementation File | Verification Evidence | Observed Result | Verdict | Remaining Gap / Operational Nuance |
+| Proposed Capability / Requirement | Scope & Specification | Implementation File | Verification Evidence | Observed Result | Verdict | Remaining Gap / Architectural Boundary |
 |---|---|---|---|---|---|---|
-| **BGP Origin-Change Detection** | Detect conflicting origin ASN against established route baseline | [`backend/horaq/detection.py`](file:///d:/HORA-Q/backend/horaq/detection.py) | [`backend/tests/test_detection.py`](file:///d:/HORA-Q/backend/tests/test_detection.py) & Historical Replay | Triggers HIGH-severity alert; generates tamper-proof evidence; baseline origin preserved | **`VERIFIED`** | None. Tested against both synthetic scenarios and historical incidents (Indosat, Rostelecom). |
-| **IPv4 Subprefix Anomaly Detection** | Detect more-specific IPv4 routes exploiting BGP Longest Prefix Match | [`backend/horaq/detection.py`](file:///d:/HORA-Q/backend/horaq/detection.py) | [`backend/tests/test_detection.py`](file:///d:/HORA-Q/backend/tests/test_detection.py) & YouTube incident | Identifies `/25` inside `/24`; links `parent_prefix`; flags severe traffic interception | **`VERIFIED`** | None. Validated against documented 2008 YouTube/PTCL hijack (`208.65.153.0/24` under `/22`). |
-| **IPv6 Subprefix Anomaly Detection** | Detect more-specific IPv6 routes exploiting multi-protocol BGP | [`backend/horaq/detection.py`](file:///d:/HORA-Q/backend/horaq/detection.py) | [`backend/tests/test_detection.py::test_ipv6_subprefix_anomaly_detection`](file:///d:/HORA-Q/backend/tests/test_detection.py) | Correctly handles 128-bit addresses; detects `/48` inside `/32`; alerts without poisoning | **`VERIFIED`** | None. Verified with RFC 3849 testbed. |
-| **Baseline Anti-Poisoning Invariant** | Prevent anomalous announcements from establishing or updating baselines | [`backend/horaq/detection.py`](file:///d:/HORA-Q/backend/horaq/detection.py) | [`backend/tests/test_detection.py::test_suspicious_subprefix_does_not_poison_baseline`](file:///d:/HORA-Q/backend/tests/test_detection.py) | Attacking subprefixes and rogue origin ASNs are strictly blocked from `baselines` table | **`VERIFIED`** | Seeding from first observation is intended for initial discovery; production networks should use authenticated seeds. |
-| **Live BGP Feed Ingestion** | Ingest real-time BGP announcements via RIPE NCC RIS Live WebSocket | [`backend/horaq/collector.py`](file:///d:/HORA-Q/backend/horaq/collector.py) | Live test against `wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416` ([`audit/live_ris_telemetry.json`](file:///d:/HORA-Q/audit/live_ris_telemetry.json)) | Connected live: 144 messages received, 1,523 route announcements parsed, 0 dropped | **`VERIFIED`** | Collector is opt-in (`HORAQ_LIVE_COLLECTOR=false` by default) to guarantee deterministic evaluation benchmarks. |
-| **Terminal AS_SET Path Handling** | Handle BGP aggregation sets (RFC 4271/RFC 6472) without crashes or silent drops | [`backend/horaq/collector.py`](file:///d:/HORA-Q/backend/horaq/collector.py) | [`backend/tests/test_collector.py`](file:///d:/HORA-Q/backend/tests/test_collector.py) | Unwraps single-element set; skips ambiguous multi-origin sets with RFC 6472 notice | **`VERIFIED`** | Multi-origin AS_SETs cannot provide unambiguous origin ASNs and are explicitly counted in telemetry. |
-| **RPKI Origin Validation** | Query RIPEstat API for real-time Route Origin Authorization (ROA) status | [`backend/horaq/rpki.py`](file:///d:/HORA-Q/backend/horaq/rpki.py) | Live test against `stat.ripe.net` ([`audit/live_rpki_evidence.json`](file:///d:/HORA-Q/audit/live_rpki_evidence.json)) | Validated real routes: Cloudflare 1.1.1.0/24 (VALID), mismatch ASN (INVALID), unannounced (UNKNOWN) | **`VERIFIED`** | RPKI lookup is an operator inspection tool, not an automatic inline blocker in the detection loop. |
-| **RPKI Correlation with Alerts** | Automatically correlate RPKI status with detector alerts | [`backend/horaq/rpki.py`](file:///d:/HORA-Q/backend/horaq/rpki.py), [`frontend/src/components/RPKIModal.tsx`](file:///d:/HORA-Q/frontend/src/components/RPKIModal.tsx) | UI and API on-demand inspection endpoints | Evaluator can inspect live RPKI status on any route/alert via modal and `/api/v1/rpki/validate` | **`PARTIALLY VERIFIED`** | Architecture maintains RPKI inspection as an independent verification tool to avoid external API dependency failures. |
-| **RFC 8785 Canonicalization (JCS)** | Deterministic JSON canonicalization across platforms and languages | [`backend/horaq/evidence.py`](file:///d:/HORA-Q/backend/horaq/evidence.py), [`verify_evidence.py`](file:///d:/HORA-Q/verify_evidence.py) | [`backend/tests/test_evidence.py`](file:///d:/HORA-Q/backend/tests/test_evidence.py) | Exact UTF-16 surrogate ordering and number serialization; verified byte parity | **`VERIFIED`** | None. Verified against RFC 8785 test vectors. |
-| **SHA-256 Evidence Integrity** | Cryptographic hash binding of normalized observation and baseline context | [`backend/horaq/evidence.py`](file:///d:/HORA-Q/backend/horaq/evidence.py) | [`backend/tests/test_evidence.py`](file:///d:/HORA-Q/backend/tests/test_evidence.py) | Any single-character mutation flips digest; detected by backend and CLI verifier | **`VERIFIED`** | None. |
-| **FIPS 204 Post-Quantum Signatures** | ML-DSA-65 post-quantum digital signatures on evidence records | [`backend/horaq/crypto.py`](file:///d:/HORA-Q/backend/horaq/crypto.py) | [`backend/tests/test_crypto.py`](file:///d:/HORA-Q/backend/tests/test_crypto.py) | Generates and verifies 3,309-byte signatures; persistent authority key lifecycle | **`VERIFIED`** | Requires persistent volume mount for authority key file in container deployments. |
-| **Independent Verification CLI** | CLI tool verifying evidence records without requiring backend service | [`verify_evidence.py`](file:///d:/HORA-Q/verify_evidence.py) | CLI execution in CI and local testbed | Strict 4-state verifier (`AUTHENTIC`, `COMPROMISED`, `UNSIGNED`, `INCOMPLETE`) | **`VERIFIED`** | None. |
-| **Operator Dashboard & UI** | Web console for triage, route visualization, and scenario execution | [`frontend/src/`](file:///d:/HORA-Q/frontend/src/) | Automated Vite build and browser inspection | Daylight operations center theme; responsive layout; clear data source badges | **`VERIFIED`** | UI accurately reports detection and resolution; does not claim router-level blocking. |
-| **Historical Incident Replay** | Replay documented public BGP incidents against ground-truth baselines | [`backend/scripts/record_live_rpki_and_replay.py`](file:///d:/HORA-Q/backend/scripts/record_live_rpki_and_replay.py) | [`audit/historical_replay_evidence.json`](file:///d:/HORA-Q/audit/historical_replay_evidence.json) & [`test_historical_replay.py`](file:///d:/HORA-Q/backend/tests/test_historical_replay.py) | 5/5 cases passed: YouTube PTCL, Indosat leak, Rostelecom leak, and 2 control cases | **`VERIFIED`** | 0% false positives on legitimate re-announcements and path updates. |
-| **Public Evaluator Deployment** | Production deployment on Cloudflare Pages and Railway with HTTPS | [`DEPLOYMENT.md`](file:///d:/HORA-Q/DEPLOYMENT.md), [`Dockerfile`](file:///d:/HORA-Q/backend/Dockerfile), [`railway.json`](file:///d:/HORA-Q/backend/railway.json) | Production build succeeded; configuration files validated | Containerized backend with persistent volume and demo safety protections | **`VERIFIED`** | Ready for evaluator staging URL. |
+| **BGP Origin-Change Detection** | Detect conflicting origin ASN against established route baseline | [`backend/horaq/detection.py`](backend/horaq/detection.py) | [`backend/tests/test_detection.py`](backend/tests/test_detection.py) & Historical Replay | Triggers HIGH-severity alert; generates tamper-proof evidence; baseline origin preserved | **`VERIFIED`** | Evaluated on real historical route conflicts (Indosat 2011, RTComm 2022). |
+| **IPv4 Subprefix Anomaly Detection** | Detect more-specific IPv4 routes exploiting BGP Longest Prefix Match | [`backend/horaq/detection.py`](backend/horaq/detection.py) | [`backend/tests/test_detection.py`](backend/tests/test_detection.py) & PTCL Replay | Identifies `/25` inside `/24`; links `parent_prefix`; flags severe traffic interception | **`VERIFIED`** | Validated against documented 2008 YouTube/PTCL hijack (`208.65.153.0/24` under `/22`). |
+| **IPv6 Subprefix Anomaly Detection** | Detect more-specific IPv6 routes exploiting multi-protocol BGP | [`backend/horaq/detection.py`](backend/horaq/detection.py) | [`backend/tests/test_detection.py`](backend/tests/test_detection.py) | Correctly handles 128-bit addresses; detects `/48` inside `/32`; alerts without poisoning | **`VERIFIED`** | Verified with RFC 3849 testbed. |
+| **Baseline Anti-Poisoning Invariant** | Prevent anomalous announcements from establishing or updating baselines | [`backend/horaq/detection.py`](backend/horaq/detection.py) | [`backend/tests/test_detection.py`](backend/tests/test_detection.py) | Attacking subprefixes and rogue origin ASNs are strictly blocked from `baselines` table | **`VERIFIED`** | First-observation seeding is intended for initial discovery; production networks should use authenticated seeds. |
+| **Live BGP Feed Ingestion** | Ingest real-time BGP announcements via RIPE NCC RIS Live WebSocket | [`backend/horaq/collector.py`](backend/horaq/collector.py) | Live test against `wss://ris-live.ripe.net` ([`audit/live_ris_telemetry.json`](audit/live_ris_telemetry.json)) | Connected live: 113 messages received, 195 route announcements parsed, 0 dropped | **`VERIFIED`** | Collector is opt-in (`HORAQ_LIVE_COLLECTOR=false` by default) to guarantee deterministic evaluation benchmarks. |
+| **Terminal AS_SET Path Handling** | Handle BGP aggregation sets (RFC 4271/RFC 6472) without crashes or silent drops | [`backend/horaq/collector.py`](backend/horaq/collector.py) | [`backend/tests/test_collector.py`](backend/tests/test_collector.py) | Unwraps single-element set; skips ambiguous multi-origin sets with RFC 6472 notice | **`VERIFIED`** | Multi-origin AS_SETs cannot provide unambiguous origin ASNs and are explicitly counted in telemetry. |
+| **RPKI Origin Validation** | Query RIPEstat API for real-time Route Origin Authorization (ROA) status | [`backend/horaq/rpki.py`](backend/horaq/rpki.py) | Live test against `stat.ripe.net` ([`audit/live_rpki_evidence.json`](audit/live_rpki_evidence.json)) | Validated real routes: Cloudflare 1.1.1.0/24 (VALID), mismatch ASN (INVALID), unannounced (UNKNOWN) | **`VERIFIED`** | RPKI lookup is an operator inspection tool, not an automatic inline blocker in the detection loop. |
+| **RPKI Correlation with Alerts** | Correlate RPKI status with detector alerts | [`backend/horaq/rpki.py`](backend/horaq/rpki.py), [`frontend/src/components/RPKIModal.tsx`](frontend/src/components/RPKIModal.tsx) | UI and API on-demand inspection endpoints | Evaluator can inspect live RPKI status on any route/alert via modal and `/api/v1/rpki/validate` | **`PARTIALLY VERIFIED`** | Architecture maintains RPKI inspection as an independent verification tool to avoid external API dependency failures. |
+| **RFC 8785 Canonicalization (JCS)** | Deterministic JSON canonicalization across platforms and languages | [`backend/horaq/evidence.py`](backend/horaq/evidence.py), [`verify_evidence.py`](verify_evidence.py) | [`backend/tests/test_evidence.py`](backend/tests/test_evidence.py) | Exact UTF-16 surrogate ordering and number serialization; verified byte parity | **`VERIFIED`** | Verified against RFC 8785 test vectors. |
+| **SHA-256 Evidence Integrity** | Cryptographic hash binding of normalized observation and baseline context | [`backend/horaq/evidence.py`](backend/horaq/evidence.py) | [`backend/tests/test_evidence.py`](backend/tests/test_evidence.py) | Any single-character mutation flips digest; detected by backend and CLI verifier | **`VERIFIED`** | Tested against simulated bit-flips and field mutations. |
+| **FIPS 204 Post-Quantum Signatures** | ML-DSA-65 post-quantum digital signatures on evidence records | [`backend/horaq/crypto.py`](backend/horaq/crypto.py) | [`backend/tests/test_crypto.py`](backend/tests/test_crypto.py) | Generates and verifies 3,309-byte signatures; persistent authority key lifecycle | **`VERIFIED`** | Requires persistent volume mount for authority key file in container deployments. |
+| **Independent Verification CLI** | CLI tool verifying evidence records without requiring backend service | [`verify_evidence.py`](verify_evidence.py) | CLI execution in CI and local testbed | Strict 4-state verifier (`AUTHENTIC`, `COMPROMISED`, `UNSIGNED`, `INCOMPLETE`) | **`VERIFIED`** | Standalone Python script with zero third-party dependencies for SHA-256 / JCS. |
+| **Operator Dashboard & UI** | Web console for triage, route visualization, and scenario execution | [`frontend/src/`](frontend/src/) | Automated Vite build and browser inspection | Daylight operations center theme; responsive layout; clear data source badges | **`VERIFIED`** | UI accurately reports detection and resolution; does not claim router-level blocking. |
+| **Historical Incident Replay** | Replay documented public BGP incidents against ground-truth baselines | [`backend/scripts/record_live_rpki_and_replay.py`](backend/scripts/record_live_rpki_and_replay.py) | [`audit/historical_replay_evidence.json`](audit/historical_replay_evidence.json) & [`test_historical_replay.py`](backend/tests/test_historical_replay.py) | 5/5 cases passed: YouTube PTCL, Indosat Google DNS, RTComm Twitter, and 2 control cases | **`VERIFIED`** | Evaluates documented incident parameters; 0% false positives on legitimate controls. |
+| **Public Evaluator Deployment** | Production deployment on Cloudflare Pages and Railway with HTTPS | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`backend/Dockerfile`](backend/Dockerfile), [`backend/railway.json`](backend/railway.json) | Production build succeeded; configuration files validated | Containerized backend with persistent volume and demo safety protections | **`VERIFIED`** | Ready for evaluator staging URL. |
 
 ---
 
-## 3. Real-World Internet Routing Data Proof
+## 4. Real-World Internet Routing Data Proof
 
-### 3.1. Live RIPE RIS WebSocket Ingestion
+### 4.1. Live RIPE RIS WebSocket Ingestion
 - **Target Feed**: `wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416`
 - **Subscription**: BGP UPDATE messages with route announcements
-- **Execution Evidence**: Captured in [`audit/live_ris_telemetry.json`](file:///d:/HORA-Q/audit/live_ris_telemetry.json)
+- **Execution Evidence**: Captured in [`audit/live_ris_telemetry.json`](audit/live_ris_telemetry.json)
 - **Results**:
-  - `duration_seconds`: 26.16 seconds
-  - `messages_received`: 144 BGP messages
-  - `messages_parsed`: 1,523 route announcements normalized and ingested
+  - `duration_seconds`: 12.22 seconds
+  - `messages_received`: 113 BGP messages
+  - `messages_parsed`: 195 route announcements normalized and ingested
   - `messages_skipped`: 0
   - `reconnect_count`: 0
   - `last_error`: null
@@ -72,9 +86,9 @@ Status categories:
   }
   ```
 
-### 3.2. Live RPKI Origin Validation via RIPEstat
+### 4.2. Live RPKI Origin Validation via RIPEstat
 - **Provider**: RIPE NCC RIPEstat Data API (`https://stat.ripe.net/data/rpki-validation/data.json`)
-- **Execution Evidence**: Captured in [`audit/live_rpki_evidence.json`](file:///d:/HORA-Q/audit/live_rpki_evidence.json)
+- **Execution Evidence**: Captured in [`audit/live_rpki_evidence.json`](audit/live_rpki_evidence.json)
 - **Results**:
   1. **Valid Route**: `1.1.1.0/24` with origin `AS13335` (Cloudflare DNS)  
      $\to$ Provider returned: `VALID` (Matching ROA: `AS13335`, MaxLength: `24`). Matched: **`TRUE`**
@@ -83,66 +97,81 @@ Status categories:
   3. **Unknown / Unannounced**: `192.0.2.0/24` with origin `AS64496` (RFC 5737 Test Net)  
      $\to$ Provider returned: `UNKNOWN` (No ROA published). Matched: **`TRUE`**
 
-### 3.3. Historical BGP Incident Replay & Controls
-- **Dataset**: Documented real-world routing incidents ([`audit/historical_incident_samples.json`](file:///d:/HORA-Q/audit/historical_incident_samples.json))
-- **Execution Evidence**: Captured in [`audit/historical_replay_evidence.json`](file:///d:/HORA-Q/audit/historical_replay_evidence.json)
-- **Summary**:
-  - **YouTube Hijack (2008)**: PTCL (`AS17557`) announced `208.65.153.0/24` under YouTube's `208.65.152.0/22` (`AS36561`).  
-    $\to$ Detected: `SUBPREFIX_ANOMALY` (Severity: `HIGH`). Baseline preserved. **`PASSED`**
-  - **Indosat Leak (2014)**: Indosat (`AS4761`) leaked `8.8.8.0/24` (`AS15169`).  
-    $\to$ Detected: `ORIGIN_CHANGE` (Severity: `HIGH`). Baseline preserved. **`PASSED`**
-  - **Rostelecom Leak (2020)**: Rostelecom (`AS12389`) announced `104.244.42.0/24` (`AS13335`).  
-    $\to$ Detected: `ORIGIN_CHANGE` (Severity: `HIGH`). Baseline preserved. **`PASSED`**
-  - **Control 1 (Legitimate Re-announcement)**: `198.51.100.0/24` by `AS64496` re-announced with updated path.  
-    $\to$ Result: `0 ALERTS` (0% false positives, observation count incremented). **`PASSED`**
-  - **Control 2 (Traffic Engineering Subprefix)**: `192.0.2.0/24` announced by `AS64496` under parent `192.0.2.0/23` (`AS64496`).  
-    $\to$ Detected: `SUBPREFIX_ANOMALY` with severity `MEDIUM` (operator deaggregation distinguished from malicious hijacks). **`PASSED`**
+### 4.3. Documented Historical Incident Replays & Controls
+- **Dataset**: Ground-truth historical routing incidents ([`audit/historical_incident_samples.json`](audit/historical_incident_samples.json))
+- **Execution Evidence**: Captured in [`audit/historical_replay_evidence.json`](audit/historical_replay_evidence.json)
+- **Verified Incidents**:
+  1. **YouTube Hijack (February 24, 2008)**:  
+     - Primary Source: RIPE NCC ("YouTube Hijacking at RIPE NCC").
+     - Baseline: `208.65.152.0/22` originated by YouTube (`AS36561`).
+     - Announcement: Pakistan Telecom (`AS17557`) announced `208.65.153.0/24`.
+     - Detection: `SUBPREFIX_ANOMALY` (Severity: `HIGH`). Baseline preserved. **`PASSED`**
+  2. **Indosat Mis-origination of Google Public DNS (January 24, 2011)**:  
+     - Primary Source: BGPmon ("Google DNS hijacked by Indosat", Jan 24, 2011).
+     - Baseline: `8.8.8.0/24` originated by Google LLC (`AS15169`).
+     - Announcement: Indosat (`AS4761`) mis-originated and announced `8.8.8.0/24`.
+     - Detection: `ORIGIN_CHANGE` (Severity: `HIGH`). Baseline preserved. **`PASSED`**
+  3. **RTComm / Twitter Origin Hijack (March 28, 2022)**:  
+     - Primary Source: Cloudflare Radar ("How Twitter was briefly rerouted via Russia", March 28, 2022) and Kentik.
+     - Baseline: `104.244.42.0/24` originated by Twitter, Inc. (`AS13414`).
+     - Announcement: RTComm (`AS8342`, Rostelecom subsidiary) announced `104.244.42.0/24`.
+     - Detection: `ORIGIN_CHANGE` (Severity: `HIGH`). Baseline preserved. **`PASSED`**
+  4. **Control 1 (Legitimate Re-announcement / Path Update)**:  
+     - Baseline: `198.51.100.0/24` by `AS64496`.
+     - Announcement: `198.51.100.0/24` by `AS64496` with updated path.
+     - Result: `0 ALERTS` (0% false positives, observation count incremented). **`PASSED`**
+  5. **Control 2 (Traffic Engineering Subprefix)**:  
+     - Baseline: `192.0.2.0/23` by `AS64496`.
+     - Announcement: `192.0.2.0/24` by `AS64496` under parent route.
+     - Result: `SUBPREFIX_ANOMALY` with severity `MEDIUM` (operator deaggregation distinguished from rogue hijacks). **`PASSED`**
 
 ---
 
-## 4. Architectural Nuances & Reconciled Claims
+## 5. Architectural Nuances & Reconciled Claims
 
-1. **RPKI Correlation**:  
-   - *Claim Reconciliation*: HORA-Q provides a dedicated RPKI inspection endpoint and UI modal to query real-time ROA states from RIPEstat. It does *not* automatically block route processing in the detection pipeline when RPKI lookups fail or timeout. This design guarantees resilience against external network failures.
-2. **Data Source Transparency**:  
-   - The user interface visibly displays unmistakable badges distinguishing:
-     - `LIVE DATA`: Real-time RIPE RIS WebSocket stream active.
-     - `HISTORICAL REPLAY`: Replay of documented Internet incidents against ground-truth baselines.
-     - `SYNTHETIC DEMO`: Local isolated test scenarios using reserved RFC 5737 and RFC 3849 documentation prefixes.
-3. **No False Enforcement Claims**:  
-   - All documentation and UI controls use accurate terminology ("Active Anomalies", "Acknowledge", "Resolve Incident"). HORA-Q is an explainable detection, monitoring, and evidence system; it does not claim to execute hardware BGP router route suppression.
+1. **Scope Distinction (Origin & Subprefix Anomaly vs. General Route Leaks)**:  
+   - HORA-Q is an *Origin-AS Conflict and Subprefix Anomaly Detector*. It detects when an unauthorized ASN announces an existing prefix or a more-specific subprefix.
+   - It does *not* evaluate valley-free AS-path routing policy graphs (RFC 7908). AS paths are extracted by the collector for provenance telemetry and terminal `AS_SET` validation, but general route-leak path analysis is explicitly out of scope for the current engine.
+2. **Public Demo Mode Safeguards**:  
+   - In public demo mode (`HORAQ_DEMO_MODE=true`):
+     - `POST /api/v1/observations` rejects unauthenticated arbitrary route injection (HTTP 403).
+     - `POST /api/v1/scenarios/reset` and `POST /api/v1/scenarios/seed-demo` perform safe demo resets that clear only scenario data, strictly preventing unauthenticated callers from wiping real live BGP observations or unrelated database records. Total database wipes require an `X-Admin-Token`.
+3. **CORS Configuration**:  
+   - FastAPI `CORSMiddleware` in [`backend/horaq/main.py`](backend/horaq/main.py) supports both explicit exact domains and regex matching (`allow_origin_regex`) for Cloudflare Pages subdomains (`*.pages.dev`).
+4. **No False Enforcement Claims**:  
+   - HORA-Q does not execute hardware router route-suppression or BGP flowspec actions. It generates explainable cryptographic evidence and alert records for network operations teams.
 
 ---
 
-## 5. Verification Commands and Reproducibility
+## 6. Verification Commands and Reproducibility
 
-### Backend Test Suite (72 Tests Passing)
+### Backend Test Suite (73 Tests Passing)
 ```powershell
-cd d:\HORA-Q\backend
+cd backend
 python -m pytest -v
 ```
-*Result*: `72 passed in 2.89s`
+*Result*: `73 passed in 2.85s`
 
 ### Frontend Production Build
 ```powershell
-cd d:\HORA-Q\frontend
+cd frontend
 npm run build
 ```
 *Result*: `tsc && vite build` succeeded in 3.62s (`dist/` generated with zero errors).
 
 ### Live RIPE RIS Telemetry Execution
 ```powershell
-cd d:\HORA-Q\backend
+cd backend
 python scripts/test_live_ris.py
 ```
-*Result*: Verified 144 live messages and 1,523 route announcements ingested from `wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416`.
+*Result*: Ingests live messages from `wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416` and writes [`audit/live_ris_telemetry.json`](audit/live_ris_telemetry.json).
 
 ### Live RPKI and Historical Incident Replay Execution
 ```powershell
-cd d:\HORA-Q\backend
+cd backend
 python scripts/record_live_rpki_and_replay.py
 ```
-*Result*: Verified 3 live RPKI lookups and 5 historical incident/control replays.
+*Result*: Queries live RIPEstat RPKI API and replays documented historical incidents.
 
 ### Independent Evidence Verifier CLI
 ```powershell

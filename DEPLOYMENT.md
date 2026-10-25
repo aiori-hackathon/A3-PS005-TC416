@@ -58,7 +58,7 @@ In the **Variables** tab of your Railway service, configure the following:
 | `HORAQ_SIGNING_KEY` | `/data/horaq_authority_key.json` | Persistent ML-DSA-65 authority keypath |
 | `HORAQ_LIVE_COLLECTOR` | `false` | Keeps live RIS collection opt-in for reproducible evaluation |
 | `HORAQ_DEMO_MODE` | `true` | Protects against destructive wipes and arbitrary observation injection |
-| `HORAQ_CORS_ORIGINS` | `https://*.pages.dev,http://localhost:5173` | Allowed frontend origins (or your exact Pages domain) |
+| `HORAQ_CORS_ORIGINS` | `https://your-project.pages.dev,http://localhost:5173` | Allowed frontend origins (exact domain recommended; regex wildcard `*.pages.dev` also supported) |
 
 ### Step 4: Verify Start Command
 Railway automatically detects `backend/Procfile` and `backend/railway.json`:

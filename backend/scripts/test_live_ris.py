@@ -23,8 +23,8 @@ from horaq.database import init_db
 
 
 
-async def run_live_test(duration_seconds: int = 12):
-    print(f"[{datetime.now(timezone.utc).isoformat()}] Starting live RIPE RIS test for {duration_seconds}s...")
+async def run_live_test(duration_seconds: int = 15):
+    print(f"[{datetime.now(timezone.utc).isoformat()}] Starting live RIPE RIS WebSocket collection (target window: {duration_seconds}s)...")
     
     fd, db_path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
@@ -34,8 +34,7 @@ async def run_live_test(duration_seconds: int = 12):
     collector.is_enabled = True
 
     sample_messages = []
-    start_time = time.time()
-
+    
     # Intercept _handle_message to collect samples
     original_handle = collector._handle_message
 
@@ -58,11 +57,12 @@ async def run_live_test(duration_seconds: int = 12):
 
     collector._handle_message = logging_handle
 
+    start_time = time.time()
     await collector.start()
 
-    # Wait for the specified duration or until at least 10 messages received
+    # Allow session to connect and collect messages for the duration window
     while time.time() - start_time < duration_seconds:
-        if collector.messages_received >= 20:
+        if collector.messages_received >= 30:
             break
         await asyncio.sleep(0.5)
 
@@ -70,7 +70,7 @@ async def run_live_test(duration_seconds: int = 12):
     elapsed = time.time() - start_time
 
     status = collector.get_status()
-    print(f"Elapsed: {elapsed:.2f}s")
+    print(f"Connection & collection duration: {elapsed:.2f}s")
     print(f"Status: {json.dumps(status, indent=2)}")
 
     evidence = {

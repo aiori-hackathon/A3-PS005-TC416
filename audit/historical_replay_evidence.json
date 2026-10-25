@@ -1,6 +1,6 @@
 {
   "test_name": "HISTORICAL_BGP_INCIDENT_REPLAY",
-  "execution_timestamp_utc": "2026-10-25T06:02:45.592724+00:00",
+  "execution_timestamp_utc": "2026-10-25T11:00:51.537520+00:00",
   "total_incidents_replayed": 5,
   "passed": 5,
   "false_positive_control_passed": true,
@@ -41,12 +41,12 @@
       "passed": true
     },
     {
-      "incident_id": "INC-2014-04-02-INDOSAT-LEAK",
-      "name": "Indosat Global Route Leak",
-      "date": "2014-04-02",
+      "incident_id": "INC-2011-01-24-INDOSAT-GOOGLE-DNS",
+      "name": "Indosat Mis-origination of Google Public DNS",
+      "date": "2011-01-24",
       "references": [
-        "https://blog.bgpmon.net/2014/04/indosat-hijacks-global-prefixes.html",
-        "https://radar.cloudflare.com/learning/bgp-route-leaks"
+        "https://blog.bgpmon.net/2011/01/google-dns-hijacked-by-indosat.html",
+        "https://www.ripe.net/publications/news/industry-updates/"
       ],
       "ground_truth_baseline": {
         "prefix": "8.8.8.0/24",
@@ -58,7 +58,7 @@
         "prefix": "8.8.8.0/24",
         "origin_asn": 4761,
         "collector": "rrc01.ripe.net",
-        "timestamp": "2014-04-02T18:30:00Z"
+        "timestamp": "2011-01-24T06:58:00Z"
       },
       "expected": {
         "alert_kind": "ORIGIN_CHANGE",
@@ -75,30 +75,30 @@
       "passed": true
     },
     {
-      "incident_id": "INC-2020-04-01-ROSTELECOM-LEAK",
-      "name": "Rostelecom Major Prefix Hijack / Route Leak",
-      "date": "2020-04-01",
+      "incident_id": "INC-2022-03-28-RTCOMM-TWITTER-HIJACK",
+      "name": "RTComm (Rostelecom Subsidiary) Origin Hijack of Twitter",
+      "date": "2022-03-28",
       "references": [
-        "https://blog.cloudflare.com/rostelecom-bgp-leak-large-scale-incident/",
-        "https://bgpstream.caida.org/"
+        "https://blog.cloudflare.com/how-twitter-was-briefly-rerouted-via-russia/",
+        "https://www.kentik.com/blog/russian-telco-hijacks-twitter-traffic/"
       ],
       "ground_truth_baseline": {
         "prefix": "104.244.42.0/24",
-        "origin_asn": 13335,
-        "owner": "Cloudflare, Inc.",
+        "origin_asn": 13414,
+        "owner": "Twitter, Inc. (X)",
         "trusted_status": "AUTHENTICATED_BASELINE"
       },
       "incident_announcement": {
         "prefix": "104.244.42.0/24",
-        "origin_asn": 12389,
+        "origin_asn": 8342,
         "collector": "rrc03.ripe.net",
-        "timestamp": "2020-04-01T19:28:00Z"
+        "timestamp": "2022-03-28T06:45:00Z"
       },
       "expected": {
         "alert_kind": "ORIGIN_CHANGE",
         "severity": "HIGH",
-        "detected_origin": "AS12389",
-        "baseline_origin": "AS13335",
+        "detected_origin": "AS8342",
+        "baseline_origin": "AS13414",
         "baseline_poisoned": false
       },
       "alerts_detected_count": 1,

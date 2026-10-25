@@ -66,11 +66,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS (disallow credentials with wildcard to satisfy standard browsers)
+# Configure CORS (support exact origins, regex for Cloudflare Pages subdomains, or wildcard)
 is_wildcard = "*" in settings.cors_origins
+origin_regex = None
+explicit_origins = []
+
+for org in settings.cors_origins:
+    if "*." in org or ".*" in org:
+        import re
+        escaped = re.escape(org).replace(r"\*\.", r"[a-zA-Z0-9-]+\.").replace(r"\.\*", r".*")
+        origin_regex = f"^{escaped}$"
+    elif org == "*":
+        explicit_origins.append("*")
+    else:
+        explicit_origins.append(org)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=explicit_origins if explicit_origins else (["*"] if is_wildcard else []),
+    allow_origin_regex=origin_regex,
     allow_credentials=not is_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -185,4 +185,30 @@ def test_demo_mode_safe_reset_protects_database(client, monkeypatch):
     assert routes_resp.json()["total"] >= 1
 
 
+def test_demo_mode_seed_demo_protects_live_observations(client, monkeypatch):
+    """Verify that in demo mode, seed-demo preserves real live BGP observations."""
+    from horaq.config import settings
+    from horaq.database import db_session
+
+    # Seed a simulated live observation (scenario is None)
+    with db_session(settings.database_path) as conn:
+        with conn:
+            conn.execute(
+                "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, created_at) "
+                "VALUES ('193.0.0.0/21', 'AS3333', 'ripe-ris-live', '2026-10-25T12:00:00Z', NULL, '{}', '2026-10-25T12:00:00Z');"
+            )
+
+    monkeypatch.setattr(settings, "demo_mode", True)
+
+    resp = client.post("/api/v1/scenarios/seed-demo")
+    assert resp.status_code == 200
+    assert resp.json()["success"] is True
+
+    # Confirm that the live observation was NOT deleted by seed-demo
+    with db_session(settings.database_path) as conn:
+        row = conn.execute("SELECT prefix FROM observations WHERE prefix = '193.0.0.0/21';").fetchone()
+        assert row is not None, "Live BGP observation was wiped by unauthenticated seed-demo in demo mode!"
+
+
+
 

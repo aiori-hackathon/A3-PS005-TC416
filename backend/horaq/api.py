@@ -591,7 +591,20 @@ async def run_scenario_endpoint(
 
     if s_name in ("seed-demo", "seed", "demo"):
         # Reset and seed realistic demonstrator data for live presentations
-        reset_database(settings.database_path)
+        if settings.demo_mode:
+            token = x_admin_token or (authorization.replace("Bearer ", "") if authorization else "")
+            if settings.admin_token and token == settings.admin_token:
+                reset_database(settings.database_path)
+            else:
+                # Safe demonstration reset: clear only scenario alerts/evidence and synthetic scenario observations,
+                # strictly preserving live BGP observations and unassociated baselines.
+                with db_session(settings.database_path) as conn:
+                    with conn:
+                        conn.execute("DELETE FROM evidence WHERE alert_id IN (SELECT id FROM alerts WHERE scenario IS NOT NULL OR scenario LIKE 'demo-%');")
+                        conn.execute("DELETE FROM alerts WHERE scenario IS NOT NULL OR scenario LIKE 'demo-%';")
+                        conn.execute("DELETE FROM observations WHERE scenario IS NOT NULL;")
+        else:
+            reset_database(settings.database_path)
 
         # 1. Establish trusted reference baseline roots
         b1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=13335, collector="rrc00", scenario="demo-seed")
