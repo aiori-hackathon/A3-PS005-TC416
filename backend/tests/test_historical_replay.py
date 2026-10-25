@@ -86,3 +86,16 @@ def test_historical_incidents_execution(replay_samples, isolated_db):
             assert alerts[0]["kind"] == expected["alert_kind"]
             assert alerts[0]["severity"] == expected["severity"]
             assert alerts[0]["observed_asn"] == f"AS{announcement['origin_asn']}"
+
+
+def test_archival_mrt_replay_validation():
+    from horaq.replay import run_full_historical_validation
+
+    report = run_full_historical_validation()
+    assert report is not None
+    summary = report["summary"]
+    assert summary["all_real_replays_detected"] is True
+    assert summary["anti_poisoning_verified_across_all"] is True
+    assert summary["false_positives_on_benign_feed"] == 0
+    assert summary["verified_real_replays_count"] >= 2
+

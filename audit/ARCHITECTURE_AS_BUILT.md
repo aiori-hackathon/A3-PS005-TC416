@@ -8,63 +8,54 @@
 ## 1. System Pipeline: As-Built
 
 The actual runtime data flow implemented across [`horaq/`](file:///d:/HORA-Q/backend/horaq) follows seven distinct, auditable stages:
-
 ```
-[ BGP Observation Source ]
-  ├─ Manual / API Route Injection (POST /api/v1/observations)
-  ├─ Scenario Runner Engine (POST /api/v1/scenarios/:name)
-  └─ Opt-In RIPE RIS Live WebSocket (ws://ris-live.ripe.net/v1/ws/)
-                 │
-                 ▼
-[ Stage 1: NORMALIZE (horaq/normalization.py) ]
+[ Stage 1: INGESTION & NORMALIZATION (horaq/normalization.py) ]
   • normalize_prefix(): Strips host bits via ipaddress.ip_network(strict=False)
-  • normalize_asn(): Strips 'AS' prefix, validates 1 <= ASN <= 4294967295 (rejects AS0, negative, ASDOT)
+  • normalize_asn(): Validates 1 <= ASN <= 4294967295 (rejects AS0, negative, ASDOT)
   • normalize_timestamp(): Enforces RFC 3339 UTC formatting
+  • Terminal AS_SET handling (RFC 6472)
                  │
                  ▼
-[ Stage 2: UNDERSTAND (horaq/database.py & detection.py) ]
-  • SQLite ACID Session: SELECT from `baselines` table
-  • Checks for exact prefix match vs established origin-AS
+[ Stage 2: HISTORICAL ROUTING STATE (horaq/database.py) ]
+  • SQLite ACID Session in WAL mode: Query `baselines` table
+  • Evaluates exact prefix match vs established origin-AS
   • Computes IP address space family & CIDR boundary
                  │
                  ▼
-[ Stage 3: DETECT (horaq/detection.py) ]
+[ Stage 3: CANDIDATE BASELINE & PROMOTION POLICY (horaq/detection.py) ]
+  • Unseeded routes enter state as `CANDIDATE`
+  • Requires PROMOTION_THRESHOLD = 3 corroborating observations to reach `PROMOTED`
+  • Quarantines transient route flaps from entering trusted reference state
+                 │
+                 ▼
+[ Stage 4: ANOMALY DETECTION & ANTI-POISONING (horaq/detection.py) ]
   • Test A (Subprefix Containment):
-    Scans baselines via `find_parent_prefixes()`.
-    Executes `child_net.subnet_of(parent_net)` across same IP family.
+    Scans baselines via `find_parent_prefixes()` across IP family.
     If match found: Flags SUBPREFIX_ANOMALY (Longest Prefix Match threat).
   • Test B (Origin-AS Shift):
-    If baseline exists AND `observed_asn != baseline_asn`:
-    Flags ORIGIN_CHANGE (High severity).
-    Crucial Rule: Baseline is NEVER overwritten or poisoned by suspicious announcements!
-  • Test C (Baseline Seeding):
-    If no baseline exists AND no parent anomaly: Seeds baseline with observation_count = 1.
+    If baseline exists AND `observed_asn != baseline_asn`: Flags ORIGIN_CHANGE.
+  • Anti-Poisoning Invariant:
+    Suspicious announcements and subprefixes NEVER contaminate or overwrite baselines!
                  │
                  ▼
-[ Stage 4: CORRELATE & CONTEXT (horaq/rpki.py) ]
-  • Queries RIPEstat ROA Validation endpoint (RFC 6483 / RFC 6811)
-  • Resolves VALID, INVALID (ASN mismatch or max-length exceeded), UNKNOWN, or UNAVAILABLE
+[ Stage 5: EVIDENCE CORRELATION & EXPLAINABLE UNCERTAINTY (horaq/detection.py & rpki.py) ]
+  • Evaluates multi-source agreement across collectors & peers
+  • Computes confidence rating (`HIGH`, `MEDIUM`, `UNCERTAIN`)
+  • Preserves operational uncertainty reasons (e.g. Traffic Engineering deaggregations vs attacks)
+  • Integrates on-demand RPKI ROA status (VALID, INVALID, UNKNOWN) via RIPEstat
                  │
                  ▼
-[ Stage 5: EXPLAIN (horaq/detection.py) ]
-  • Generates transparent plain-language rationale explaining:
-    - Longest Prefix Match (RFC 1812) traffic diversion
-    - Competing Autonomous Systems
-    - Operational context (DDoS scrubbing, TE vs malicious hijack)
-                 │
-                 ▼
-[ Stage 6: EVIDENCE NOTARIZATION (horaq/evidence.py & crypto.py) ]
-  • Serializes facts using RFC 8785 JSON Canonicalization Scheme (JCS) via 'rfc8785' package
+[ Stage 6: POST-QUANTUM EVIDENCE NOTARIZATION (horaq/evidence.py & crypto.py) ]
+  • Serializes facts using RFC 8785 JSON Canonicalization Scheme (JCS)
   • Computes SHA-256 digest over canonical UTF-8 bytes
-  • ML-DSA-65 (NIST FIPS 204) Module-Lattice signing (via dilithium-py.ml_dsa.ML_DSA_65 or liboqs)
+  • Signs with NIST FIPS 204 ML-DSA-65 post-quantum digital signatures
   • Atomic persistence to `observations`, `alerts`, `evidence` tables
-
                  │
                  ▼
-[ Stage 7: VERIFY & MITIGATE (Frontend & API) ]
-  • React/TypeScript Dashboard (Overview, Alerts, Audit Ledger, RPKI Inspector)
-  • Live Tamper Simulation Sandbox (side-by-side mutation diff)
-  • Operators execute edge mitigation: Block, Allow, or Ack
+[ Stage 7: VERIFICATION, REVIEW & MITIGATION (Frontend & CLI) ]
+  • React/TypeScript Operations Center UI (Overview, Alerts, Audit Ledger, RPKI Inspector)
+  • Standalone verifier CLI (`verify_evidence.py`): Independent 4-state verification
+  • Evaluators review evidence, simulate tamper, or inspect head-to-head benchmarks
 ```
 
 ---
@@ -80,6 +71,7 @@ Database path: `d:\HORA-Q\backend\horaq.db` (configured via `settings.database_u
    - `first_seen` (TEXT NOT NULL) — ISO 8601 UTC timestamp
    - `last_seen` (TEXT NOT NULL) — ISO 8601 UTC timestamp
    - `observation_count` (INTEGER DEFAULT 1) — Provenance counter
+   - `status` (TEXT NOT NULL DEFAULT 'PROMOTED') — `CANDIDATE` or `PROMOTED`
    - `updated_at` (TEXT NOT NULL)
 2. **`observations`**:
    - `id` (TEXT PRIMARY KEY) — Unique observation UUID
@@ -102,6 +94,8 @@ Database path: `d:\HORA-Q\backend\horaq.db` (configured via `settings.database_u
    - `explanation` (TEXT NOT NULL)
    - `evidence_id` (TEXT NOT NULL)
    - `status` (TEXT DEFAULT 'ACTIVE') — `ACTIVE`, `ACKNOWLEDGED`, `RESOLVED`
+   - `confidence` (TEXT NOT NULL DEFAULT 'HIGH') — `HIGH`, `MEDIUM`, `UNCERTAIN`
+   - `uncertainty_reason` (TEXT) — Explains why confidence is qualified
    - `collector` (TEXT NOT NULL)
    - `scenario` (TEXT)
 4. **`evidence`**:

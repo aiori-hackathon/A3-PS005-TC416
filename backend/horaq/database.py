@@ -72,6 +72,7 @@ def init_db(db_path: str) -> None:
                 first_seen TEXT NOT NULL,
                 last_seen TEXT NOT NULL,
                 observation_count INTEGER NOT NULL DEFAULT 1,
+                status TEXT NOT NULL DEFAULT 'PROMOTED',
                 updated_at TEXT NOT NULL
             );
 
@@ -88,6 +89,8 @@ def init_db(db_path: str) -> None:
                 explanation TEXT NOT NULL,
                 evidence_id TEXT,
                 status TEXT NOT NULL DEFAULT 'ACTIVE',
+                confidence TEXT NOT NULL DEFAULT 'HIGH',
+                uncertainty_reason TEXT,
                 collector TEXT,
                 scenario TEXT
             );
@@ -110,6 +113,20 @@ def init_db(db_path: str) -> None:
             CREATE INDEX IF NOT EXISTS idx_alerts_kind ON alerts (kind);
             CREATE INDEX IF NOT EXISTS idx_evidence_alert ON evidence (alert_id);
             """)
+
+            # Safe column additions for pre-existing databases
+            try:
+                conn.execute("ALTER TABLE baselines ADD COLUMN status TEXT NOT NULL DEFAULT 'PROMOTED';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN confidence TEXT NOT NULL DEFAULT 'HIGH';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN uncertainty_reason TEXT;")
+            except sqlite3.OperationalError:
+                pass
 
 
 def reset_database(db_path: str) -> None:

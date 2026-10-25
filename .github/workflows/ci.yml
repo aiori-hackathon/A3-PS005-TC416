@@ -26,10 +26,18 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run Pytest Test Suite (73 Tests)
+      - name: Run Pytest Test Suite (76 Tests)
         working-directory: backend
         run: |
           pytest -v
+
+      - name: Run Reference Detector Head-to-Head Benchmark
+        run: |
+          python backend/horaq/benchmark.py
+
+      - name: Run Archival Historical BGP MRT Replay
+        run: |
+          python backend/scripts/replay_historical_mrt.py
 
       - name: Run Independent Evidence Verifier (Authentic Sample)
         run: |

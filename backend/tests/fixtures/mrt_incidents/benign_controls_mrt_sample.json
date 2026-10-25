@@ -1,0 +1,596 @@
+{
+  "control_id": "CONTROL-NORMAL-BGP-UPDATES",
+  "source_url": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+  "announcements_count": 20,
+  "withdrawals_count": 15,
+  "announcements": [
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878701,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "148.208.203.0/24"
+      ],
+      "as_path": [
+        "3549",
+        "7018",
+        "28513",
+        "8151"
+      ],
+      "origin_asn": "8151"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878701,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "193.247.95.0/24"
+      ],
+      "as_path": [
+        "3333",
+        "3356",
+        "3549",
+        "286",
+        "31592"
+      ],
+      "origin_asn": "31592"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878702,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "80.243.64.0/20"
+      ],
+      "as_path": [
+        "3549",
+        "701",
+        "702",
+        "6731",
+        "12389",
+        "21332"
+      ],
+      "origin_asn": "21332"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878703,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "80.243.64.0/20"
+      ],
+      "as_path": [
+        "3549",
+        "701",
+        "702",
+        "12389",
+        "12389",
+        "21332"
+      ],
+      "origin_asn": "21332"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878703,
+      "peer_ip": "193.138.164.1",
+      "peer_as": "34225",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "193.247.95.0/24"
+      ],
+      "as_path": [
+        "34225",
+        "1299",
+        "3549",
+        "286",
+        "31592"
+      ],
+      "origin_asn": "31592"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878703,
+      "peer_ip": "12.0.1.63",
+      "peer_as": "7018",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "193.247.95.0/24"
+      ],
+      "as_path": [
+        "7018",
+        "3549",
+        "286",
+        "31592"
+      ],
+      "origin_asn": "31592"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878704,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "196.28.246.0/24"
+      ],
+      "as_path": [
+        "3549",
+        "6453",
+        "22351",
+        "25543"
+      ],
+      "origin_asn": "25543"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878704,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "212.52.153.0/24"
+      ],
+      "as_path": [
+        "3549",
+        "6453",
+        "22351",
+        "25543"
+      ],
+      "origin_asn": "25543"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878704,
+      "peer_ip": "193.138.164.1",
+      "peer_as": "34225",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "193.247.95.0/24"
+      ],
+      "as_path": [
+        "34225",
+        "1299",
+        "3549",
+        "286",
+        "31592"
+      ],
+      "origin_asn": "31592"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878704,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "148.208.142.0/24"
+      ],
+      "as_path": [
+        "3333",
+        "286",
+        "3549",
+        "701",
+        "28513",
+        "8151"
+      ],
+      "origin_asn": "8151"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878705,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "212.52.153.0/24"
+      ],
+      "as_path": [
+        "3549",
+        "6453",
+        "22351",
+        "25543"
+      ],
+      "origin_asn": "25543"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878705,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "202.140.63.0/24"
+      ],
+      "as_path": [
+        "3333",
+        "1103",
+        "3549",
+        "2914",
+        "15412",
+        "18101",
+        "17443"
+      ],
+      "origin_asn": "17443"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878705,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "203.101.87.0/24"
+      ],
+      "as_path": [
+        "3549",
+        "6762",
+        "9498"
+      ],
+      "origin_asn": "9498"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878705,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "196.28.246.0/24"
+      ],
+      "as_path": [
+        "3549",
+        "6453",
+        "22351",
+        "25543"
+      ],
+      "origin_asn": "25543"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878705,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "202.140.63.0/24"
+      ],
+      "as_path": [
+        "3333",
+        "286",
+        "15412",
+        "18101",
+        "18101",
+        "17443"
+      ],
+      "origin_asn": "17443"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878706,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "202.140.63.0/24"
+      ],
+      "as_path": [
+        "3333",
+        "286",
+        "15412",
+        "18101",
+        "17443"
+      ],
+      "origin_asn": "17443"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878706,
+      "peer_ip": "213.200.87.254",
+      "peer_as": "3257",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "212.52.153.0/24"
+      ],
+      "as_path": [
+        "3257",
+        "6453",
+        "22351",
+        "25543"
+      ],
+      "origin_asn": "25543"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878706,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "118.136.208.0/22",
+        "118.137.200.0/22",
+        "118.137.204.0/22",
+        "118.137.212.0/22",
+        "118.137.216.0/22",
+        "118.136.128.0/22",
+        "118.136.204.0/22",
+        "118.136.124.0/22",
+        "118.137.244.0/22",
+        "118.137.248.0/22",
+        "118.137.124.0/22",
+        "118.136.200.0/22",
+        "118.137.224.0/22",
+        "202.73.96.0/22",
+        "118.136.232.0/22",
+        "118.136.240.0/22",
+        "118.137.184.0/22",
+        "118.137.128.0/22",
+        "118.137.220.0/22",
+        "118.136.160.0/22",
+        "118.137.116.0/22",
+        "118.137.236.0/22",
+        "118.137.228.0/22",
+        "118.137.24.0/22",
+        "118.136.172.0/22",
+        "118.137.120.0/22",
+        "118.137.88.0/22",
+        "118.137.100.0/22",
+        "202.137.20.0/22",
+        "118.137.96.0/22",
+        "118.137.112.0/22",
+        "118.137.92.0/22",
+        "118.136.184.0/22",
+        "118.136.132.0/22",
+        "118.136.180.0/22",
+        "118.137.176.0/22",
+        "202.137.28.0/22",
+        "118.136.228.0/22",
+        "118.137.104.0/22",
+        "118.137.232.0/22",
+        "118.137.132.0/22",
+        "118.137.108.0/22",
+        "202.137.16.0/22",
+        "118.137.208.0/22",
+        "202.137.24.0/22",
+        "118.136.136.0/22",
+        "118.137.72.0/22",
+        "118.137.140.0/22",
+        "118.136.176.0/22",
+        "118.137.136.0/22",
+        "118.136.144.0/22",
+        "118.136.156.0/22",
+        "118.136.244.0/22",
+        "118.136.236.0/22",
+        "118.136.148.0/22",
+        "202.77.120.0/22",
+        "118.137.168.0/22",
+        "118.137.252.0/22",
+        "118.136.152.0/22",
+        "118.136.188.0/22",
+        "118.137.172.0/22",
+        "118.136.196.0/22",
+        "118.136.140.0/22",
+        "118.136.168.0/22",
+        "118.136.192.0/22",
+        "118.137.144.0/22"
+      ],
+      "as_path": [
+        "3333",
+        "5511",
+        "4761",
+        "4761",
+        "23700"
+      ],
+      "origin_asn": "23700"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878706,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "202.77.100.0/22",
+        "202.77.108.0/22",
+        "202.137.12.0/22",
+        "202.137.0.0/22",
+        "202.137.4.0/22",
+        "202.77.112.0/22",
+        "202.77.96.0/22",
+        "202.77.124.0/22"
+      ],
+      "as_path": [
+        "3333",
+        "5511",
+        "4761",
+        "4761",
+        "23700",
+        "9905"
+      ],
+      "origin_asn": "9905"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878706,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "117.20.50.0/23",
+        "202.65.119.0/24"
+      ],
+      "as_path": [
+        "3333",
+        "5511",
+        "4761",
+        "4761",
+        "23951"
+      ],
+      "origin_asn": "23951"
+    }
+  ],
+  "withdrawals": [
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878702,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "WITHDRAWAL",
+      "prefix": "80.243.64.0/20"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878705,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "WITHDRAWAL",
+      "prefix": "90.31.119.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878711,
+      "peer_ip": "213.179.39.65",
+      "peer_as": "16186",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.233.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878711,
+      "peer_ip": "213.179.39.65",
+      "peer_as": "16186",
+      "type": "WITHDRAWAL",
+      "prefix": "208.81.97.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878711,
+      "peer_ip": "213.179.39.65",
+      "peer_as": "16186",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.232.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878711,
+      "peer_ip": "213.179.39.65",
+      "peer_as": "16186",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.235.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878711,
+      "peer_ip": "213.179.39.65",
+      "peer_as": "16186",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.234.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878711,
+      "peer_ip": "213.179.39.65",
+      "peer_as": "16186",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.226.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878714,
+      "peer_ip": "208.51.134.248",
+      "peer_as": "3549",
+      "type": "WITHDRAWAL",
+      "prefix": "202.133.47.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878714,
+      "peer_ip": "213.179.39.65",
+      "peer_as": "16186",
+      "type": "WITHDRAWAL",
+      "prefix": "202.133.47.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878717,
+      "peer_ip": "193.138.164.1",
+      "peer_as": "34225",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.233.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878717,
+      "peer_ip": "193.138.164.1",
+      "peer_as": "34225",
+      "type": "WITHDRAWAL",
+      "prefix": "208.81.97.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878717,
+      "peer_ip": "193.138.164.1",
+      "peer_as": "34225",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.232.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878717,
+      "peer_ip": "193.138.164.1",
+      "peer_as": "34225",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.235.0/24"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
+      "collector": "rrc00",
+      "timestamp": 1203878717,
+      "peer_ip": "193.138.164.1",
+      "peer_as": "34225",
+      "type": "WITHDRAWAL",
+      "prefix": "69.1.234.0/24"
+    }
+  ]
+}

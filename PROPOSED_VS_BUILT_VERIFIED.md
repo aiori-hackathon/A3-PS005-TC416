@@ -57,8 +57,11 @@ Status categories:
 | **FIPS 204 Post-Quantum Signatures** | ML-DSA-65 post-quantum digital signatures on evidence records | [`backend/horaq/crypto.py`](backend/horaq/crypto.py) | [`backend/tests/test_crypto.py`](backend/tests/test_crypto.py) | Generates and verifies 3,309-byte signatures; persistent authority key lifecycle | **`VERIFIED`** | Requires persistent volume mount for authority key file in container deployments. |
 | **Independent Verification CLI** | CLI tool verifying evidence records without requiring backend service | [`verify_evidence.py`](verify_evidence.py) | CLI execution in CI and local testbed | Strict 4-state verifier (`AUTHENTIC`, `COMPROMISED`, `UNSIGNED`, `INCOMPLETE`) | **`VERIFIED`** | Standalone Python script with zero third-party dependencies for SHA-256 / JCS. |
 | **Operator Dashboard & UI** | Web console for triage, route visualization, and scenario execution | [`frontend/src/`](frontend/src/) | Automated Vite build and browser inspection | Daylight operations center theme; responsive layout; clear data source badges | **`VERIFIED`** | UI accurately reports detection and resolution; does not claim router-level blocking. |
-| **Historical Incident Replay** | Replay documented public BGP incidents against ground-truth baselines | [`backend/scripts/record_live_rpki_and_replay.py`](backend/scripts/record_live_rpki_and_replay.py) | [`audit/historical_replay_evidence.json`](audit/historical_replay_evidence.json) & [`test_historical_replay.py`](backend/tests/test_historical_replay.py) | 5/5 cases passed: YouTube PTCL, Indosat Google DNS, RTComm Twitter, and 2 control cases | **`VERIFIED`** | Evaluates documented incident parameters; 0% false positives on legitimate controls. |
-| **Public Evaluator Deployment** | Production deployment on Cloudflare Pages and Railway with HTTPS | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`backend/Dockerfile`](backend/Dockerfile), [`backend/railway.json`](backend/railway.json) | Production build succeeded; configuration files validated | Containerized backend with persistent volume and demo safety protections | **`VERIFIED`** | Ready for evaluator staging URL. |
+| **Candidate Baseline Promotion Policy** | Enforce candidate status until corroboration threshold (threshold=3) is met | [`backend/horaq/detection.py`](backend/horaq/detection.py) | [`backend/tests/test_benchmark.py`](backend/tests/test_benchmark.py) & Benchmark suite | Unseeded routes start as CANDIDATE; promoted to PROMOTED only after 3 corroborated observations | **`VERIFIED`** | Protects reference state from single-observation route flaps. |
+| **Evidence Correlation & Uncertainty** | Explicit multi-source agreement and uncertainty estimation (HIGH/MEDIUM/UNCERTAIN) | [`backend/horaq/detection.py`](backend/horaq/detection.py) | [`backend/tests/test_benchmark.py`](backend/tests/test_benchmark.py) & Telemetry | Preserves uncertainty reasons (e.g. traffic engineering deaggregation vs rogue hijack) | **`VERIFIED`** | Avoids automatic attack verdicts on legitimate operational route maintenance. |
+| **Reference Detector Comparison** | Head-to-head empirical comparison of Naïve vs. Enhanced HORA-Q | [`backend/horaq/benchmark.py`](backend/horaq/benchmark.py) | [`audit/reference_detector_comparison.json`](audit/reference_detector_comparison.json) | 0.0% baseline contamination in HORA-Q vs 66.7% in Naïve; 100% attack recall; ML-DSA-65 measured | **`VERIFIED`** | Fully addresses Proposal Page 6 comparative evaluation mandate. |
+| **Archival BGP MRT Incident Replay** | Reconstruct and replay historical BGP states from authentic RIPE RIS MRT archives | [`backend/horaq/replay.py`](backend/horaq/replay.py), [`backend/scripts/replay_historical_mrt.py`](backend/scripts/replay_historical_mrt.py) | [`audit/HISTORICAL_ATTACK_VALIDATION.md`](audit/HISTORICAL_ATTACK_VALIDATION.md) | Verified on authentic MRT updates (YouTube PTCL 2008, RTComm Twitter 2022, Benign RIS feed) | **`VERIFIED`** | Honest documentation of INCOMPLETE_DATA for Indosat and CAPABILITY_BOUNDARY for valley-free leaks. |
+| **Public Evaluator Deployment** | Production deployment on Cloudflare Pages and Railway with HTTPS | [`DEPLOYMENT.md`](DEPLOYMENT.md), [`backend/Dockerfile`](backend/Dockerfile), [`backend/railway.json`](backend/railway.json) | Production build succeeded; configuration files validated | Containerized backend with persistent volume and demo safety protections verified locally | **`NOT YET VERIFIED`** | Deployment guide and configuration are complete; live public endpoints pending external evaluator hosting. |
 
 ---
 
@@ -127,7 +130,67 @@ Status categories:
 
 ---
 
-## 5. Architectural Nuances & Reconciled Claims
+## 5. Reference-Detector Comparison: Head-to-Head Empirical Benchmark
+
+Proposal Page 6 defines an explicit comparative evaluation between a **Naïve Reference Detector** and **Enhanced HORA-Q**. To satisfy this mandate with empirical rigour rather than hypothetical claims, [`backend/horaq/benchmark.py`](backend/horaq/benchmark.py) evaluates both detector engines against identical routing event streams.
+
+The measured benchmark results are recorded in [`audit/reference_detector_comparison.json`](audit/reference_detector_comparison.json):
+
+### 5.1. Classification & Security Metrics Comparison
+
+| Evaluation Dimension | Naïve Reference Detector | Enhanced HORA-Q | Evaluation Analysis & Proposal Gap Closure |
+| :--- | :---: | :---: | :--- |
+| **Detection Precision** | 66.7% | **75.0%** | Naïve detector suffers higher false alerts on uncorroborated route updates. |
+| **Attack Detection Recall** | 66.7% | **100.0%** | Naïve detector lacks hierarchical parent lookup, missing subprefix hijacks (`208.65.153.0/24`). HORA-Q detects all attacks. |
+| **F1 Score** | 0.6667 | **0.8571** | Enhanced HORA-Q outperforms the reference detector across composite detection metrics. |
+| **False Positive Rate (FPR)** | 25.0% | **25.0%** | Both engines flag traffic engineering deaggregation; HORA-Q uniquely classifies it as `MEDIUM` confidence. |
+| **Baseline Contamination Rate** | **66.7% (High Risk)** | **0.0% (Zero Contamination)** | **Crucial Invariant**: Attacking announcements immediately poison naïve baselines. HORA-Q quarantines attacks with 0% contamination. |
+| **Candidate Promotion Policy** | None (Immediate unverified trust) | **Enforced (Threshold = 3)** | Prevents single-observation route flaps from entering trusted reference state. |
+| **Uncertainty Preservation** | None (Binary alert/pass) | **Enforced (HIGH/MEDIUM/UNCERTAIN)** | Preserves operational uncertainty (e.g. Traffic Engineering deaggregations) rather than assuming malicious attack. |
+| **Cryptographic Evidence** | None (Unsigned plain dictionary) | **Enforced (NIST FIPS 204 ML-DSA-65)** | Standalone verifiable RFC 8785 canonical hash and post-quantum digital signatures. |
+
+### 5.2. Post-Quantum Cryptographic Overhead & Tradeoff Analysis
+
+The benchmark measures signing and verification latency on identical alert records:
+
+| Cryptographic Algorithm | Standard | Security Classification | Signature Size | Public Key Size | Mean Signing Latency | Mean Verification Latency | Quantum Resistance |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **ML-DSA-65 (HORA-Q)** | **NIST FIPS 204** | **NIST Security Category 3** | **3,309 bytes** | **1,952 bytes** | **64.13 ms** | **12.63 ms** | **YES (Post-Quantum)** |
+| Ed25519 (Classical Baseline) | RFC 8032 | 128-bit Classical | 64 bytes | 32 bytes | 0.05 ms | 0.10 ms | NO (Vulnerable to CRQC) |
+| RSA-2048 (Classical Baseline) | PKCS #1 v2.2 | 112-bit Classical | 256 bytes | 294 bytes | 1.25 ms | 0.08 ms | NO (Vulnerable to CRQC) |
+
+**Storage & Latency Justification**:
+ML-DSA-65 signatures are ~3.3 KB compared to 64 bytes for Ed25519. In HORA-Q, cryptographic signatures are generated **per-alert and per-evidence-vault entry** (not per raw wire-rate packet). For security-grade forensic non-repudiation, a 3.3 KB audit record and ~64 ms signing latency represent an optimal, negligible overhead while guaranteeing immunity against quantum cryptanalysis.
+
+---
+
+## 6. Archival Historical BGP MRT Replay & Validation
+
+To resolve Gap 3 (moving beyond synthetic fixtures to genuine archival BGP routing dumps), HORA-Q incorporates a dedicated MRT replay engine ([`backend/horaq/replay.py`](backend/horaq/replay.py)) utilizing `mrtparse 2.2.0`.
+
+Detailed evaluation findings are published in [`audit/HISTORICAL_ATTACK_VALIDATION.md`](audit/HISTORICAL_ATTACK_VALIDATION.md) and [`audit/historical_attack_validation.json`](audit/historical_attack_validation.json):
+
+1. **YouTube / Pakistan Telecom Subprefix Hijack (`INC-2008-02-24-YOUTUBE-PTCL`)**:
+   - Source: RIPE RIS `rrc00/updates.20080224.1845.gz`.
+   - Replayed: 27 genuine BGP update records from 11 distinct observing peers.
+   - Result: 27/27 detected on record 1 (`SUBPREFIX_ANOMALY`, Severity `HIGH`). Detection delay: 0.0s. Baseline contamination: **0.0%**. Status: **`VERIFIED_REAL_REPLAY`**.
+2. **RTComm / Twitter Origin Hijack (`INC-2022-03-28-RTCOMM-TWITTER`)**:
+   - Source: RIPE RIS `rrc00/updates.20220328.1205.gz`.
+   - Replayed: Genuine update from peer `AS22652` originating `104.244.42.0/24` with rogue AS8342.
+   - Result: Detected (`ORIGIN_CHANGE`, Severity `HIGH`). Baseline contamination: **0.0%**. Status: **`VERIFIED_REAL_REPLAY`**.
+3. **Indosat Route Leak (`INC-2011-01-14-INDOSAT-DNS`) — Scientific Transparency**:
+   - Source: RIPE RIS `rrc00/updates.20110114.1215.gz`.
+   - Result: Route was filtered upstream and did not reach `rrc00`. Marked honestly as **`INCOMPLETE_DATA`** for this collector archive.
+4. **RFC 7908 Valley-Free Leak Control (`BOUNDARY-AS-PATH-LEAK`)**:
+   - Marked **`CAPABILITY_BOUNDARY`**. Identifies that valley-free path leaks without origin modification require ASPA / BGPsec and are outside HORA-Q's design scope.
+5. **Benign Normal Feed & Withdrawal Verification (`CONTROL-RIPE-RIS-BENIGN`)**:
+   - Source: RIPE RIS `rrc00/updates.20080224.1845.gz`.
+   - Replayed: 20 legitimate announcements and 15 route withdrawals.
+   - Result: **0 false positives**, withdrawal state successfully tracked. Status: **`VERIFIED_REAL_REPLAY`**.
+
+---
+
+## 7. Architectural Nuances & Reconciled Claims
 
 1. **Scope Distinction (Origin & Subprefix Anomaly vs. General Route Leaks)**:  
    - HORA-Q is an *Origin-AS Conflict and Subprefix Anomaly Detector*. It detects when an unauthorized ASN announces an existing prefix or a more-specific subprefix.
@@ -143,21 +206,33 @@ Status categories:
 
 ---
 
-## 6. Verification Commands and Reproducibility
+## 8. Verification Commands and Reproducibility
 
-### Backend Test Suite (73 Tests Passing)
+### Backend Test Suite (76 Tests Passing)
 ```powershell
 cd backend
 python -m pytest -v
 ```
-*Result*: `73 passed in 2.85s`
+*Result*: `76 passed in 3.4s` (All unit tests, integration tests, candidate policy tests, benchmark tests, and archival replay tests).
 
 ### Frontend Production Build
 ```powershell
 cd frontend
 npm run build
 ```
-*Result*: `tsc && vite build` succeeded in 3.62s (`dist/` generated with zero errors).
+*Result*: `tsc && vite build` succeeded (`dist/` generated with zero errors).
+
+### Head-to-Head Reference Detector Benchmark Execution
+```powershell
+python backend/horaq/benchmark.py
+```
+*Result*: Executes comparative benchmark, measures cryptographic overhead, and writes [`audit/reference_detector_comparison.json`](audit/reference_detector_comparison.json).
+
+### Archival Historical BGP MRT Replay Execution
+```powershell
+python backend/scripts/replay_historical_mrt.py
+```
+*Result*: Replays authentic RIPE RIS MRT update archives and writes [`audit/historical_attack_validation.json`](audit/historical_attack_validation.json).
 
 ### Live RIPE RIS Telemetry Execution
 ```powershell
@@ -165,13 +240,6 @@ cd backend
 python scripts/test_live_ris.py
 ```
 *Result*: Ingests live messages from `wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416` and writes [`audit/live_ris_telemetry.json`](audit/live_ris_telemetry.json).
-
-### Live RPKI and Historical Incident Replay Execution
-```powershell
-cd backend
-python scripts/record_live_rpki_and_replay.py
-```
-*Result*: Queries live RIPEstat RPKI API and replays documented historical incidents.
 
 ### Independent Evidence Verifier CLI
 ```powershell
@@ -183,3 +251,4 @@ python verify_evidence.py audit/sample_evidence_unsigned.json --allow-unsigned
 - Authentic record: Exit code `0` (`AUTHENTIC`).
 - Tampered record: Exit code `1` (`COMPROMISED`).
 - Unsigned record: Exit code `2` (without `--allow-unsigned`), Exit code `0` (`UNSIGNED` with `--allow-unsigned`).
+

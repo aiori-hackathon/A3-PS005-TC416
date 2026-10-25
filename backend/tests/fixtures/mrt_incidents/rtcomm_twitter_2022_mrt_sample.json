@@ -1,0 +1,30 @@
+{
+  "incident_id": "INC-2022-03-28-RTCOMM-TWITTER-HIJACK",
+  "source_url": "https://data.ris.ripe.net/rrc00/2022.03/updates.20220328.1205.gz",
+  "incident_class": "ORIGIN_CONFLICT",
+  "ground_truth": {
+    "target_prefix": "104.244.42.0/24",
+    "authorized_origin": "AS13414",
+    "rogue_origin": "AS8342"
+  },
+  "records_count": 1,
+  "records": [
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2022.03/updates.20220328.1205.gz",
+      "collector": "rrc00",
+      "timestamp": 1648469200,
+      "peer_ip": "45.61.0.85",
+      "peer_as": "22652",
+      "type": "ANNOUNCEMENT",
+      "prefixes": [
+        "104.244.42.0/24"
+      ],
+      "as_path": [
+        "22652",
+        "8359",
+        "8342"
+      ],
+      "origin_asn": "8342"
+    }
+  ]
+}
