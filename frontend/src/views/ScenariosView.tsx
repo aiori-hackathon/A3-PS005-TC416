@@ -229,6 +229,22 @@ export const ScenariosView: React.FC = () => {
         </div>
       </div>
 
+      {/* Explicit Synthetic Demo Notice */}
+      <div className="p-3.5 rounded-lg border border-divider bg-bg-interactive flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <span className="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-brand-blue/15 text-brand-blue border border-brand-blue/30 uppercase tracking-wide">
+            SYNTHETIC DEMO
+          </span>
+          <span className="font-medium text-text-main">
+            Controlled RFC 5737 / RFC 3849 Testbed
+          </span>
+          <span className="text-text-dim">•</span>
+          <span className="text-text-sub">
+            All scenario announcements are simulated locally against reserved documentation blocks. No mutated routes are broadcast to the Internet.
+          </span>
+        </div>
+      </div>
+
       {/* Scenarios Table / List */}
       <div className="card-panel overflow-hidden divide-y divide-divider">
         {scenarios.map((sc) => {

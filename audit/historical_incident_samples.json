@@ -1,0 +1,141 @@
+[
+  {
+    "incident_id": "INC-2008-02-24-YOUTUBE-PTCL",
+    "name": "Pakistan Telecom YouTube Subprefix Hijack",
+    "date": "2008-02-24",
+    "public_references": [
+      "https://www.ripe.net/publications/news/industry-updates/youtube-hijacking-at-ripe-ncc",
+      "https://blog.cloudflare.com/why-bgp-is-broken-and-how-rpki-fixes-it/"
+    ],
+    "ground_truth_baseline": {
+      "prefix": "208.65.152.0/22",
+      "origin_asn": 36561,
+      "owner": "YouTube, LLC",
+      "trusted_status": "AUTHENTICATED_BASELINE"
+    },
+    "incident_announcement": {
+      "prefix": "208.65.153.0/24",
+      "origin_asn": 17557,
+      "collector": "rrc00.ripe.net",
+      "timestamp": "2008-02-24T18:47:00Z"
+    },
+    "expected_result": {
+      "alert_kind": "SUBPREFIX_ANOMALY",
+      "severity": "HIGH",
+      "detected_origin": "AS17557",
+      "baseline_origin": "AS36561",
+      "parent_prefix": "208.65.152.0/22",
+      "baseline_poisoned": false
+    }
+  },
+  {
+    "incident_id": "INC-2014-04-02-INDOSAT-LEAK",
+    "name": "Indosat Global Route Leak",
+    "date": "2014-04-02",
+    "public_references": [
+      "https://blog.bgpmon.net/2014/04/indosat-hijacks-global-prefixes.html",
+      "https://radar.cloudflare.com/learning/bgp-route-leaks"
+    ],
+    "ground_truth_baseline": {
+      "prefix": "8.8.8.0/24",
+      "origin_asn": 15169,
+      "owner": "Google LLC",
+      "trusted_status": "AUTHENTICATED_BASELINE"
+    },
+    "incident_announcement": {
+      "prefix": "8.8.8.0/24",
+      "origin_asn": 4761,
+      "collector": "rrc01.ripe.net",
+      "timestamp": "2014-04-02T18:30:00Z"
+    },
+    "expected_result": {
+      "alert_kind": "ORIGIN_CHANGE",
+      "severity": "HIGH",
+      "detected_origin": "AS4761",
+      "baseline_origin": "AS15169",
+      "baseline_poisoned": false
+    }
+  },
+  {
+    "incident_id": "INC-2020-04-01-ROSTELECOM-LEAK",
+    "name": "Rostelecom Major Prefix Hijack / Route Leak",
+    "date": "2020-04-01",
+    "public_references": [
+      "https://blog.cloudflare.com/rostelecom-bgp-leak-large-scale-incident/",
+      "https://bgpstream.caida.org/"
+    ],
+    "ground_truth_baseline": {
+      "prefix": "104.244.42.0/24",
+      "origin_asn": 13335,
+      "owner": "Cloudflare, Inc.",
+      "trusted_status": "AUTHENTICATED_BASELINE"
+    },
+    "incident_announcement": {
+      "prefix": "104.244.42.0/24",
+      "origin_asn": 12389,
+      "collector": "rrc03.ripe.net",
+      "timestamp": "2020-04-01T19:28:00Z"
+    },
+    "expected_result": {
+      "alert_kind": "ORIGIN_CHANGE",
+      "severity": "HIGH",
+      "detected_origin": "AS12389",
+      "baseline_origin": "AS13335",
+      "baseline_poisoned": false
+    }
+  },
+  {
+    "incident_id": "CONTROL-LEGITIMATE-SAME-ORIGIN-UPDATE",
+    "name": "Legitimate Route Re-announcement / Path Update (Control)",
+    "date": "2026-10-25",
+    "public_references": [
+      "RFC 4271 BGP-4 Protocol Specification"
+    ],
+    "ground_truth_baseline": {
+      "prefix": "198.51.100.0/24",
+      "origin_asn": 64496,
+      "owner": "Documentation Net (RFC 5737)",
+      "trusted_status": "AUTHENTICATED_BASELINE"
+    },
+    "incident_announcement": {
+      "prefix": "198.51.100.0/24",
+      "origin_asn": 64496,
+      "collector": "rrc00.ripe.net",
+      "timestamp": "2026-10-25T10:00:00Z"
+    },
+    "expected_result": {
+      "alert_kind": null,
+      "alerts_generated": 0,
+      "is_false_positive": false,
+      "observation_count_incremented": true
+    }
+  },
+  {
+    "incident_id": "CONTROL-LEGITIMATE-TRAFFIC-ENGINEERING-SUBPREFIX",
+    "name": "Traffic Engineering Subprefix with Same Origin (Control)",
+    "date": "2026-10-25",
+    "public_references": [
+      "RFC 7454 BGP Operations and Security"
+    ],
+    "ground_truth_baseline": {
+      "prefix": "192.0.2.0/23",
+      "origin_asn": 64496,
+      "owner": "Documentation Net (RFC 5737)",
+      "trusted_status": "AUTHENTICATED_BASELINE"
+    },
+    "incident_announcement": {
+      "prefix": "192.0.2.0/24",
+      "origin_asn": 64496,
+      "collector": "rrc00.ripe.net",
+      "timestamp": "2026-10-25T10:05:00Z"
+    },
+    "expected_result": {
+      "alert_kind": "SUBPREFIX_ANOMALY",
+      "severity": "MEDIUM",
+      "detected_origin": "AS64496",
+      "baseline_origin": "AS64496",
+      "parent_prefix": "192.0.2.0/23",
+      "note": "Operator deaggregation - distinguished by MEDIUM severity matching ASN"
+    }
+  }
+]

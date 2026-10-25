@@ -83,13 +83,17 @@ export const OverviewView: React.FC = () => {
         {/* Single Data Source Indicator */}
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-bg-interactive border border-divider text-xs text-text-sub">
-            <span className={`w-2 h-2 rounded-full ${isCollectorConnected ? "bg-status-green" : "bg-brand-blue"}`} />
-            <span className="font-medium text-text-main">
-              {overview?.evaluation_mode === "LIVE_TELEMETRY" ? "RIPE RIS Live Stream" : "Synthetic Evaluation Mode"}
+            <span className={`w-2 h-2 rounded-full ${isCollectorConnected ? "bg-status-green animate-pulse" : "bg-brand-blue"}`} />
+            <span className="font-semibold text-text-main tracking-wide">
+              {isCollectorConnected
+                ? "LIVE DATA"
+                : overview?.evaluation_mode === "HISTORICAL_REPLAY"
+                ? "HISTORICAL REPLAY"
+                : "SYNTHETIC DEMO"}
             </span>
             <span className="text-text-dim">•</span>
-            <span className="text-text-dim">
-              {isCollectorConnected ? "Active Ingestion" : "Evaluation Scenarios"}
+            <span className="text-text-sub font-mono text-[11px]">
+              {isCollectorConnected ? "RIPE RIS Live Stream" : "RFC 5737 / RFC 3849 Testbed"}
             </span>
           </div>
         </div>

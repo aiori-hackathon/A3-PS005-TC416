@@ -1,0 +1,128 @@
+{
+  "test_name": "RIPE_STAT_LIVE_RPKI_VALIDATION",
+  "execution_timestamp_utc": "2026-10-25T06:02:45.482642+00:00",
+  "provider": "RIPE NCC RIPEstat Data API",
+  "total_cases": 3,
+  "passed_cases": 3,
+  "cases": [
+    {
+      "case_id": "RPKI-LIVE-VALID",
+      "description": "Cloudflare primary DNS route with valid signed ROA",
+      "query_timestamp_utc": "2026-10-25T06:02:40.386833+00:00",
+      "prefix": "1.1.1.0/24",
+      "origin_asn": "AS13335",
+      "target_url": "https://stat.ripe.net/data/rpki-validation/data.json?resource=13335&prefix=1.1.1.0/24",
+      "http_status": 200,
+      "expected_state": "VALID",
+      "horaq_state": "VALID",
+      "matched_expected": true,
+      "horaq_full_response": {
+        "prefix": "1.1.1.0/24",
+        "origin_asn": "AS13335",
+        "status": "VALID",
+        "raw_status": "VALID",
+        "lookup_time": "2026-10-25T06:02:41.280689Z",
+        "provider": "RIPEstat",
+        "details": "RPKI validation result from RIPEstat: VALID",
+        "validating_roas": [
+          {
+            "origin": "13335",
+            "prefix": "1.1.1.0/24",
+            "validity": "valid",
+            "max_length": 24
+          }
+        ]
+      },
+      "raw_ripestat_data": {
+        "resource": "13335",
+        "prefix": "1.1.1.0/24",
+        "validating_roas": [
+          {
+            "origin": "13335",
+            "prefix": "1.1.1.0/24",
+            "validity": "valid",
+            "max_length": 24
+          }
+        ],
+        "status": "valid",
+        "validator": "routinator"
+      },
+      "error": null
+    },
+    {
+      "case_id": "RPKI-LIVE-INVALID-ASN",
+      "description": "Cloudflare route tested against wrong origin ASN (ROA mismatch)",
+      "query_timestamp_utc": "2026-10-25T06:02:42.122692+00:00",
+      "prefix": "1.1.1.0/24",
+      "origin_asn": "AS99999",
+      "target_url": "https://stat.ripe.net/data/rpki-validation/data.json?resource=99999&prefix=1.1.1.0/24",
+      "http_status": 200,
+      "expected_state": "INVALID",
+      "horaq_state": "INVALID",
+      "matched_expected": true,
+      "horaq_full_response": {
+        "prefix": "1.1.1.0/24",
+        "origin_asn": "AS99999",
+        "status": "INVALID",
+        "raw_status": "INVALID_ASN",
+        "lookup_time": "2026-10-25T06:02:42.951611Z",
+        "provider": "RIPEstat",
+        "details": "RPKI validation result from RIPEstat: INVALID",
+        "validating_roas": [
+          {
+            "origin": "13335",
+            "prefix": "1.1.1.0/24",
+            "validity": "invalid_asn",
+            "max_length": 24
+          }
+        ]
+      },
+      "raw_ripestat_data": {
+        "resource": "99999",
+        "prefix": "1.1.1.0/24",
+        "validating_roas": [
+          {
+            "origin": "13335",
+            "prefix": "1.1.1.0/24",
+            "validity": "invalid_asn",
+            "max_length": 24
+          }
+        ],
+        "status": "invalid_asn",
+        "validator": "routinator"
+      },
+      "error": null
+    },
+    {
+      "case_id": "RPKI-LIVE-UNKNOWN",
+      "description": "RFC 5737 TEST-NET-1 documentation prefix with no published ROA",
+      "query_timestamp_utc": "2026-10-25T06:02:43.796570+00:00",
+      "prefix": "192.0.2.0/24",
+      "origin_asn": "AS64496",
+      "target_url": "https://stat.ripe.net/data/rpki-validation/data.json?resource=64496&prefix=192.0.2.0/24",
+      "http_status": 200,
+      "expected_state": "UNKNOWN",
+      "horaq_state": "UNKNOWN",
+      "matched_expected": true,
+      "horaq_full_response": {
+        "prefix": "192.0.2.0/24",
+        "origin_asn": "AS64496",
+        "status": "UNKNOWN",
+        "raw_status": "UNKNOWN",
+        "lookup_time": "2026-10-25T06:02:44.692707Z",
+        "provider": "RIPEstat",
+        "details": "RPKI validation result from RIPEstat: UNKNOWN",
+        "validating_roas": []
+      },
+      "raw_ripestat_data": {
+        "resource": "64496",
+        "prefix": "192.0.2.0/24",
+        "validating_roas": [],
+        "status": "unknown",
+        "validator": "routinator"
+      },
+      "error": null
+    }
+  ],
+  "verdict": "VERIFIED"
+}
