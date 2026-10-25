@@ -98,7 +98,8 @@ export const ScenariosView: React.FC = () => {
     setRunningId(scenarioId);
     try {
       const res = await runScenarioAction(scenarioId);
-      const isPass = res.alerts_generated >= res.expected_alerts;
+      // Strictly require exact match of generated alerts to expected alerts, and affirmative success
+      const isPass = res && res.success !== false && res.alerts_generated === res.expected_alerts;
       setLogs((prev) => [
         {
           id: Math.random().toString(36).substring(7),
@@ -111,7 +112,17 @@ export const ScenariosView: React.FC = () => {
         ...prev.slice(0, 9),
       ]);
     } catch {
-      // handled
+      setLogs((prev) => [
+        {
+          id: Math.random().toString(36).substring(7),
+          time: new Date().toLocaleTimeString(),
+          scenario: scenarioId,
+          alerts: 0,
+          expected: 1,
+          status: "FAIL",
+        },
+        ...prev.slice(0, 9),
+      ]);
     } finally {
       setRunningId(null);
     }
@@ -121,6 +132,17 @@ export const ScenariosView: React.FC = () => {
     setRunningId("run-all");
     try {
       const res = await runScenarioAction("run-all");
+      // Calculate suite outcome from actual individual results: all 5 scenarios must pass exactly
+      const suiteResults = res.suite_results || [];
+      const isSuitePass =
+        res &&
+        res.success === true &&
+        res.alerts_generated === res.expected_alerts &&
+        suiteResults.length === 5 &&
+        suiteResults.every(
+          (sc: any) => sc.alerts_generated === sc.expected_alerts && sc.success === true
+        );
+
       setLogs((prev) => [
         {
           id: Math.random().toString(36).substring(7),
@@ -128,16 +150,27 @@ export const ScenariosView: React.FC = () => {
           scenario: "Full Evaluation Suite",
           alerts: res.alerts_generated,
           expected: res.expected_alerts,
-          status: "PASS",
+          status: isSuitePass ? "PASS" : "FAIL",
         },
         ...prev.slice(0, 9),
       ]);
     } catch {
-      // handled
+      setLogs((prev) => [
+        {
+          id: Math.random().toString(36).substring(7),
+          time: new Date().toLocaleTimeString(),
+          scenario: "Full Evaluation Suite",
+          alerts: 0,
+          expected: 4,
+          status: "FAIL",
+        },
+        ...prev.slice(0, 9),
+      ]);
     } finally {
       setRunningId(null);
     }
   };
+
 
   const handleReset = async () => {
     setRunningId("reset");

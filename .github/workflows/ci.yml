@@ -26,10 +26,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run Pytest Test Suite (42 Tests)
+      - name: Run Pytest Test Suite (50 Tests)
         working-directory: backend
         run: |
           pytest -v
+
 
       - name: Run Independent Evidence Verifier (Authentic Sample)
         run: |

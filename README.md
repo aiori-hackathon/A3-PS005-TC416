@@ -2,18 +2,27 @@
 
 [![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-indigo.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
 [![Track](https://img.shields.io/badge/AIORI--3-Track%202%20Cyber%20Security%20(PS--005)-cyan.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
-[![Tests](https://img.shields.io/badge/Tests-36%20Passed%20(100%25)-emerald.svg)](file:///d:/HORA-Q/backend/tests)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](file:///d:/HORA-Q/LICENSE)
+[![Tests](https://img.shields.io/badge/Tests-50%20Passed%20(100%25)-emerald.svg)](backend/tests)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **AIORI-3 Hackathon · Problem PS-005 · Track 2 Cyber Security**  
 **Team Code:** `A3-PS005-TC416` | **Institution:** Al-Ameen College  
 **Team Members:** Sankardev VS (Team Lead), Adarsh A (Team Member) | **Faculty Mentor:** Dr. Jyothy Joseph  
 **Team Introduction Video:** [https://youtu.be/oKoHllmyCMQ](https://youtu.be/oKoHllmyCMQ)  
-**Project Proposal:** [HORA Q — Explainable BGP Anomaly Monitor (AIORI-3 Proposal).pdf](file:///d:/HORA-Q/HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20(AIORI-3%20Proposal).pdf) | [Proposed-structure-hackathon.pdf](file:///d:/HORA-Q/Proposed-structure-hackathon.pdf)
+**Project Proposal:** [HORA Q — Explainable BGP Anomaly Monitor (AIORI-3 Proposal).pdf](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20(AIORI-3%20Proposal).pdf) | [Proposed-structure-hackathon.pdf](Proposed-structure-hackathon.pdf)
 
 ---
 
-**HORA-Q** is a production-grade, explainable BGP origin and subprefix anomaly monitoring platform. It normalizes live and replayed BGP route announcements, maintains immutable per-prefix baselines, detects origin-AS conflicts and strict more-specific subprefix announcements without baseline poisoning, binds forensic findings into tamper-evident canonical evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
+**HORA-Q** is an explainable BGP origin and subprefix anomaly monitoring architecture engineered for AIORI-3. It normalizes BGP route announcements, maintains immutable per-prefix baselines, detects origin-AS conflicts and strict more-specific subprefix announcements without baseline poisoning, binds forensic findings into tamper-evident canonical evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
+
+### Verification Status & Scope:
+- **Unit & Integration Tests**: 50 of 50 backend tests passing (100% pass rate).
+- **Post-Quantum Digital Signatures**: Standardized NIST FIPS 204 ML-DSA-65 implemented via `dilithium-py.ml_dsa.ML_DSA_65` and `liboqs`.
+- **Evidence Canonicalization**: Deterministic RFC 8785 JSON Canonicalization Scheme (JCS) backed by the standard `rfc8785` package.
+- **Independent Verification**: CLI verifier (`verify_evidence.py`) confirms both authentic signatures and tamper rejection (exit code 1).
+- **Live Ingestion & Resolvers**: Opt-in RIPE RIS Live WebSocket collector and RIPEstat RPKI origin validation resolver implemented.
+- **Deployment Status**: Fully verifiable local prototype; public cloud deployment is planned for post-hackathon staging.
+
 
 ---
 
@@ -192,16 +201,16 @@ python verify_evidence.py audit/sample_evidence_signed.json --tamper
 
 ## 📚 Complete Documentation Suite
 
-All 43 engineering documents, architecture guides, data flows, and acceptance checklists can be reviewed in [`HORAQ_Documentation/`](file:///d:/HORA-Q/HORAQ_Documentation):
-- [`00_START_HERE.md`](file:///d:/HORA-Q/HORAQ_Documentation/00_START_HERE.md)
-- [`01_PROJECT_BRIEF.md`](file:///d:/HORA-Q/HORAQ_Documentation/01_PROJECT_BRIEF.md)
-- [`02_REQUIREMENTS.md`](file:///d:/HORA-Q/HORAQ_Documentation/02_REQUIREMENTS.md)
-- [`03_ARCHITECTURE.md`](file:///d:/HORA-Q/HORAQ_Documentation/03_ARCHITECTURE.md)
-- [`08_API_REFERENCE.md`](file:///d:/HORA-Q/HORAQ_Documentation/08_API_REFERENCE.md)
-- [`09_DATABASE.md`](file:///d:/HORA-Q/HORAQ_Documentation/09_DATABASE.md)
-- [`12_DETECTION_ALGORITHMS.md`](file:///d:/HORA-Q/HORAQ_Documentation/12_DETECTION_ALGORITHMS.md)
-- [`18_EVIDENCE.md`](file:///d:/HORA-Q/HORAQ_Documentation/18_EVIDENCE.md)
-- [`19_ML_DSA.md`](file:///d:/HORA-Q/HORAQ_Documentation/19_ML_DSA.md)
-- [`20_FRONTEND.md`](file:///d:/HORA-Q/HORAQ_Documentation/20_FRONTEND.md)
-- [`21_SCENARIOS.md`](file:///d:/HORA-Q/HORAQ_Documentation/21_SCENARIOS.md)
-- [`34_ACCEPTANCE.md`](file:///d:/HORA-Q/HORAQ_Documentation/34_ACCEPTANCE.md)
+All 43 engineering documents, architecture guides, data flows, and acceptance checklists can be reviewed in [`HORAQ_Documentation/`](HORAQ_Documentation):
+- [`00_START_HERE.md`](HORAQ_Documentation/00_START_HERE.md)
+- [`01_PROJECT_BRIEF.md`](HORAQ_Documentation/01_PROJECT_BRIEF.md)
+- [`02_REQUIREMENTS.md`](HORAQ_Documentation/02_REQUIREMENTS.md)
+- [`03_ARCHITECTURE.md`](HORAQ_Documentation/03_ARCHITECTURE.md)
+- [`08_API_REFERENCE.md`](HORAQ_Documentation/08_API_REFERENCE.md)
+- [`09_DATABASE.md`](HORAQ_Documentation/09_DATABASE.md)
+- [`12_DETECTION_ALGORITHMS.md`](HORAQ_Documentation/12_DETECTION_ALGORITHMS.md)
+- [`18_EVIDENCE.md`](HORAQ_Documentation/18_EVIDENCE.md)
+- [`19_ML_DSA.md`](HORAQ_Documentation/19_ML_DSA.md)
+- [`20_FRONTEND.md`](HORAQ_Documentation/20_FRONTEND.md)
+- [`21_SCENARIOS.md`](HORAQ_Documentation/21_SCENARIOS.md)
+- [`34_ACCEPTANCE.md`](HORAQ_Documentation/34_ACCEPTANCE.md)

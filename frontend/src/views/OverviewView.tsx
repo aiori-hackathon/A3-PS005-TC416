@@ -28,11 +28,20 @@ export const OverviewView: React.FC = () => {
   const topIncident = activeIncidents[0] || null;
 
   const prefixesTracked = overview?.tracked_routes || routes.length || 0;
-  const updatesEvaluated = (overview?.total_observations || 0) + alerts.length;
-  const risFeedsCount = "3 Collectors";
-  const risFeedNames = "rrc00, rrc01, rrc03 (RIPE RIS)";
+  // Truthful BGP update count directly from observation telemetry (does not double-count alerts)
+  const updatesEvaluated = overview?.total_observations ?? 0;
+  const anomaliesCount = overview?.total_alerts ?? alerts.length;
+
+  const collectorStatus = (overview as any)?.collector_status;
+  const isCollectorConnected = collectorStatus?.connected === true;
+  const isCollectorEnabled = collectorStatus?.enabled === true;
+  const risFeedStatusLabel = isCollectorConnected ? "CONNECTED" : (isCollectorEnabled ? "CONNECTING" : "OFFLINE (Opt-In)");
+  const risFeedSubtitle = isCollectorConnected
+    ? "Active WebSocket: rrc00, rrc01, rrc03"
+    : "Configured feeds: rrc00, rrc01, rrc03";
 
   const recentIncidents = groupedIncidents.slice(0, 7);
+
 
   const getAlertHeadline = (incident: GroupedIncident | null) => {
     if (!incident) return "All monitored prefixes conform to baseline routing policies";
@@ -196,25 +205,26 @@ export const OverviewView: React.FC = () => {
               {updatesEvaluated}
             </div>
             <div className="text-xs text-text-dim">
-              Normalized BGP telemetry
+              {anomaliesCount} {anomaliesCount === 1 ? "anomaly flagged" : "anomalies flagged"}
             </div>
           </div>
 
-          {/* RIPE RIS Ingestion Feeds */}
+          {/* RIPE RIS Telemetry Feeds */}
           <div className="p-5 space-y-1">
             <div className="text-xs font-medium text-text-sub flex items-center justify-between">
-              <span>RIPE RIS Feeds</span>
-              <Server className="w-4 h-4 text-text-dim" />
+              <span>RIPE RIS Feed</span>
+              <Server className={`w-4 h-4 ${isCollectorConnected ? "text-status-green" : "text-text-dim"}`} />
             </div>
-            <div className="text-3xl font-bold font-mono text-text-main tracking-tight">
-              {risFeedsCount}
+            <div className={`text-xl font-bold font-mono tracking-tight ${isCollectorConnected ? "text-status-green" : "text-text-main"}`}>
+              {risFeedStatusLabel}
             </div>
             <div className="text-xs text-text-dim">
-              {risFeedNames}
+              {risFeedSubtitle}
             </div>
           </div>
         </div>
       </div>
+
 
       {/* 4. Recent Incidents Structured Table */}
       <div className="space-y-3">

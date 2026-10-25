@@ -136,3 +136,14 @@ def test_crypto_public_key_endpoint(client):
     assert "fingerprint" in data
     assert len(data["fingerprint"]) == 64
 
+
+def test_collector_status_endpoint(client):
+    resp = client.get("/api/v1/collector/status")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "enabled" in data
+    assert "connected" in data
+    assert "url" in data
+    assert "messages_received" in data
+
+

@@ -13,49 +13,61 @@ from typing import Any, Dict, Optional, Tuple
 
 
 ALGORITHM_NAME = "ML-DSA-65"
+STANDARD_NAME = "NIST FIPS 204"
 
-_PROVIDER_TYPE = "none"  # "oqs" or "dilithium-py" or "none"
+_PROVIDER_TYPE = "none"  # "oqs" or "dilithium-py-mldsa" or "dilithium-py-legacy" or "none"
 _PROVIDER_NAME = "none"
 _MECHANISM_NAME = "none"
 _AVAILABLE = False
 _ERROR_MESSAGE = ""
 
-# 1. Try liboqs / oqs first
+# 1. Try standardized ML-DSA-65 via liboqs first
 try:
     oqs_mod = importlib.import_module("oqs")
     available_sigs = oqs_mod.get_enabled_sig_mechanisms()
     if "ML-DSA-65" in available_sigs:
         _AVAILABLE = True
         _PROVIDER_TYPE = "oqs"
-        _PROVIDER_NAME = "liboqs"
+        _PROVIDER_NAME = "liboqs (NIST FIPS 204)"
         _MECHANISM_NAME = "ML-DSA-65"
-    elif "Dilithium3" in available_sigs:
-        _AVAILABLE = True
-        _PROVIDER_TYPE = "oqs"
-        _PROVIDER_NAME = "liboqs"
-        _MECHANISM_NAME = "Dilithium3"
+        ALGORITHM_NAME = "ML-DSA-65"
 except Exception:
     pass
 
-# 2. Try native dilithium-py (FIPS 204 / Dilithium3)
+# 2. Try native dilithium-py standardized FIPS 204 ML-DSA-65
+if not _AVAILABLE:
+    try:
+        from dilithium_py.ml_dsa import ML_DSA_65
+
+        _AVAILABLE = True
+        _PROVIDER_TYPE = "dilithium-py-mldsa"
+        _PROVIDER_NAME = "dilithium-py (NIST FIPS 204)"
+        _MECHANISM_NAME = "ML-DSA-65"
+        ALGORITHM_NAME = "ML-DSA-65"
+    except Exception:
+        pass
+
+# 3. Transparent legacy fallback: if only pre-standardization Dilithium3 is present,
+# do NOT falsely label it as standardized ML-DSA-65. Report truthfully.
 if not _AVAILABLE:
     try:
         from dilithium_py.dilithium import Dilithium3
 
         _AVAILABLE = True
-        _PROVIDER_TYPE = "dilithium-py"
-        _PROVIDER_NAME = "dilithium-py"
-        _MECHANISM_NAME = "ML-DSA-65 (Dilithium3)"
+        _PROVIDER_TYPE = "dilithium-py-legacy"
+        _PROVIDER_NAME = "dilithium-py (pre-standardization)"
+        _MECHANISM_NAME = "Dilithium3"
+        ALGORITHM_NAME = "CRYSTALS-Dilithium3"
     except Exception as err:
         _AVAILABLE = False
-        _ERROR_MESSAGE = f"Neither liboqs nor dilithium-py is installed: {err}"
+        _ERROR_MESSAGE = f"Neither standardized ML-DSA-65 nor Dilithium3 provider is installed: {err}"
 
 if not _AVAILABLE and not _ERROR_MESSAGE:
-    _ERROR_MESSAGE = "ML-DSA-65 cryptographic provider is not installed."
+    _ERROR_MESSAGE = "ML-DSA-65 post-quantum cryptographic provider is not installed."
 
 
 def is_mldsa_available() -> bool:
-    """Return True if ML-DSA-65 provider is available, False otherwise."""
+    """Return True if an ML-DSA or post-quantum signature provider is available."""
     return _AVAILABLE
 
 
@@ -69,6 +81,7 @@ class AuthorityKeyManager:
 
     Ensures durable signer identity across application runs. Generates and stores
     the authority keypair on first initialization, then reliably reloads it.
+    Rejects corrupted or invalid key files without silent regeneration.
     """
 
     def __init__(self, key_path: Optional[str] = None) -> None:
@@ -88,12 +101,25 @@ class AuthorityKeyManager:
             try:
                 with open(self.key_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
+                if not isinstance(data, dict) or "public_key" not in data or "secret_key" not in data:
+                    raise ValueError("Missing 'public_key' or 'secret_key' fields in key file")
                 self._public_key = base64.b64decode(data["public_key"])
                 self._secret_key = base64.b64decode(data["secret_key"])
+                # Validate key dimensions: ML-DSA-65 pk=1952 bytes, sk=4032 bytes
+                if _PROVIDER_TYPE in ("dilithium-py-mldsa", "oqs"):
+                    if len(self._public_key) != 1952 or len(self._secret_key) != 4032:
+                        raise ValueError(
+                            f"Key lengths (pk: {len(self._public_key)}, sk: {len(self._secret_key)}) "
+                            f"do not match standardized FIPS 204 ML-DSA-65 parameters (pk: 1952, sk: 4032)"
+                        )
                 return self._public_key, self._secret_key
-            except Exception:
-                # Fall back to re-generating if file was corrupted
-                pass
+            except Exception as err:
+                raise RuntimeError(
+                    f"Corrupted or invalid authority key file at '{self.key_path}': {err}. "
+                    f"Automatic regeneration is strictly prohibited by security specification to prevent "
+                    f"silent key rotation or loss of authority identity. Please recover the key from backup "
+                    f"or explicitly remove the corrupted file."
+                ) from err
 
         # Generate fresh persistent authority keypair
         pk, sk = generate_keypair()
@@ -103,7 +129,9 @@ class AuthorityKeyManager:
         try:
             key_data = {
                 "algorithm": ALGORITHM_NAME,
+                "standard": STANDARD_NAME if ALGORITHM_NAME == "ML-DSA-65" else "Round 3 NIST Submission",
                 "mechanism": _MECHANISM_NAME,
+                "provider": _PROVIDER_NAME,
                 "public_key": base64.b64encode(pk).decode("ascii"),
                 "secret_key": base64.b64encode(sk).decode("ascii"),
                 "fingerprint": hashlib.sha256(pk).hexdigest(),
@@ -196,11 +224,18 @@ def generate_keypair() -> Tuple[bytes, bytes]:
             public_key = signer.generate_keypair()
             secret_key = signer.export_secret_key()
             return public_key, secret_key
-    else:
+    elif _PROVIDER_TYPE == "dilithium-py-mldsa":
+        from dilithium_py.ml_dsa import ML_DSA_65
+
+        pk, sk = ML_DSA_65.keygen()
+        return pk, sk
+    elif _PROVIDER_TYPE == "dilithium-py-legacy":
         from dilithium_py.dilithium import Dilithium3
 
         pk, sk = Dilithium3.keygen()
         return pk, sk
+    else:
+        raise RuntimeError("No recognized signature provider available.")
 
 
 def sign_data(
@@ -241,13 +276,22 @@ def sign_data(
             sig_b64 = base64.b64encode(sig_bytes).decode("ascii")
             pub_b64 = base64.b64encode(pk).decode("ascii")
             return sig_b64, pub_b64
-    else:
+    elif _PROVIDER_TYPE == "dilithium-py-mldsa":
+        from dilithium_py.ml_dsa import ML_DSA_65
+
+        sig_bytes = ML_DSA_65.sign(sk, data_bytes)
+        sig_b64 = base64.b64encode(sig_bytes).decode("ascii")
+        pub_b64 = base64.b64encode(pk).decode("ascii")
+        return sig_b64, pub_b64
+    elif _PROVIDER_TYPE == "dilithium-py-legacy":
         from dilithium_py.dilithium import Dilithium3
 
         sig_bytes = Dilithium3.sign(sk, data_bytes)
         sig_b64 = base64.b64encode(sig_bytes).decode("ascii")
         pub_b64 = base64.b64encode(pk).decode("ascii")
         return sig_b64, pub_b64
+    else:
+        raise RuntimeError("No recognized signature provider available.")
 
 
 def verify_signature(data_bytes: bytes, signature_b64: str, public_key_b64: str) -> bool:
@@ -276,10 +320,20 @@ def verify_signature(data_bytes: bytes, signature_b64: str, public_key_b64: str)
                 return verifier.verify(data_bytes, sig_bytes, pub_bytes)
             except Exception:
                 return False
-    else:
+    elif _PROVIDER_TYPE == "dilithium-py-mldsa":
+        from dilithium_py.ml_dsa import ML_DSA_65
+
+        try:
+            return ML_DSA_65.verify(pub_bytes, data_bytes, sig_bytes)
+        except Exception:
+            return False
+    elif _PROVIDER_TYPE == "dilithium-py-legacy":
         from dilithium_py.dilithium import Dilithium3
 
         try:
             return Dilithium3.verify(pub_bytes, data_bytes, sig_bytes)
         except Exception:
             return False
+    else:
+        raise RuntimeError("No recognized signature provider available.")
+

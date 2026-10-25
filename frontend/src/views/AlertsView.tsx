@@ -66,21 +66,16 @@ export const AlertsView: React.FC = () => {
 
   const handleAcknowledge = (event: AlertItem) => {
     updateAlertStatus(event.id, "ACKNOWLEDGED");
-    setActionNotice(`Acknowledged incident for ${event.prefix}.`);
+    setActionNotice(`Incident status updated to ACKNOWLEDGED for ${event.prefix}.`);
     setTimeout(() => setActionNotice(null), 3000);
   };
 
-  const handleRecordSuppression = (event: AlertItem) => {
-    updateAlertStatus(event.id, "ACKNOWLEDGED");
-    setActionNotice(`Suppression policy recorded: ${event.prefix} from ${event.observed_asn}.`);
-    setTimeout(() => setActionNotice(null), 3500);
+  const handleResolve = (event: AlertItem) => {
+    updateAlertStatus(event.id, "RESOLVED");
+    setActionNotice(`Incident status updated to RESOLVED for ${event.prefix}.`);
+    setTimeout(() => setActionNotice(null), 3000);
   };
 
-  const handleAuthorizeOrigin = (event: AlertItem) => {
-    updateAlertStatus(event.id, "RESOLVED");
-    setActionNotice(`Origin authorized: ${event.observed_asn} for ${event.prefix}.`);
-    setTimeout(() => setActionNotice(null), 3500);
-  };
 
   const handleCheckRpki = (event: AlertItem) => {
     setRpkiTarget({ prefix: event.prefix, asn: event.observed_asn });
@@ -390,19 +385,20 @@ export const AlertsView: React.FC = () => {
                           <span>Check RPKI / ROA</span>
                         </button>
                         <button
-                          onClick={() => handleAuthorizeOrigin(inc.primaryAlert)}
+                          onClick={() => handleResolve(inc.primaryAlert)}
                           className="px-3 py-1.5 rounded-md bg-bg-card border border-border-card hover:bg-bg-interactive text-xs font-medium text-text-main flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
-                          <ShieldCheck className="w-3.5 h-3.5 text-status-green" />
-                          <span>Authorize Origin</span>
+                          <CheckCircle2 className="w-3.5 h-3.5 text-status-green" />
+                          <span>Mark Resolved</span>
                         </button>
                         <button
-                          onClick={() => handleRecordSuppression(inc.primaryAlert)}
+                          onClick={() => handleAcknowledge(inc.primaryAlert)}
                           className="px-3 py-1.5 rounded-md bg-bg-card border border-border-card hover:bg-bg-interactive text-xs font-medium text-text-main flex items-center gap-1.5 transition-colors cursor-pointer"
                         >
-                          <Ban className="w-3.5 h-3.5 text-status-warning" />
-                          <span>Suppress Policy</span>
+                          <Check className="w-3.5 h-3.5 text-text-sub" />
+                          <span>Acknowledge</span>
                         </button>
+
                       </div>
                     </div>
                   </div>

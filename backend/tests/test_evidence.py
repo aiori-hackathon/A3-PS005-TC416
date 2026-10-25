@@ -78,3 +78,64 @@ def test_rfc8785_canonicalization_compliance():
     # 3. Compact delimiters without any whitespace
     d_nested = {"arr": [1, 2, {"k": "v"}], "flag": True, "empty": None}
     assert canonicalize_json(d_nested) == b'{"arr":[1,2,{"k":"v"}],"empty":null,"flag":true}'
+
+
+def test_rfc8785_utf16_surrogate_pair_ordering_vs_codepoints():
+    """Test non-BMP supplementary code points where UTF-16 ordering differs from Unicode code point order."""
+    # U+FFFF has code point 65535, UTF-16 code unit [0xFFFF]
+    # U+1F600 has code point 128512, UTF-16 surrogate pair [0xD83D, 0xDE00]
+    # In Unicode code point sort: U+FFFF (65535) comes before U+1F600 (128512)
+    # In RFC 8785 UTF-16 code unit sort: 0xD83D comes before 0xFFFF!
+    d = {"\uffff": 1, "\U0001f600": 2}
+    canon = canonicalize_json(d)
+    # The UTF-8 encoded byte sequence for U+1F600 is \xf0\x9f\x98\x80 and for U+FFFF is \xef\xbf\xbf
+    assert canon == b'{"\xf0\x9f\x98\x80":2,"\xef\xbf\xbf":1}'
+
+
+def test_rfc8785_number_and_float_serialization():
+    """Test RFC 8785 Section 3.2.2 number serialization: negative zero, float formatting, and domain."""
+    import math
+
+    # Negative zero must be serialized as 0
+    d_neg_zero = {"zero": -0.0}
+    assert canonicalize_json(d_neg_zero) == b'{"zero":0}'
+
+    # Integers and safe integers
+    d_nums = {"max_safe": 9007199254740991, "neg_safe": -9007199254740991}
+    assert canonicalize_json(d_nums) == b'{"max_safe":9007199254740991,"neg_safe":-9007199254740991}'
+
+    # NaN and Infinity must be rejected under RFC 8785
+    import pytest
+    with pytest.raises(Exception):
+        canonicalize_json({"val": float("nan")})
+
+    with pytest.raises(Exception):
+        canonicalize_json({"val": float("inf")})
+
+
+def test_backend_and_independent_verifier_byte_parity():
+    """Verify that backend horaq.evidence and verify_evidence produce byte-identical canonical JSON."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    payload = {
+        "alert_id": "alert-test-parity",
+        "prefix": "192.0.2.0/24",
+        "observed_asn": "AS64511",
+        "baseline_asn": "AS64496",
+        "float_val": -0.0,
+        "nested": {"z": 1, "a": 2, "\U0001f600": "emoji"},
+        "tags": ["bgp", "incident", None, True, False],
+    }
+
+    backend_bytes = canonicalize_json(payload)
+    verifier_bytes = verify_evidence.canonicalize_json(payload)
+
+    assert backend_bytes == verifier_bytes
+    assert compute_sha256(backend_bytes) == verify_evidence.compute_sha256(verifier_bytes)
+

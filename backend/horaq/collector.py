@@ -22,8 +22,30 @@ from horaq.detection import process_observation
 logger = logging.getLogger("horaq.collector")
 
 
+_active_collector: Optional["RISLiveCollector"] = None
+
+
+def get_collector_telemetry() -> Dict[str, Any]:
+    """Return operational status and telemetry of the active live collector."""
+    global _active_collector
+    if _active_collector is not None:
+        return _active_collector.get_status()
+    return {
+        "enabled": settings.live_collector_enabled,
+        "running": False,
+        "connected": False,
+        "url": settings.ris_url,
+        "messages_received": 0,
+        "messages_parsed": 0,
+        "messages_skipped": 0,
+        "last_message_at": None,
+        "last_error": None,
+    }
+
+
 class RISLiveCollector:
     def __init__(self, db_path: str, url: Optional[str] = None) -> None:
+        global _active_collector
         self.db_path = db_path
         self.url = url or settings.ris_url
         self.is_enabled = settings.live_collector_enabled
@@ -35,6 +57,8 @@ class RISLiveCollector:
         self.messages_skipped = 0
         self.last_message_at: Optional[str] = None
         self.last_error: Optional[str] = None
+        _active_collector = self
+
 
     def get_status(self) -> Dict[str, Any]:
         """Return operational telemetry for the collector."""

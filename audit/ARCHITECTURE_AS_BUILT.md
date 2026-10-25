@@ -54,10 +54,11 @@ The actual runtime data flow implemented across [`horaq/`](file:///d:/HORA-Q/bac
                  │
                  ▼
 [ Stage 6: EVIDENCE NOTARIZATION (horaq/evidence.py & crypto.py) ]
-  • Serializes facts using RFC 8785 JSON Canonicalization Scheme (JCS)
+  • Serializes facts using RFC 8785 JSON Canonicalization Scheme (JCS) via 'rfc8785' package
   • Computes SHA-256 digest over canonical UTF-8 bytes
-  • ML-DSA-65 (NIST FIPS 204) Module-Lattice signing (when liboqs available)
+  • ML-DSA-65 (NIST FIPS 204) Module-Lattice signing (via dilithium-py.ml_dsa.ML_DSA_65 or liboqs)
   • Atomic persistence to `observations`, `alerts`, `evidence` tables
+
                  │
                  ▼
 [ Stage 7: VERIFY & MITIGATE (Frontend & API) ]

@@ -91,11 +91,22 @@ async def get_overview() -> Dict[str, Any]:
     """Return dashboard summary metrics."""
     counts = get_overview_counts(settings.database_path)
     crypto_st = get_crypto_status()
+    from horaq.collector import get_collector_telemetry
+    collector_st = get_collector_telemetry()
     return {
         **counts,
         "crypto_status": crypto_st,
+        "collector_status": collector_st,
         "database": settings.database_path,
     }
+
+
+@router.get("/collector/status")
+async def get_collector_status() -> Dict[str, Any]:
+    """Return operational telemetry of the RIPE RIS Live collector."""
+    from horaq.collector import get_collector_telemetry
+    return get_collector_telemetry()
+
 
 
 @router.get("/routes")
@@ -383,6 +394,7 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
             "description": "Seeded initial baseline route 192.0.2.0/24 originating from AS64496",
             "alerts_generated": res["alerts_count"],
             "expected_alerts": 0,
+            "success": res["alerts_count"] == 0,
             "result": res,
         }
 
@@ -414,6 +426,7 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
             "description": "Observed origin change for 192.0.2.0/24 from AS64496 to AS64511",
             "alerts_generated": res["alerts_count"],
             "expected_alerts": 1,
+            "success": res["alerts_count"] == 1,
             "result": res,
         }
 
@@ -445,6 +458,7 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
             "description": "Announced more-specific subnet 192.0.2.128/25 under tracked parent 192.0.2.0/24",
             "alerts_generated": res["alerts_count"],
             "expected_alerts": 1,
+            "success": res["alerts_count"] == 1,
             "result": res,
         }
 
@@ -471,6 +485,7 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
             "description": "Seeded 198.51.100.0/24 at AS64497, then transitioned to AS64498 with migration tag",
             "alerts_generated": r2["alerts_count"],
             "expected_alerts": 1,
+            "success": r2["alerts_count"] == 1,
             "result": r2,
         }
 
@@ -495,6 +510,7 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
             "description": "Seeded IPv6 2001:db8::/32, then announced child 2001:db8:1::/48",
             "alerts_generated": r2["alerts_count"],
             "expected_alerts": 1,
+            "success": r2["alerts_count"] == 1,
             "result": r2,
         }
 
@@ -510,14 +526,16 @@ async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
             total_alerts += sc_res.get("alerts_generated", 0)
             expected_total += sc_res.get("expected_alerts", 0)
 
+        all_passed = (len(results) == 5) and all(sc.get("success") is True for sc in results)
         return {
             "scenario": "run-all",
             "description": "Executed complete AIORI-3 benchmark suite (5 scenarios)",
             "alerts_generated": total_alerts,
             "expected_alerts": expected_total,
             "suite_results": results,
-            "success": True,
+            "success": all_passed and (total_alerts == expected_total),
         }
+
 
     if s_name in ("seed-demo", "seed", "demo"):
         # Reset and seed realistic demonstrator data for live presentations

@@ -19,8 +19,9 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
 - **Baseline Poisoning Protection**: **VERIFIED**. Suspicious or anomalous route announcements (`8.8.8.128/25` and `2001:db8:1::/48`) fire alerts and forensic evidence, but are strictly blocked from poisoning trusted route baselines.
 - **Evidence Count Semantics**: **VERIFIED**. Evaluated BGP telemetry updates (`observations`: 10–13 updates) are strictly distinguished from forensic anomaly artifacts (`evidence`: 3 records, linked via `alert_id`).
 - **Post-Quantum Cryptography**: **VERIFIED**. Real ML-DSA-65 signing and verification backed by `dilithium-py`. Tested mathematically against public keys; independently verified via `verify_evidence.py`. In-memory tampering reliably detected.
-- **Backend Test Suite**: **42 of 42 tests passing (100% pass rate)**.
-- **Frontend Production Build**: **Clean compilation** (`tsc && vite build` completed with code 0 in 3.47s).
+- **Backend Test Suite**: **50 of 50 tests passing (100% pass rate)**.
+- **Frontend Production Build**: **Clean compilation** (`tsc && vite build` completed with code 0 in 2.84s).
+
 - **Public Git Delivery**: **Synchronized**. Code, test suite, documentation, and 16:9 full-desktop screenshots are published to GitHub `main`.
 - **Automated CI**: **`.github/workflows/ci.yml`** configured for automated GitHub Actions verification.
 
@@ -88,15 +89,14 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
   - Updated `EvidenceVaultView.tsx` badge to `3 Anomaly Evidence Records` with explicit subtitle.
 
 ### 3.3. NIST FIPS 204 ML-DSA-65 Verification & Key Lifecycle
-- **Implementation**: Backed by `dilithium-py` with FIPS 204 ML-DSA-65 parameters (Public Key: 1,952 bytes; Private Key: 4,032 bytes; Signature: 3,309 bytes).
-- **Persistent Authority Key Lifecycle**: Eliminated ephemeral key generation on signing requests. Implemented persistent singleton `AuthorityKeyManager` in `backend/horaq/crypto.py` storing the authority keypair in `horaq_authority_key.json` with restricted filesystem permissions (`0o600`).
-- **Signer Identity & Key Derivation**: When signing evidence without custom keys, the persistent authority key is used, returning both signature and matching public key. If a custom secret key is supplied, a matching public key is mandatory, preventing orphaned or unverified signatures.
-- **Authority Public Key API**: Exposed via `GET /api/v1/crypto/public-key` and `GET /api/v1/crypto/status` returning algorithm, key length, Base64 public key, and SHA-256 fingerprint.
-- **Genuine RFC 8785 Canonicalization (JCS)**: Integrated `rfc8785` library (with a pure-Python fallback in `backend/horaq/evidence.py` and `verify_evidence.py`) ensuring byte-level compliance with RFC 8785: UTF-16 code unit lexical key sorting, IEEE 754 number serialization, and unescaped UTF-8 characters.
+- **Implementation**: Backed by `dilithium_py.ml_dsa.ML_DSA_65` conforming strictly to NIST FIPS 204 parameters (Public Key: 1,952 bytes / 2,604 Base64 chars; Private Key: 4,032 bytes; Signature: 3,309 bytes / 4,412 Base64 chars).
+- **Algorithm vs Legacy Distinction**: The codebase strictly distinguishes standardized FIPS 204 ML-DSA-65 from pre-standardization CRYSTALS-Dilithium3. Legacy Dilithium3 is never labeled as ML-DSA-65. The independent verifier (`verify_evidence.py`) selects the cryptographic provider based directly on the recorded `algorithm` metadata.
+- **Strict Key Lifecycle & Non-Silent Failure**: Managed by persistent singleton `AuthorityKeyManager` in `backend/horaq/crypto.py` storing the authority keypair in `horaq_authority_key.json` with restricted permissions (`0o600`). If the authority key file is corrupted, malformed, or has incorrect key lengths, `AuthorityKeyManager` raises an explicit `RuntimeError` and refuses to silently regenerate a new key, preventing authority identity loss or unauthorized rotation.
+- **Genuine RFC 8785 Canonicalization (JCS)**: Required standard `rfc8785` library for byte-identical serialization across backend and independent CLI verifier. Tested against UTF-16 code unit ordering (BMP vs supplementary code points), floating point formatting, negative zero (`-0.0` -> `0`), and numeric precision limits.
 - **Strict Integrity**: Rejects fallback to classical algorithms (RSA/ECDSA). Reports `PROVIDER_UNAVAILABLE` if key material or provider is absent.
-- **Independent Verification Tool** ([`verify_evidence.py`](file:///d:/HORA-Q/verify_evidence.py)):
+- **Independent Verification Tool** ([`verify_evidence.py`](verify_evidence.py)):
   - Authentic verification: `python verify_evidence.py audit/sample_evidence_signed.json` -> `[PASS]`
-  - Tamper verification: `python verify_evidence.py audit/sample_evidence_signed.json --tamper` -> `[FAIL] TAMPER DETECTED: Computed digest does NOT match!`, `[FAIL] INVALID SIGNATURE!`
+  - Tamper verification: `python verify_evidence.py audit/sample_evidence_signed.json --tamper` -> `[FAIL] TAMPER DETECTED: Computed digest does NOT match!`, `[FAIL] INVALID SIGNATURE!` (Exit code: `1`)
 
 ### 3.4. RPKI Live Workflow
 - **Service**: Asynchronously queries RIPEstat API with a 5-second timeout.
@@ -105,7 +105,8 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
 
 ---
 
-## 4. Backend Regression Test Matrix (42/42 Passed)
+## 4. Backend Regression Test Matrix (50/50 Passed)
+
 
 All tests executed via `python -m pytest -v` from `backend/`:
 
