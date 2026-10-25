@@ -1,6 +1,6 @@
 {
   "report_id": "HISTORICAL-BGP-MRT-VALIDATION-v2",
-  "timestamp_utc": "2026-10-25T13:17:33.712268+00:00",
+  "timestamp_utc": "2026-10-25T14:01:08.687007+00:00",
   "tool_used": "mrtparse 2.2.0 + SQLite isolated engine",
   "summary": {
     "verified_real_replays_count": 3,
@@ -8,6 +8,7 @@
     "capability_boundary_controls_count": 1,
     "all_real_replays_detected": true,
     "anti_poisoning_verified_across_all": true,
+    "withdrawal_and_recovery_verified": true,
     "false_positives_on_benign_feed": 0
   },
   "incidents": [
@@ -16,10 +17,13 @@
       "verification_status": "VERIFIED_REAL_REPLAY",
       "source_archive_url": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
       "incident_classification": "SUBPREFIX_HIJACK",
-      "records_replayed_count": 27,
+      "records_replayed_count": 28,
       "distinct_observing_peers": 11,
       "detection_achieved": true,
       "alerts_count": 27,
+      "withdrawals_processed": 1,
+      "resolved_alerts_count": 27,
+      "recovery_tracking_verified": true,
       "detection_delay_seconds": 0,
       "anti_poisoning_invariant_verified": true,
       "first_alert": {
@@ -38,6 +42,9 @@
       "distinct_observing_peers": 1,
       "detection_achieved": true,
       "alerts_count": 1,
+      "withdrawals_processed": 0,
+      "resolved_alerts_count": 0,
+      "recovery_tracking_verified": true,
       "detection_delay_seconds": 0,
       "anti_poisoning_invariant_verified": true,
       "first_alert": {
@@ -69,8 +76,9 @@
       "source_archive_url": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
       "announcements_parsed": 20,
       "withdrawals_parsed": 15,
+      "withdrawals_persisted_to_db": 16,
       "false_positives_recorded": 0,
-      "behavior_summary": "Successfully processed 20 genuine normal announcements and 15 withdrawals from RIPE RIS rrc00 with 0 false positive alerts."
+      "behavior_summary": "Successfully processed 20 genuine normal announcements and 15 withdrawals from RIPE RIS rrc00 with 0 false positive alerts and verified withdrawal state persistence."
     }
   ]
 }

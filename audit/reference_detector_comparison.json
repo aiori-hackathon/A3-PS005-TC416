@@ -1,21 +1,23 @@
 {
-  "timestamp_utc": "2026-10-25T13:15:35Z",
-  "test_dataset_size": 7,
+  "report_id": "REFERENCE-DETECTOR-BENCHMARK-v2",
+  "benchmark_classification": "Controlled Testbed Benchmark (Proposal Page 6 Model Comparison)",
+  "timestamp_utc": "2026-10-25T14:01:17Z",
+  "test_dataset_size": 12,
   "total_attacks_tested": 3,
-  "total_controls_tested": 4,
+  "total_controls_tested": 9,
   "naive_reference_detector": {
     "classification_metrics": {
       "TP": 2,
       "FP": 1,
-      "TN": 3,
+      "TN": 8,
       "FN": 1,
       "precision": 0.6667,
       "recall": 0.6667,
       "f1_score": 0.6667,
-      "false_positive_rate": 0.25
+      "false_positive_rate": 0.1111
     },
     "baseline_contamination_rate_pct": 66.7,
-    "candidate_promotion_policy": "NONE (Immediate unverified promotion)",
+    "candidate_promotion_policy": "NONE (Immediate unverified trust, ignores peer diversity)",
     "evidence_correlation": "NONE (Static binary alert)",
     "cryptographic_signatures": "NONE (Unsigned plain dictionary)"
   },
@@ -23,17 +25,20 @@
     "classification_metrics": {
       "TP": 3,
       "FP": 1,
-      "TN": 3,
+      "TN": 8,
       "FN": 0,
       "precision": 0.75,
       "recall": 1.0,
       "f1_score": 0.8571,
-      "false_positive_rate": 0.25
+      "false_positive_rate": 0.1111
     },
     "baseline_contamination_rate_pct": 0.0,
-    "candidate_promotion_policy": "ENFORCED (Requires 3 corroborating observations)",
-    "candidate_policy_verified": true,
-    "evidence_correlation": "ENFORCED (Multi-source agreement, confidence & uncertainty reasons)",
+    "candidate_promotion_policy": "ENFORCED (Requires >= 2 distinct peers AND >= 3 observations)",
+    "peer_diversity_invariants": {
+      "single_peer_flapping_quarantined_as_candidate": true,
+      "multi_peer_corroboration_promoted": true
+    },
+    "evidence_correlation": "ENFORCED (Multi-source agreement across distinct peers, confidence & reasons)",
     "uncertainty_handling": {
       "operational_deaggregation_handling": "Preserved as MEDIUM confidence (Traffic Engineering deaggregation)",
       "explicit_uncertainty_reasons_provided": true,
@@ -43,34 +48,38 @@
   },
   "cryptographic_overhead_benchmark": {
     "status": "MEASURED",
+    "benchmark_environment": "Direct empirical measurement on local CPU (50 iterations)",
     "post_quantum_mldsa65": {
       "algorithm": "ML-DSA-65",
       "standard": "NIST FIPS 204",
       "security_category": "NIST Level 3 (AES-192 equivalent)",
       "signature_size_bytes": 3309,
       "public_key_size_bytes": 1952,
-      "mean_signing_latency_ms": 64.133,
-      "mean_verification_latency_ms": 12.629,
-      "quantum_resistant": true
+      "mean_signing_latency_ms": 57.178,
+      "mean_verification_latency_ms": 11.604,
+      "quantum_resistant": true,
+      "measurement_mode": "Live CPU Benchmark"
     },
     "classical_reference_comparison": {
       "ed25519": {
         "standard": "RFC 8032",
         "signature_size_bytes": 64,
         "public_key_size_bytes": 32,
-        "mean_signing_latency_ms": 0.045,
-        "mean_verification_latency_ms": 0.095,
+        "mean_signing_latency_ms": 0.033,
+        "mean_verification_latency_ms": 0.114,
         "quantum_resistant": false,
-        "vulnerability": "Broken by Shor's algorithm on cryptanalytically relevant quantum computer (CRQC)"
+        "vulnerability": "Broken by Shor's algorithm on CRQC",
+        "measurement_mode": "Live CPU Benchmark"
       },
       "rsa_2048": {
         "standard": "PKCS #1 v2.2",
         "signature_size_bytes": 256,
         "public_key_size_bytes": 294,
-        "mean_signing_latency_ms": 1.25,
-        "mean_verification_latency_ms": 0.08,
+        "mean_signing_latency_ms": 0.557,
+        "mean_verification_latency_ms": 0.035,
         "quantum_resistant": false,
-        "vulnerability": "Broken by Shor's algorithm on CRQC"
+        "vulnerability": "Broken by Shor's algorithm on CRQC",
+        "measurement_mode": "Live CPU Benchmark"
       }
     },
     "overhead_analysis": {
@@ -79,5 +88,5 @@
       "tradeoff_justification": "ML-DSA-65 signatures are ~3.3 KB compared to 64 B for Ed25519. In HORA-Q, signatures are generated per-alert and per-evidence-vault entry rather than per raw packet wire-rate, making the 3.3 KB storage overhead easily negligible while providing unconditional post-quantum non-repudiation."
     }
   },
-  "proposal_gap_closure_conclusion": "Head-to-head empirical measurements confirm Enhanced HORA-Q achieves 0.0% baseline contamination compared to 66.7% for the na\u00efve reference detector on attack vectors, while preserving 100% recall for malicious hijacks. Unlike the na\u00efve detector, Enhanced HORA-Q distinguishes operational traffic engineering from malicious attacks by preserving uncertainty (MEDIUM confidence with explanatory reason) and quarantines unverified candidates. Post-quantum cryptographic overhead adds ~64.133 ms per alert signing, well within acceptable parameters for non-repudiable audit logging."
+  "preliminary_benchmark_disclaimer": "These metrics represent a controlled testbed comparison between the proposal's na\u00efve baseline and Enhanced HORA-Q across a calibrated test stream. They confirm the functional differentiation predicted in the proposal (0.0% baseline contamination vs 66.7%, and strict candidate quarantine against single-peer flapping), rather than claiming universal Internet-wide accuracy statistics."
 }

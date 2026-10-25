@@ -10,6 +10,8 @@ jobs:
   backend-verification:
     name: Backend Test Suite & Cryptographic Verification
     runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: ${{ github.workspace }}/backend
 
     steps:
       - name: Checkout Repository
@@ -26,7 +28,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run Pytest Test Suite (76 Tests)
+      - name: Run Pytest Test Suite (78 Tests)
         working-directory: backend
         run: |
           pytest -v

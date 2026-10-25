@@ -32,8 +32,10 @@ def test_head_to_head_benchmark_metrics():
     # Invariant 3: Enhanced HORA-Q achieves 100% recall on malicious attacks
     assert enhanced["classification_metrics"]["recall"] == 1.0
 
-    # Invariant 4: Candidate promotion policy is verified
-    assert enhanced["candidate_policy_verified"] is True
+    # Invariant 4: Candidate promotion policy and peer diversity are verified
+    peer_inv = enhanced["peer_diversity_invariants"]
+    assert peer_inv["single_peer_flapping_quarantined_as_candidate"] is True
+    assert peer_inv["multi_peer_corroboration_promoted"] is True
 
     # Invariant 5: Uncertainty handling is preserved
     assert enhanced["uncertainty_handling"]["explicit_uncertainty_reasons_provided"] is True

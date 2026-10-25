@@ -1,7 +1,12 @@
 """CLI script for running the archival historical BGP MRT replay and validation engine."""
 
 import json
+import sys
 from pathlib import Path
+
+# Ensure backend package is on Python import path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from horaq.replay import run_full_historical_validation
 
 

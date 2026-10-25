@@ -502,6 +502,15 @@
         "17557"
       ],
       "origin_asn": "17557"
+    },
+    {
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.2100.gz",
+      "collector": "rrc00",
+      "timestamp": 1203887400,
+      "peer_ip": "193.0.0.56",
+      "peer_as": "3333",
+      "type": "WITHDRAWAL",
+      "prefix": "208.65.153.0/24"
     }
   ]
 }

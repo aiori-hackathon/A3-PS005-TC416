@@ -59,6 +59,8 @@ def process_observation(
     timestamp_raw: Any = None,
     scenario: Optional[str] = None,
     raw_metadata: Optional[Dict[str, Any]] = None,
+    peer_as: Optional[str] = None,
+    peer_ip: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Ingest and evaluate a BGP route observation against baselines.
 
@@ -75,31 +77,43 @@ def process_observation(
     norm_time = normalize_timestamp(timestamp_raw)
     now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
+    if raw_metadata:
+        peer_as = peer_as or str(raw_metadata.get("peer_as") or "") or None
+        peer_ip = peer_ip or str(raw_metadata.get("peer_ip") or "") or None
+
+    peer_key = f"{collector}:{peer_as or 'peer'}"
+
     current_net = ipaddress.ip_network(norm_prefix, strict=False)
     metadata_json = json.dumps(raw_metadata or {}, sort_keys=True)
 
     generated_alerts: List[Dict[str, Any]] = []
 
     with db_session(db_path) as conn:
-        # Fetch current baselines (including candidate status)
+        # Fetch current baselines (including candidate status and peer tracking)
         all_baselines = [
             dict(r)
             for r in conn.execute(
                 "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
-                "COALESCE(status, 'PROMOTED') as status FROM baselines;"
+                "COALESCE(status, 'PROMOTED') as status, "
+                "COALESCE(distinct_peers, '[]') as distinct_peers, "
+                "COALESCE(peer_count, 1) as peer_count FROM baselines;"
             ).fetchall()
         ]
 
         baseline_map = {b["prefix"]: b for b in all_baselines}
         existing_baseline = baseline_map.get(norm_prefix)
 
-        # Multi-source Corroboration Query
+        # Multi-source Peer & Collector Corroboration Query
         corroboration = conn.execute(
-            "SELECT COUNT(DISTINCT collector) as collector_count, COUNT(*) as total_obs "
+            "SELECT COUNT(DISTINCT collector) as collector_count, "
+            "COUNT(DISTINCT COALESCE(peer_as, collector)) as peer_count, "
+            "COUNT(*) as total_obs "
             "FROM observations WHERE prefix = ? AND origin_asn = ?;",
             (norm_prefix, norm_asn),
         ).fetchone()
+        distinct_peers_prior = corroboration["peer_count"] if corroboration else 0
         collector_count = (corroboration["collector_count"] if corroboration else 0) + 1
+        distinct_peer_count = max(distinct_peers_prior + 1, 1)
         total_prev_obs = corroboration["total_obs"] if corroboration else 0
 
         # A. Check Subprefix Anomaly
@@ -121,12 +135,12 @@ def process_observation(
             if parent_asn == norm_asn:
                 confidence = "MEDIUM"
                 uncertainty_reason = "Same-origin more-specific route. Likely operational traffic engineering or load balancing deaggregation."
-            elif collector_count >= 2 or total_prev_obs >= 3:
+            elif distinct_peer_count >= 2 or collector_count >= 2:
                 confidence = "HIGH"
-                uncertainty_reason = "Corroborated across multiple collectors/peers. Widespread global propagation observed."
+                uncertainty_reason = f"Corroborated across {distinct_peer_count} distinct BGP peers/sources. Widespread global propagation observed."
             else:
                 confidence = "MEDIUM"
-                uncertainty_reason = "Initial observation from single routing peer. Awaiting broader collector corroboration."
+                uncertainty_reason = f"Single-peer observation from AS{peer_as or 'unknown'}. Awaiting broader peer corroboration."
 
             explanation = (
                 f"Observed announcement of more-specific prefix '{norm_prefix}' originating from {norm_asn}. "
@@ -204,26 +218,44 @@ def process_observation(
                 or (raw_metadata and raw_metadata.get("trusted_seed"))
             )
             init_status = "PROMOTED" if is_explicit_seed else "CANDIDATE"
+            peer_list = [peer_key]
 
             conn.execute(
-                "INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, status, updated_at) "
-                "VALUES (?, ?, ?, ?, 1, ?, ?);",
-                (norm_prefix, norm_asn, norm_time, norm_time, init_status, now_utc),
+                "INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, status, distinct_peers, peer_count, updated_at) "
+                "VALUES (?, ?, ?, ?, 1, ?, ?, 1, ?);",
+                (norm_prefix, norm_asn, norm_time, norm_time, init_status, json.dumps(peer_list), now_utc),
             )
         else:
             baseline_asn = existing_baseline["origin_asn"]
             current_status = existing_baseline.get("status", "PROMOTED")
 
             if baseline_asn == norm_asn:
-                # Same origin: update last seen & count; promote candidate if threshold reached
+                # Same origin: update last seen & count; promote candidate only if peer diversity threshold reached
                 new_count = existing_baseline["observation_count"] + 1
-                PROMOTION_THRESHOLD = 3
-                new_status = "PROMOTED" if (current_status == "PROMOTED" or new_count >= PROMOTION_THRESHOLD) else "CANDIDATE"
+                try:
+                    peer_list = json.loads(existing_baseline.get("distinct_peers") or "[]")
+                except Exception:
+                    peer_list = []
+                if peer_key not in peer_list:
+                    peer_list.append(peer_key)
+                current_peer_count = len(peer_list)
+
+                # Robust Peer-Diversity Promotion Invariant:
+                # Requires at least 2 distinct peer/collector sources AND >= 3 observations.
+                # Crucial check: Repeated announcements from a single flapping peer (peer_count == 1) remain CANDIDATE!
+                PROMOTION_PEER_THRESHOLD = 2
+                PROMOTION_OBS_THRESHOLD = 3
+                if current_status == "PROMOTED":
+                    new_status = "PROMOTED"
+                elif current_peer_count >= PROMOTION_PEER_THRESHOLD and new_count >= PROMOTION_OBS_THRESHOLD:
+                    new_status = "PROMOTED"
+                else:
+                    new_status = "CANDIDATE"
 
                 conn.execute(
-                    "UPDATE baselines SET last_seen = ?, observation_count = ?, status = ?, updated_at = ? "
+                    "UPDATE baselines SET last_seen = ?, observation_count = ?, status = ?, distinct_peers = ?, peer_count = ?, updated_at = ? "
                     "WHERE prefix = ?;",
-                    (norm_time, new_count, new_status, now_utc, norm_prefix),
+                    (norm_time, new_count, new_status, json.dumps(peer_list), current_peer_count, now_utc, norm_prefix),
                 )
             else:
                 # Changed origin: DO NOT silently overwrite baseline. Generate alert!
@@ -233,16 +265,16 @@ def process_observation(
 
                 is_migration = bool(scenario and "migration" in scenario.lower())
                 
-                # Confidence & Uncertainty Assessment
+                # Confidence & Uncertainty Assessment (Source-Aware)
                 if is_migration:
                     confidence = "MEDIUM"
                     uncertainty_reason = "Flagged with migration tag; scheduled operator maintenance."
-                elif collector_count >= 2 or existing_baseline["observation_count"] >= 5:
+                elif distinct_peer_count >= 2 or collector_count >= 2 or existing_baseline["observation_count"] >= 5:
                     confidence = "HIGH"
-                    uncertainty_reason = "Corroborated conflict against long-standing established baseline."
+                    uncertainty_reason = f"Corroborated conflict across {distinct_peer_count} distinct BGP peers against established baseline."
                 else:
                     confidence = "MEDIUM"
-                    uncertainty_reason = "Single-peer observation. Corroborating across additional peers in progress."
+                    uncertainty_reason = f"Single-peer observation from AS{peer_as or 'unknown'}. Corroborating across additional peers in progress."
 
                 title = f"Origin ASN Conflict Detected for {norm_prefix}"
                 explanation = (
@@ -306,9 +338,9 @@ def process_observation(
 
         # C. Insert Observation Record
         cur = conn.execute(
-            "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?);",
-            (norm_prefix, norm_asn, collector, norm_time, scenario, metadata_json, now_utc),
+            "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            (norm_prefix, norm_asn, collector, norm_time, scenario, metadata_json, peer_as, peer_ip, now_utc),
         )
         obs_id = cur.lastrowid
 
@@ -365,3 +397,91 @@ def process_observation(
         "alerts_count": len(generated_alerts),
         "alerts": generated_alerts,
     }
+
+
+def process_withdrawal(
+    db_path: str,
+    prefix_raw: str,
+    collector: str = "manual",
+    peer_as: Optional[str] = None,
+    peer_ip: Optional[str] = None,
+    timestamp_raw: Any = None,
+    scenario: Optional[str] = None,
+    raw_metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Process a BGP route withdrawal event and track anomaly recovery.
+
+    Proposal Alignment:
+    Withdrawal and recovery tracking:
+    - Ingests BGP WITHDRAWAL message.
+    - Records event in observations audit table.
+    - Resolves any currently ACTIVE alerts affecting this prefix (Recovery Tracking).
+    - Transitions candidate routes to WITHDRAWN status.
+    """
+    norm_prefix, _ = normalize_prefix(prefix_raw)
+    norm_time = normalize_timestamp(timestamp_raw)
+    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+    if raw_metadata:
+        peer_as = peer_as or str(raw_metadata.get("peer_as") or "") or None
+        peer_ip = peer_ip or str(raw_metadata.get("peer_ip") or "") or None
+
+    meta = dict(raw_metadata or {})
+    meta["update_type"] = "WITHDRAWAL"
+    metadata_json = json.dumps(meta, sort_keys=True)
+
+    resolved_alerts: List[Dict[str, Any]] = []
+
+    with db_session(db_path) as conn:
+        # 1. Record withdrawal in observations
+        cur = conn.execute(
+            "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, created_at) "
+            "VALUES (?, 'WITHDRAWAL', ?, ?, ?, ?, ?, ?, ?);",
+            (norm_prefix, collector, norm_time, scenario, metadata_json, peer_as, peer_ip, now_utc),
+        )
+        obs_id = cur.lastrowid
+
+        # 2. Check active alerts on this prefix or child subprefixes (Recovery Tracking)
+        active_alerts = conn.execute(
+            "SELECT id, title, kind, prefix, observed_asn, baseline_asn FROM alerts "
+            "WHERE prefix = ? AND status = 'ACTIVE';",
+            (norm_prefix,),
+        ).fetchall()
+
+        for alt in active_alerts:
+            alt_id = alt["id"]
+            recovery_note = (
+                f"\n[RECOVERY]: Route withdrawal observed from peer {peer_as or 'unknown'} ({collector}). "
+                f"Anomalous propagation terminated; routing state restored to baseline."
+            )
+            conn.execute(
+                "UPDATE alerts SET status = 'RESOLVED', explanation = explanation || ? WHERE id = ?;",
+                (recovery_note, alt_id),
+            )
+            resolved_alerts.append({
+                "alert_id": alt_id,
+                "prefix": norm_prefix,
+                "kind": alt["kind"],
+                "status": "RESOLVED",
+            })
+
+        # 3. If baseline was a candidate prefix, transition to WITHDRAWN
+        base_row = conn.execute("SELECT status FROM baselines WHERE prefix = ?;", (norm_prefix,)).fetchone()
+        if base_row and base_row["status"] == "CANDIDATE":
+            conn.execute(
+                "UPDATE baselines SET status = 'WITHDRAWN', updated_at = ? WHERE prefix = ?;",
+                (now_utc, norm_prefix),
+            )
+
+        conn.commit()
+
+    return {
+        "observation_id": obs_id,
+        "prefix": norm_prefix,
+        "status": "WITHDRAWN",
+        "collector": collector,
+        "peer_as": peer_as,
+        "resolved_alerts_count": len(resolved_alerts),
+        "resolved_alerts": resolved_alerts,
+    }
+

@@ -55,7 +55,6 @@ def init_db(db_path: str) -> None:
         with conn:
             conn.executescript("""
             CREATE TABLE IF NOT EXISTS observations (
-
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 prefix TEXT NOT NULL,
                 origin_asn TEXT NOT NULL,
@@ -63,6 +62,8 @@ def init_db(db_path: str) -> None:
                 observed_at TEXT NOT NULL,
                 scenario TEXT,
                 raw_metadata TEXT,
+                peer_as TEXT,
+                peer_ip TEXT,
                 created_at TEXT NOT NULL
             );
 
@@ -73,6 +74,8 @@ def init_db(db_path: str) -> None:
                 last_seen TEXT NOT NULL,
                 observation_count INTEGER NOT NULL DEFAULT 1,
                 status TEXT NOT NULL DEFAULT 'PROMOTED',
+                distinct_peers TEXT NOT NULL DEFAULT '[]',
+                peer_count INTEGER NOT NULL DEFAULT 1,
                 updated_at TEXT NOT NULL
             );
 
@@ -117,6 +120,22 @@ def init_db(db_path: str) -> None:
             # Safe column additions for pre-existing databases
             try:
                 conn.execute("ALTER TABLE baselines ADD COLUMN status TEXT NOT NULL DEFAULT 'PROMOTED';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE baselines ADD COLUMN distinct_peers TEXT NOT NULL DEFAULT '[]';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE baselines ADD COLUMN peer_count INTEGER NOT NULL DEFAULT 1;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE observations ADD COLUMN peer_as TEXT;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE observations ADD COLUMN peer_ip TEXT;")
             except sqlite3.OperationalError:
                 pass
             try:
@@ -173,7 +192,10 @@ def get_all_baselines(db_path: str) -> List[Dict[str, Any]]:
     """Retrieve all current baselines for detector lookup."""
     with db_session(db_path) as conn:
         cursor = conn.execute(
-            "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, updated_at "
+            "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
+            "COALESCE(status, 'PROMOTED') as status, "
+            "COALESCE(peer_count, 1) as peer_count, "
+            "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
             "FROM baselines ORDER BY prefix ASC;"
         )
         return [dict(row) for row in cursor.fetchall()]
@@ -183,7 +205,10 @@ def get_baseline_by_prefix(db_path: str, prefix: str) -> Optional[Dict[str, Any]
     """Lookup a single baseline by prefix."""
     with db_session(db_path) as conn:
         row = conn.execute(
-            "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, updated_at "
+            "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
+            "COALESCE(status, 'PROMOTED') as status, "
+            "COALESCE(peer_count, 1) as peer_count, "
+            "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
             "FROM baselines WHERE prefix = ?;",
             (prefix,),
         ).fetchone()

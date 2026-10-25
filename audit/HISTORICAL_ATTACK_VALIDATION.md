@@ -20,13 +20,13 @@ Unlike synthetic or hand-crafted unit tests, this validation processes raw BGP M
 
 ## 3. Incident Replay Results Matrix
 
-| Incident / Control Identifier | Real-World Event Date | Source Archive (RIPE RIS) | Incident Classification | Updates Replayed | Peers Observed | Detection Result | Anti-Poisoning Invariant | Verification Status |
-| :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| `INC-2008-02-24-YOUTUBE-PTCL` | Feb 24, 2008 18:47 UTC | `rrc00/updates.20080224.1845.gz` | `SUBPREFIX_HIJACK` | 27 updates | 11 peers | **DETECTED** (27/27) | **VERIFIED (0% Poisoning)** | `VERIFIED_REAL_REPLAY` |
-| `INC-2022-03-28-RTCOMM-TWITTER` | Mar 28, 2022 12:06 UTC | `rrc00/updates.20220328.1205.gz` | `ORIGIN_CONFLICT` | 1 update | 1 peer | **DETECTED** (1/1) | **VERIFIED (0% Poisoning)** | `VERIFIED_REAL_REPLAY` |
+| Incident / Control Identifier | Real-World Event Date | Source Archive (RIPE RIS) | Incident Classification | Updates Replayed | Peers Observed | Detection Result | Anti-Poisoning & Recovery Invariants | Verification Status |
+| :--- | :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: |
+| `INC-2008-02-24-YOUTUBE-PTCL` | Feb 24, 2008 18:47 UTC | `rrc00/updates.20080224.1845.gz` | `SUBPREFIX_HIJACK` | 28 updates (27 ann, 1 wdr) | 11 peers | **DETECTED** (27/27 alerts) | **VERIFIED (0% Poisoning; 27 Alerts Resolved on Withdrawal)** | `VERIFIED_REAL_REPLAY` |
+| `INC-2022-03-28-RTCOMM-TWITTER` | Mar 28, 2022 12:06 UTC | `rrc00/updates.20220328.1205.gz` | `ORIGIN_CONFLICT` | 1 update | 1 peer | **DETECTED** (1/1 alert) | **VERIFIED (0% Poisoning; Baseline Preserved)** | `VERIFIED_REAL_REPLAY` |
 | `INC-2011-01-14-INDOSAT-DNS` | Jan 14, 2011 12:19 UTC | `rrc00/updates.20110114.1215.gz` | `ROUTE_LEAK_PROPAGATION` | 0 updates | 0 peers | N/A | Preserved | `INCOMPLETE_DATA` |
 | `BOUNDARY-AS-PATH-LEAK` | N/A (Theoretical Control) | RFC 7908 Valley-Free Leak | `AS_PATH_VALLEY_FREE` | N/A | N/A | Excluded | Preserved | `CAPABILITY_BOUNDARY` |
-| `CONTROL-RIPE-RIS-BENIGN` | Feb 24, 2008 18:45 UTC | `rrc00/updates.20080224.1845.gz` | Normal BGP Stream | 35 updates (20 ann, 15 wdr) | 4 peers | **0 False Positives** | Preserved | `VERIFIED_REAL_REPLAY` |
+| `CONTROL-RIPE-RIS-BENIGN` | Feb 24, 2008 18:45 UTC | `rrc00/updates.20080224.1845.gz` | Normal BGP Stream | 35 updates (20 ann, 15 wdr) | 4 peers | **0 False Positives** | **VERIFIED (16 Withdrawals Persisted to DB)** | `VERIFIED_REAL_REPLAY` |
 
 ---
 
@@ -37,15 +37,17 @@ Unlike synthetic or hand-crafted unit tests, this validation processes raw BGP M
 - **Archival Evidence**: `updates.20080224.1845.gz` from RIPE RIS `rrc00` (RIPE NCC, Amsterdam).
 - **Observed AS Path**: `[3333, 12859, 6461, 3491, 17557]` at timestamp `1203878877` (18:47:57 UTC).
 - **HORA-Q Performance**:
-  - Detected on first observation (Detection Delay: 0.0s).
+  - Detected on first observation (Detection Delay: 0.0s) across 11 distinct observing peers.
   - Alert Kind: `SUBPREFIX_ANOMALY`.
   - Severity: `HIGH`.
-  - Anti-Poisoning: YouTube parent `/22` remained strictly anchored to AS36561. Rogue `/24` was quarantined and not admitted to trusted baselines.
+  - Anti-Poisoning: YouTube parent `/22` remained strictly anchored to AS36561 (`Status: PROMOTED`). Rogue `/24` was quarantined and not admitted to trusted baselines.
+  - **Withdrawal & Recovery Tracking**: Subsequent withdrawal from AS17557 was ingested and processed by `process_withdrawal`, automatically transitioning all 27 active alerts to `RESOLVED` with forensic rationale `[RECOVERY] Received BGP WITHDRAWAL for hijacked route`.
 
 ### 4.2. RTComm / Twitter Origin Conflict Hijack (`INC-2022-03-28-RTCOMM-TWITTER`)
 - **Background**: Rostelecom/RTComm (AS8342) announced Twitter's authorized prefix `104.244.42.0/24` (legitimate origin AS13414).
 - **Archival Evidence**: `updates.20220328.1205.gz` from RIPE RIS `rrc00`.
 - **Observed AS Path**: `[22652, 8359, 8342]` at timestamp `1648469200` (12:06:40 UTC).
+- **Scope Note**: In the checked-in sample slice, this incident contains 1 update from 1 observing peer (`peer_as: 22652`). This validates single-observation attack detection against an authorized baseline; it does not claim multi-peer corroboration for that specific incident.
 - **HORA-Q Performance**:
   - Detected on first observation.
   - Alert Kind: `ORIGIN_CHANGE`.

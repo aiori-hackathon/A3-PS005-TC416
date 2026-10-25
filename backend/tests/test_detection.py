@@ -182,3 +182,86 @@ def test_suspicious_subprefix_does_not_poison_baseline(test_db):
     updated_parent = get_baseline_by_prefix(test_db, "8.8.8.0/24")
     assert updated_parent["observation_count"] == 2
 
+
+def test_candidate_policy_peer_diversity_invariant(test_db):
+    """Verifies that single-peer route flapping cannot promote to trusted reference state."""
+    # Observations 1, 2, 3 all from the SAME peer AS64500
+    for i in range(3):
+        process_observation(
+            db_path=test_db,
+            prefix_raw="198.51.100.0/24",
+            origin_asn_raw="AS64500",
+            collector="rrc00",
+            peer_as="64500",
+            scenario="single-peer-flap-test",
+        )
+
+    base = get_baseline_by_prefix(test_db, "198.51.100.0/24")
+    assert base is not None
+    assert base["observation_count"] == 3
+    assert base["peer_count"] == 1
+    # INVARIANT: Must stay CANDIDATE because peer diversity is only 1!
+    assert base["status"] == "CANDIDATE"
+
+    # Observation 4 from a DISTINCT 2nd peer AS64501
+    process_observation(
+        db_path=test_db,
+        prefix_raw="198.51.100.0/24",
+        origin_asn_raw="AS64500",
+        collector="rrc00",
+        peer_as="64501",
+        scenario="corroborated-promotion-test",
+    )
+
+    promoted_base = get_baseline_by_prefix(test_db, "198.51.100.0/24")
+    assert promoted_base["peer_count"] == 2
+    # INVARIANT: Now promoted to PROMOTED because peer diversity threshold (>=2) is met!
+    assert promoted_base["status"] == "PROMOTED"
+
+
+def test_withdrawal_recovery_resolution(test_db):
+    """Verifies that a BGP withdrawal resolves active alerts and records recovery."""
+    from horaq.detection import process_withdrawal
+    from horaq.database import db_session
+
+    # 1. Establish parent route
+    process_observation(
+        db_path=test_db,
+        prefix_raw="208.65.152.0/22",
+        origin_asn_raw="AS36561",
+        collector="rrc00",
+        peer_as="3356",
+        scenario="baseline-seed",
+    )
+
+    # 2. Announce rogue subprefix (triggers ACTIVE alert)
+    obs_res = process_observation(
+        db_path=test_db,
+        prefix_raw="208.65.153.0/24",
+        origin_asn_raw="AS17557",
+        collector="rrc00",
+        peer_as="3333",
+        scenario="hijack-test",
+    )
+    assert obs_res["alerts_count"] == 1
+    alert_id = obs_res["alerts"][0]["id"]
+    assert obs_res["alerts"][0]["status"] == "ACTIVE"
+
+    # 3. Ingest route withdrawal for the rogue subprefix
+    w_res = process_withdrawal(
+        db_path=test_db,
+        prefix_raw="208.65.153.0/24",
+        collector="rrc00",
+        peer_as="3333",
+        scenario="hijack-test",
+    )
+    assert w_res["resolved_alerts_count"] == 1
+    assert w_res["status"] == "WITHDRAWN"
+
+    # 4. Verify in database that alert status transitioned to RESOLVED with recovery note
+    with db_session(test_db) as conn:
+        alert_row = conn.execute("SELECT status, explanation FROM alerts WHERE id = ?;", (alert_id,)).fetchone()
+    assert alert_row["status"] == "RESOLVED"
+    assert "[RECOVERY]" in alert_row["explanation"]
+
+
