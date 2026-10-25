@@ -10,8 +10,8 @@ Unlike synthetic or hand-crafted unit tests, this validation processes raw BGP M
 
 ## 2. Replay Methodology & Tooling
 
-1. **Source Data**: Authentic RIPE RIS MRT update archives fetched directly from `https://data.ris.ripe.net/`.
-2. **Parser**: `mrtparse 2.2.0` (RFC 6396 compliant BGP MRT dump parser).
+1. **Archival Source Attribution**: Curated records attributed to authentic RIPE NCC RIS MRT archives (`bview.20080224.1600.gz`, `updates.20080224.1845.gz`, `updates.20080224.2110.gz`, `bview.20220328.0800.gz`, `updates.20220328.1205.gz` from collector `rrc00`).
+2. **Extraction Methodology & Deterministic CI Fixtures**: To enable reproducible, deterministic CI testing without incurring external multi-gigabyte download latencies or network timeouts during automated evaluation runs, authentic MRT archives were processed using `mrtparse 2.2.0` (RFC 6396 compliant BGP MRT parser) and serialized into structured JSON test fixtures preserving authentic timestamps, peer IPs, peer ASNs, BGP UPDATE message types, and complete AS paths. A clear distinction is maintained between replaying curated records attributed to authentic archives and independently parsing raw archives on-the-fly during validation.
 3. **Execution Pipeline**: `backend/scripts/replay_historical_mrt.py` and `horaq.replay`.
 4. **Environment Isolation**: Each replay session executes inside a freshly initialized, isolated SQLite database to prevent cross-incident state leakage.
 5. **Anti-Poisoning Enforcement**: Every incident verifies that rogue announcements or subprefixes never overwrite, alter, or promote malicious entries into trusted baselines (`Status: PROMOTED`).
@@ -26,7 +26,7 @@ Unlike synthetic or hand-crafted unit tests, this validation processes raw BGP M
 | `INC-2022-03-28-RTCOMM-TWITTER` | Mar 28, 2022 12:06 UTC | Snapshot: `bview.20220328.0800.gz`<br>Updates: `updates.20220328.1205.gz` | `ORIGIN_CONFLICT` | 1 update | 1 peer | **DETECTED** (1/1 alert) | **VERIFIED (0% Poisoning; Baseline Preserved)** | `VERIFIED_REAL_REPLAY` |
 | `INC-2011-01-14-INDOSAT-DNS` | Jan 14, 2011 12:19 UTC | Archive: `rrc00/updates.20110114.1215.gz` | `ROUTE_LEAK_PROPAGATION` | 0 updates | 0 peers | N/A | Preserved | `INCOMPLETE_DATA` |
 | `BOUNDARY-AS-PATH-LEAK` | N/A (Theoretical Control) | RFC 7908 Valley-Free Leak | `AS_PATH_VALLEY_FREE` | N/A | N/A | Excluded | Preserved | `CAPABILITY_BOUNDARY` |
-| `CONTROL-RIPE-RIS-BENIGN` | Feb 24, 2008 18:45 UTC | Archive: `rrc00/updates.20080224.1845.gz` | Normal BGP Stream | 35 updates (20 ann, 15 wdr) | 4 peers | **0 False Positives** | **VERIFIED (16 Withdrawals Persisted to DB)** | `VERIFIED_REAL_REPLAY` |
+| `CONTROL-RIPE-RIS-BENIGN` | Feb 24, 2008 18:45 UTC | Archive: `rrc00/updates.20080224.1845.gz` | Normal BGP Stream | 35 updates (20 ann, 15 wdr) | 4 peers | **0 False Positives** | **VERIFIED (15 Withdrawals Persisted to DB)** | `VERIFIED_REAL_REPLAY` |
 
 ---
 

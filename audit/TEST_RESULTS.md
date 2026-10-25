@@ -2,7 +2,7 @@
 
 **Project**: HORA-Q (Explainable BGP Origin and Subprefix Anomaly Monitor)  
 **Hackathon**: AIORI-3 | Track 2 Cyber Security (Problem PS-005, Team A3-PS005-TC416)  
-**Execution Timestamp**: 2026-10-24 10:23:30 UTC  
+**Execution Timestamp**: 2026-10-25 16:35:00 UTC  
 **Environment**: Windows 11 / Linux (Ubuntu 24.04), Python 3.12 / 3.13.7, pytest 9.1.1, Node.js v20.x, Vite 5.4.21  
 
 ---
@@ -106,7 +106,7 @@ backend/tests/test_rpki.py::test_rpki_invalid_response PASSED            [ 97%]
 backend/tests/test_rpki.py::test_rpki_timeout_yields_unavailable PASSED  [ 98%]
 backend/tests/test_rpki.py::test_rpki_http_error_yields_unavailable PASSED [100%]
 
-============================= 81 passed in 12.31s =============================
+============================= 81 passed in 10.45s =============================
 ```
 
 ---
@@ -208,17 +208,17 @@ transforming...
 rendering chunks...
 computing gzip size...
 dist/index.html                   1.12 kB │ gzip:  0.61 kB
-dist/assets/index-CpQIKgCI.css   26.58 kB │ gzip:  5.82 kB
-dist/assets/index-DDJBhBAU.js   255.60 kB │ gzip: 69.49 kB
-✓ built in 3.47s
+dist/assets/index-CRn6nD2u.css   26.76 kB │ gzip:  5.86 kB
+dist/assets/index-CHnOY5QJ.js   257.34 kB │ gzip: 69.91 kB
+✓ built in 2.98s
 ```
 
 ---
 
 ## 4. Test Statistics Summary
-- **Total Tests Collected**: 78
-- **Tests Passed**: 78 (100.0%)
+- **Total Tests Collected**: 81
+- **Tests Passed**: 81 (100.0%)
 - **Tests Failed**: 0 (0.0%)
 - **Tests Skipped**: 0 (0.0%)
-- **Total Test Execution Duration**: 8.76 seconds
+- **Total Test Execution Duration**: 10.45 seconds
 - **Production Build Diagnostics / Lint Errors**: 0

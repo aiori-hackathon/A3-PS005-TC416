@@ -238,10 +238,10 @@ class ArchivalMrtReplayEngine:
                     scenario="benign-mrt-control",
                 )
 
-        # Verify withdrawals were persisted to database
+        # Verify withdrawals were persisted to database for this scenario
         with db_session(self.db_path) as conn:
             w_obs_count = conn.execute(
-                "SELECT COUNT(*) as cnt FROM observations WHERE origin_asn = 'WITHDRAWAL';"
+                "SELECT COUNT(*) as cnt FROM observations WHERE origin_asn = 'WITHDRAWAL' AND scenario = 'benign-mrt-control';"
             ).fetchone()["cnt"]
 
         return {

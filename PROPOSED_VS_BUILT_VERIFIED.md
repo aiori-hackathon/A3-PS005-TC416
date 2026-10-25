@@ -171,6 +171,9 @@ ML-DSA-65 signatures are ~3.3 KB compared to 64 bytes for Ed25519 (a 51.7× fact
 
 To resolve Gap 3 (moving beyond synthetic fixtures to genuine archival BGP routing dumps), HORA-Q incorporates a dedicated MRT replay engine ([`backend/horaq/replay.py`](backend/horaq/replay.py)) utilizing `mrtparse 2.2.0`. The engine chronologically reconstructs the pre-incident routing state from authentic RIB table dumps (`bview`), ingests subsequent attack announcements and recovery withdrawals, and tracks per-peer recovery.
 
+> [!NOTE]
+> **Archival Provenance & Execution Model**: HORA-Q replays curated records extracted from authentic RIPE NCC RIS MRT archives (`bview.20080224.1600.gz`, `updates.20080224.1845.gz`, `updates.20080224.2110.gz`, `bview.20220328.0800.gz`, `updates.20220328.1205.gz`) using `mrtparse 2.2.0`. These authentic observations are stored in structured test fixtures to provide deterministic, zero-network CI execution without multi-gigabyte download latencies. We distinguish between replaying curated records attributed to authentic archives and independently parsing raw archives on-the-fly during validation.
+
 Detailed evaluation findings are published in [`audit/HISTORICAL_ATTACK_VALIDATION.md`](audit/HISTORICAL_ATTACK_VALIDATION.md) and [`audit/historical_attack_validation.json`](audit/historical_attack_validation.json):
 
 1. **YouTube / Pakistan Telecom Subprefix Hijack (`INC-2008-02-24-YOUTUBE-PTCL`)**:
@@ -193,7 +196,7 @@ Detailed evaluation findings are published in [`audit/HISTORICAL_ATTACK_VALIDATI
 5. **Benign Normal Feed & Withdrawal Verification (`CONTROL-RIPE-RIS-BENIGN`)**:
    - Source: RIPE RIS `rrc00/updates.20080224.1845.gz`.
    - Replayed: 20 legitimate announcements and 15 route withdrawals.
-   - Result: **0 false positives**, 16 withdrawal state rows persisted in database. Status: **`VERIFIED_REAL_REPLAY`**.
+   - Result: **0 false positives**, 15 withdrawal state rows persisted in database (matching 15 withdrawals parsed). Status: **`VERIFIED_REAL_REPLAY`**.
 
 ---
 
@@ -222,7 +225,7 @@ Detailed evaluation findings are published in [`audit/HISTORICAL_ATTACK_VALIDATI
 cd backend
 python -m pytest -v
 ```
-*Result*: `81 passed in 12.3s` (All unit tests, integration tests, candidate peer-diversity policy tests, per-peer withdrawal recovery tests, benchmark tests, and archival replay tests).
+*Result*: `81 passed in 10.45s` (All unit tests, integration tests, candidate peer-diversity policy tests, per-peer withdrawal recovery tests, benchmark tests, and archival replay tests).
 
 ### Frontend Production Build
 ```powershell

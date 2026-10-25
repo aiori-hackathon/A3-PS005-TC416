@@ -1,7 +1,7 @@
 {
   "report_id": "REFERENCE-DETECTOR-BENCHMARK-v2",
   "benchmark_classification": "Controlled Testbed Benchmark (Proposal Page 6 Model Comparison)",
-  "timestamp_utc": "2026-10-25T15:38:15Z",
+  "timestamp_utc": "2026-10-25T16:42:29Z",
   "test_dataset_size": 14,
   "total_attacks_tested": 4,
   "total_controls_tested": 10,
@@ -55,8 +55,8 @@
       "security_category": "NIST Level 3 (AES-192 equivalent)",
       "signature_size_bytes": 3309,
       "public_key_size_bytes": 1952,
-      "mean_signing_latency_ms": 52.669,
-      "mean_verification_latency_ms": 16.53,
+      "mean_signing_latency_ms": 59.37,
+      "mean_verification_latency_ms": 11.089,
       "quantum_resistant": true,
       "measurement_mode": "Live CPU Benchmark"
     },
@@ -65,8 +65,8 @@
         "standard": "RFC 8032",
         "signature_size_bytes": 64,
         "public_key_size_bytes": 32,
-        "mean_signing_latency_ms": 0.052,
-        "mean_verification_latency_ms": 0.103,
+        "mean_signing_latency_ms": 0.034,
+        "mean_verification_latency_ms": 0.095,
         "quantum_resistant": false,
         "vulnerability": "Broken by Shor's algorithm on CRQC",
         "measurement_mode": "Live CPU Benchmark"
@@ -75,8 +75,8 @@
         "standard": "PKCS #1 v2.2",
         "signature_size_bytes": 256,
         "public_key_size_bytes": 294,
-        "mean_signing_latency_ms": 0.599,
-        "mean_verification_latency_ms": 0.026,
+        "mean_signing_latency_ms": 0.579,
+        "mean_verification_latency_ms": 0.023,
         "quantum_resistant": false,
         "vulnerability": "Broken by Shor's algorithm on CRQC",
         "measurement_mode": "Live CPU Benchmark"

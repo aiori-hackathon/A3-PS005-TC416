@@ -1,6 +1,6 @@
 {
   "report_id": "HISTORICAL-BGP-MRT-VALIDATION-v2",
-  "timestamp_utc": "2026-10-25T15:38:47.538881+00:00",
+  "timestamp_utc": "2026-10-25T16:42:16.926952+00:00",
   "tool_used": "mrtparse 2.2.0 + SQLite isolated engine",
   "summary": {
     "verified_real_replays_count": 3,
@@ -83,7 +83,7 @@
       "source_archive_url": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
       "announcements_parsed": 20,
       "withdrawals_parsed": 15,
-      "withdrawals_persisted_to_db": 16,
+      "withdrawals_persisted_to_db": 15,
       "false_positives_recorded": 0,
       "behavior_summary": "Successfully processed 20 genuine normal announcements and 15 withdrawals from RIPE RIS rrc00 with 0 false positive alerts and verified withdrawal state persistence."
     }
