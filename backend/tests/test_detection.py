@@ -260,8 +260,94 @@ def test_withdrawal_recovery_resolution(test_db):
 
     # 4. Verify in database that alert status transitioned to RESOLVED with recovery note
     with db_session(test_db) as conn:
-        alert_row = conn.execute("SELECT status, explanation FROM alerts WHERE id = ?;", (alert_id,)).fetchone()
+        alert_row = conn.execute("SELECT status, explanation, recovery_status FROM alerts WHERE id = ?;", (alert_id,)).fetchone()
     assert alert_row["status"] == "RESOLVED"
+    assert alert_row["recovery_status"] == "CONFIRMED"
     assert "[RECOVERY]" in alert_row["explanation"]
+
+
+def test_multi_peer_withdrawal_recovery_semantics(test_db):
+    """Verify that a single peer's withdrawal does not resolve alerts supported by other peers.
+
+    Regression test for Critical Issue 3:
+    In BGP, a withdrawal reflects route withdrawal from a specific peer relationship.
+    When multiple peers announce an anomalous route, one peer's withdrawal must resolve only
+    that peer's alert, leaving alerts from non-withdrawn peers active.
+    """
+    from horaq.detection import process_withdrawal
+    from horaq.database import db_session
+
+    # 1. Establish parent baseline
+    for p in ["3356", "12859"]:
+        process_observation(
+            db_path=test_db,
+            prefix_raw="208.65.152.0/22",
+            origin_asn_raw="AS36561",
+            collector="rrc00",
+            peer_as=p,
+            scenario="baseline-seed",
+        )
+
+    # 2. Peer A (AS3333) announces rogue subprefix
+    obs_a = process_observation(
+        db_path=test_db,
+        prefix_raw="208.65.153.0/24",
+        origin_asn_raw="AS17557",
+        collector="rrc00",
+        peer_as="3333",
+        scenario="multi-peer-hijack",
+    )
+    assert obs_a["alerts_count"] == 1
+    alert_a_id = obs_a["alerts"][0]["id"]
+
+    # 3. Peer B (AS3549) announces rogue subprefix
+    obs_b = process_observation(
+        db_path=test_db,
+        prefix_raw="208.65.153.0/24",
+        origin_asn_raw="AS17557",
+        collector="rrc00",
+        peer_as="3549",
+        scenario="multi-peer-hijack",
+    )
+    assert obs_b["alerts_count"] == 1
+    alert_b_id = obs_b["alerts"][0]["id"]
+
+    # 4. Peer A (AS3333) withdraws its route
+    w_res_a = process_withdrawal(
+        db_path=test_db,
+        prefix_raw="208.65.153.0/24",
+        collector="rrc00",
+        peer_as="3333",
+        scenario="multi-peer-hijack",
+    )
+    assert w_res_a["resolved_alerts_count"] == 1
+    assert w_res_a["unresolved_alerts_count"] == 1
+
+    # Invariant: Alert A must be RESOLVED, but Alert B must remain ACTIVE!
+    with db_session(test_db) as conn:
+        row_a = conn.execute("SELECT status, recovery_status FROM alerts WHERE id = ?;", (alert_a_id,)).fetchone()
+        row_b = conn.execute("SELECT status, recovery_status FROM alerts WHERE id = ?;", (alert_b_id,)).fetchone()
+
+    assert row_a["status"] == "RESOLVED"
+    assert row_a["recovery_status"] == "CONFIRMED"
+    assert row_b["status"] == "ACTIVE"
+    assert row_b["recovery_status"] == "UNCONFIRMED"
+
+    # 5. Peer B (AS3549) now withdraws its route as well
+    w_res_b = process_withdrawal(
+        db_path=test_db,
+        prefix_raw="208.65.153.0/24",
+        collector="rrc00",
+        peer_as="3549",
+        scenario="multi-peer-hijack",
+    )
+    assert w_res_b["resolved_alerts_count"] == 1
+    assert w_res_b["unresolved_alerts_count"] == 0
+
+    with db_session(test_db) as conn:
+        row_b2 = conn.execute("SELECT status, recovery_status FROM alerts WHERE id = ?;", (alert_b_id,)).fetchone()
+    assert row_b2["status"] == "RESOLVED"
+    assert row_b2["recovery_status"] == "CONFIRMED"
+
 
 

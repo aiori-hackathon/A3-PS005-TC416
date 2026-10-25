@@ -19,7 +19,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import websockets
 
 from horaq.config import settings
-from horaq.detection import process_observation
+from horaq.detection import process_observation, process_withdrawal
 
 
 logger = logging.getLogger("horaq.collector")
@@ -54,20 +54,39 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             "valid": False,
             "announcements": [],
             "withdrawals": [],
+            "withdrawal_records": [],
             "as_set_handled": 0,
             "as_set_skipped": 0,
             "skipped_reason": "Malformed 'data' field in RIS message",
         }
 
+    # Extract peer, collector host, and timestamp metadata from RIPE RIS Live payload
+    peer_ip = str(data.get("peer") or "").strip() or None
+    peer_as = str(data.get("peer_asn") or "").strip() or None
+    collector_host = str(data.get("host") or "ripe-ris-live").strip()
+    ts = data.get("timestamp")
+
+    path = data.get("path")
+    if peer_as is None and path and isinstance(path, list) and len(path) > 0 and isinstance(path[0], (int, str)):
+        peer_as = str(path[0])
+
     # Extract withdrawals if present
     raw_withdrawals = data.get("withdrawals", [])
     withdrawals: List[str] = []
+    withdrawal_records: List[Dict[str, Any]] = []
     if isinstance(raw_withdrawals, list):
         for w in raw_withdrawals:
             if isinstance(w, str) and w.strip():
-                withdrawals.append(w.strip())
+                clean_w = w.strip()
+                withdrawals.append(clean_w)
+                withdrawal_records.append({
+                    "prefix": clean_w,
+                    "peer_as": peer_as,
+                    "peer_ip": peer_ip,
+                    "collector": collector_host,
+                    "timestamp": ts,
+                })
 
-    path = data.get("path")
     announcements_data = data.get("announcements", [])
 
     # If it is a pure withdrawal message with no announcements
@@ -76,6 +95,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             "valid": True,
             "announcements": [],
             "withdrawals": withdrawals,
+            "withdrawal_records": withdrawal_records,
             "as_set_handled": 0,
             "as_set_skipped": 0,
             "skipped_reason": "BGP withdrawal update (no route announcements)",
@@ -86,6 +106,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             "valid": False,
             "announcements": [],
             "withdrawals": withdrawals,
+            "withdrawal_records": withdrawal_records,
             "as_set_handled": 0,
             "as_set_skipped": 0,
             "skipped_reason": "Missing or empty AS_PATH in announcement",
@@ -96,6 +117,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             "valid": False,
             "announcements": [],
             "withdrawals": withdrawals,
+            "withdrawal_records": withdrawal_records,
             "as_set_handled": 0,
             "as_set_skipped": 0,
             "skipped_reason": "No announcements list found in update",
@@ -118,6 +140,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
                 "valid": False,
                 "announcements": [],
                 "withdrawals": withdrawals,
+                "withdrawal_records": withdrawal_records,
                 "as_set_handled": 0,
                 "as_set_skipped": 1,
                 "skipped_reason": "Terminal AS_SET is empty",
@@ -132,6 +155,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
                 "valid": False,
                 "announcements": [],
                 "withdrawals": withdrawals,
+                "withdrawal_records": withdrawal_records,
                 "as_set_handled": 0,
                 "as_set_skipped": 1,
                 "skipped_reason": (
@@ -164,10 +188,17 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             parsed_announcements.append({
                 "prefix": cleaned,
                 "origin_asn": origin_asn,
-                "timestamp": data.get("timestamp"),
+                "timestamp": ts,
+                "peer_as": peer_as,
+                "peer_ip": peer_ip,
+                "collector": collector_host,
                 "metadata": {
-                    "peer": data.get("peer"),
-                    "host": data.get("host"),
+                    "peer": peer_ip,
+                    "peer_ip": peer_ip,
+                    "peer_asn": peer_as,
+                    "peer_as": peer_as,
+                    "host": collector_host,
+                    "collector": collector_host,
                     "path_length": len(path),
                     "terminal_as_set": is_as_set,
                     "as_set_members": as_set_members,
@@ -179,6 +210,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             "valid": False,
             "announcements": [],
             "withdrawals": withdrawals,
+            "withdrawal_records": withdrawal_records,
             "as_set_handled": as_set_handled,
             "as_set_skipped": as_set_skipped,
             "skipped_reason": "No valid prefix strings found in announcement",
@@ -188,6 +220,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
         "valid": True,
         "announcements": parsed_announcements,
         "withdrawals": withdrawals,
+        "withdrawal_records": withdrawal_records,
         "as_set_handled": as_set_handled,
         "as_set_skipped": as_set_skipped,
         "skipped_reason": None,
@@ -330,8 +363,37 @@ class RISLiveCollector:
 
         result = parse_ris_message(msg)
 
-        if result.get("withdrawals"):
-            self.withdrawals_received += len(result["withdrawals"])
+        # 1. Process BGP withdrawals safely through the withdrawal pipeline
+        withdrawal_records = result.get("withdrawal_records") or [
+            {
+                "prefix": w,
+                "peer_as": None,
+                "peer_ip": None,
+                "collector": "ripe-ris-live",
+                "timestamp": None,
+            }
+            for w in result.get("withdrawals", [])
+        ]
+        if withdrawal_records:
+            self.withdrawals_received += len(withdrawal_records)
+            for w_rec in withdrawal_records:
+                try:
+                    process_withdrawal(
+                        db_path=self.db_path,
+                        prefix_raw=w_rec["prefix"],
+                        collector=w_rec.get("collector") or "ripe-ris-live",
+                        peer_as=w_rec.get("peer_as"),
+                        peer_ip=w_rec.get("peer_ip"),
+                        timestamp_raw=w_rec.get("timestamp"),
+                        scenario="ripe-ris-live",
+                        raw_metadata={
+                            "peer_ip": w_rec.get("peer_ip"),
+                            "peer_as": w_rec.get("peer_as"),
+                            "collector": w_rec.get("collector"),
+                        },
+                    )
+                except Exception as w_err:
+                    logger.debug(f"Failed to process live withdrawal for '{w_rec['prefix']}': {w_err}")
 
         self.as_set_handled += result.get("as_set_handled", 0)
         self.as_set_skipped += result.get("as_set_skipped", 0)
@@ -352,16 +414,21 @@ class RISLiveCollector:
             prefix = item["prefix"]
             origin_asn = item["origin_asn"]
             ts = item.get("timestamp")
+            peer_as = item.get("peer_as")
+            peer_ip = item.get("peer_ip")
+            collector = item.get("collector") or "ripe-ris-live"
             raw_meta = item.get("metadata", {})
             try:
                 process_observation(
                     db_path=self.db_path,
                     prefix_raw=prefix,
                     origin_asn_raw=origin_asn,
-                    collector="ripe-ris-live",
+                    collector=collector,
                     timestamp_raw=ts,
-                    scenario=None,
+                    scenario="ripe-ris-live",
                     raw_metadata=raw_meta,
+                    peer_as=peer_as,
+                    peer_ip=peer_ip,
                 )
                 self.messages_parsed += 1
             except Exception as parse_err:

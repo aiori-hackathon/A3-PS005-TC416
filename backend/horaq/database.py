@@ -95,7 +95,10 @@ def init_db(db_path: str) -> None:
                 confidence TEXT NOT NULL DEFAULT 'HIGH',
                 uncertainty_reason TEXT,
                 collector TEXT,
-                scenario TEXT
+                scenario TEXT,
+                active_peers TEXT NOT NULL DEFAULT '[]',
+                withdrawn_peers TEXT NOT NULL DEFAULT '[]',
+                recovery_status TEXT NOT NULL DEFAULT 'UNCONFIRMED'
             );
 
             CREATE TABLE IF NOT EXISTS evidence (
@@ -144,6 +147,18 @@ def init_db(db_path: str) -> None:
                 pass
             try:
                 conn.execute("ALTER TABLE alerts ADD COLUMN uncertainty_reason TEXT;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN active_peers TEXT NOT NULL DEFAULT '[]';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN withdrawn_peers TEXT NOT NULL DEFAULT '[]';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN recovery_status TEXT NOT NULL DEFAULT 'UNCONFIRMED';")
             except sqlite3.OperationalError:
                 pass
 
@@ -272,7 +287,11 @@ def list_alerts(
 
         cursor = conn.execute(
             f"SELECT id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
-            f"parent_prefix, title, explanation, evidence_id, status, collector, scenario "
+            f"parent_prefix, title, explanation, evidence_id, status, collector, scenario, "
+            f"COALESCE(confidence, 'HIGH') as confidence, uncertainty_reason, "
+            f"COALESCE(active_peers, '[]') as active_peers, "
+            f"COALESCE(withdrawn_peers, '[]') as withdrawn_peers, "
+            f"COALESCE(recovery_status, 'UNCONFIRMED') as recovery_status "
             f"FROM alerts {where_sql} ORDER BY created_at DESC LIMIT ? OFFSET ?;",
             params + [limit, offset],
         )
@@ -285,7 +304,11 @@ def get_alert_by_id(db_path: str, alert_id: str) -> Optional[Dict[str, Any]]:
     with db_session(db_path) as conn:
         row = conn.execute(
             "SELECT id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
-            "parent_prefix, title, explanation, evidence_id, status, collector, scenario "
+            "parent_prefix, title, explanation, evidence_id, status, collector, scenario, "
+            "COALESCE(confidence, 'HIGH') as confidence, uncertainty_reason, "
+            "COALESCE(active_peers, '[]') as active_peers, "
+            "COALESCE(withdrawn_peers, '[]') as withdrawn_peers, "
+            "COALESCE(recovery_status, 'UNCONFIRMED') as recovery_status "
             "FROM alerts WHERE id = ?;",
             (alert_id,),
         ).fetchone()

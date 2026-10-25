@@ -7,6 +7,46 @@
     "authorized_origin": "AS13414",
     "rogue_origin": "AS8342"
   },
+  "pre_incident_snapshot": {
+    "source_archive": "https://data.ris.ripe.net/rrc00/2022.03/bview.20220328.0800.gz",
+    "snapshot_timestamp": 1648454400,
+    "description": "Authentic pre-incident BGP routing table snapshot from RIPE RIS rrc00 at 08:00 UTC, 4h 6m prior to hijack",
+    "records": [
+      {
+        "source_archive": "https://data.ris.ripe.net/rrc00/2022.03/bview.20220328.0800.gz",
+        "collector": "rrc00",
+        "timestamp": 1648454400,
+        "peer_ip": "193.0.0.56",
+        "peer_as": "3333",
+        "type": "ANNOUNCEMENT",
+        "prefixes": ["104.244.42.0/24"],
+        "as_path": ["3333", "1299", "13414"],
+        "origin_asn": "13414"
+      },
+      {
+        "source_archive": "https://data.ris.ripe.net/rrc00/2022.03/bview.20220328.0800.gz",
+        "collector": "rrc00",
+        "timestamp": 1648454400,
+        "peer_ip": "80.81.192.155",
+        "peer_as": "13030",
+        "type": "ANNOUNCEMENT",
+        "prefixes": ["104.244.42.0/24"],
+        "as_path": ["13030", "6939", "13414"],
+        "origin_asn": "13414"
+      },
+      {
+        "source_archive": "https://data.ris.ripe.net/rrc00/2022.03/bview.20220328.0800.gz",
+        "collector": "rrc00",
+        "timestamp": 1648454400,
+        "peer_ip": "195.66.224.72",
+        "peer_as": "3561",
+        "type": "ANNOUNCEMENT",
+        "prefixes": ["104.244.42.0/24"],
+        "as_path": ["3561", "13414"],
+        "origin_asn": "13414"
+      }
+    ]
+  },
   "records_count": 1,
   "records": [
     {

@@ -1,36 +1,36 @@
 {
   "report_id": "REFERENCE-DETECTOR-BENCHMARK-v2",
   "benchmark_classification": "Controlled Testbed Benchmark (Proposal Page 6 Model Comparison)",
-  "timestamp_utc": "2026-10-25T14:01:17Z",
-  "test_dataset_size": 12,
-  "total_attacks_tested": 3,
-  "total_controls_tested": 9,
+  "timestamp_utc": "2026-10-25T15:38:15Z",
+  "test_dataset_size": 14,
+  "total_attacks_tested": 4,
+  "total_controls_tested": 10,
   "naive_reference_detector": {
     "classification_metrics": {
-      "TP": 2,
+      "TP": 4,
       "FP": 1,
-      "TN": 8,
-      "FN": 1,
-      "precision": 0.6667,
-      "recall": 0.6667,
-      "f1_score": 0.6667,
-      "false_positive_rate": 0.1111
+      "TN": 9,
+      "FN": 0,
+      "precision": 0.8,
+      "recall": 1.0,
+      "f1_score": 0.8889,
+      "false_positive_rate": 0.1
     },
-    "baseline_contamination_rate_pct": 66.7,
+    "baseline_contamination_rate_pct": 75.0,
     "candidate_promotion_policy": "NONE (Immediate unverified trust, ignores peer diversity)",
     "evidence_correlation": "NONE (Static binary alert)",
     "cryptographic_signatures": "NONE (Unsigned plain dictionary)"
   },
   "enhanced_horaq_detector": {
     "classification_metrics": {
-      "TP": 3,
+      "TP": 4,
       "FP": 1,
-      "TN": 8,
+      "TN": 9,
       "FN": 0,
-      "precision": 0.75,
+      "precision": 0.8,
       "recall": 1.0,
-      "f1_score": 0.8571,
-      "false_positive_rate": 0.1111
+      "f1_score": 0.8889,
+      "false_positive_rate": 0.1
     },
     "baseline_contamination_rate_pct": 0.0,
     "candidate_promotion_policy": "ENFORCED (Requires >= 2 distinct peers AND >= 3 observations)",
@@ -55,8 +55,8 @@
       "security_category": "NIST Level 3 (AES-192 equivalent)",
       "signature_size_bytes": 3309,
       "public_key_size_bytes": 1952,
-      "mean_signing_latency_ms": 57.178,
-      "mean_verification_latency_ms": 11.604,
+      "mean_signing_latency_ms": 52.669,
+      "mean_verification_latency_ms": 16.53,
       "quantum_resistant": true,
       "measurement_mode": "Live CPU Benchmark"
     },
@@ -65,8 +65,8 @@
         "standard": "RFC 8032",
         "signature_size_bytes": 64,
         "public_key_size_bytes": 32,
-        "mean_signing_latency_ms": 0.033,
-        "mean_verification_latency_ms": 0.114,
+        "mean_signing_latency_ms": 0.052,
+        "mean_verification_latency_ms": 0.103,
         "quantum_resistant": false,
         "vulnerability": "Broken by Shor's algorithm on CRQC",
         "measurement_mode": "Live CPU Benchmark"
@@ -75,8 +75,8 @@
         "standard": "PKCS #1 v2.2",
         "signature_size_bytes": 256,
         "public_key_size_bytes": 294,
-        "mean_signing_latency_ms": 0.557,
-        "mean_verification_latency_ms": 0.035,
+        "mean_signing_latency_ms": 0.599,
+        "mean_verification_latency_ms": 0.026,
         "quantum_resistant": false,
         "vulnerability": "Broken by Shor's algorithm on CRQC",
         "measurement_mode": "Live CPU Benchmark"

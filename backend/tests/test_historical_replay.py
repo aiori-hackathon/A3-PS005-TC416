@@ -98,4 +98,90 @@ def test_archival_mrt_replay_validation():
     assert summary["anti_poisoning_verified_across_all"] is True
     assert summary["false_positives_on_benign_feed"] == 0
     assert summary["verified_real_replays_count"] >= 2
+    assert summary["incomplete_data_evaluations_count"] >= 1
+    assert summary["capability_boundary_controls_count"] >= 1
+    assert summary["failed_verifications_count"] == 0
+
+
+def test_replay_outcomes_data_driven_and_failure_detection(tmp_path):
+    """Verify that replay outcomes are strictly computed from actual data and catch failures/incompletes."""
+    from horaq.replay import ArchivalMrtReplayEngine
+
+    db_path = str(tmp_path / "replay_test.db")
+    init_db(db_path)
+    engine = ArchivalMrtReplayEngine(db_path)
+
+    # 1. Test Incomplete Data: fixture lacking pre_incident_snapshot
+    incomplete_fixture = tmp_path / "incomplete_incident.json"
+    incomplete_fixture.write_text(json.dumps({
+        "incident_id": "INC-TEST-NO-SNAPSHOT",
+        "source_url": "https://example.com/updates.gz",
+        "incident_class": "SUBPREFIX_HIJACK",
+        "ground_truth": {
+            "target_prefix": "10.0.1.0/24",
+            "parent_baseline_prefix": "10.0.0.0/16",
+            "authorized_origin": "AS65001",
+            "rogue_origin": "AS65002",
+        },
+        "records": [
+            {
+                "type": "ANNOUNCEMENT",
+                "timestamp": 1200000000,
+                "peer_as": "65003",
+                "origin_asn": "65002",
+                "prefixes": ["10.0.1.0/24"],
+            }
+        ],
+    }), encoding="utf-8")
+
+    res_incomplete = engine.replay_incident(incomplete_fixture)
+    # Must be marked INCOMPLETE_DATA, never VERIFIED_REAL_REPLAY
+    assert res_incomplete["verification_status"] == "INCOMPLETE_DATA"
+    assert res_incomplete["detection_achieved"] is False
+
+    # 2. Test Failed Verification: benign announcement that expected detection but didn't trigger
+    failed_fixture = tmp_path / "failed_incident.json"
+    failed_fixture.write_text(json.dumps({
+        "incident_id": "INC-TEST-FAILED-DETECTION",
+        "source_url": "https://example.com/updates.gz",
+        "incident_class": "SUBPREFIX_HIJACK",
+        "ground_truth": {
+            "target_prefix": "10.0.1.0/24",
+            "parent_baseline_prefix": "10.0.0.0/16",
+            "authorized_origin": "AS65001",
+            "rogue_origin": "AS65002",
+        },
+        "pre_incident_snapshot": {
+            "source_archive": "https://example.com/bview.gz",
+            "snapshot_timestamp": 1199999000,
+            "records": [
+                {
+                    "peer_as": "65010",
+                    "origin_asn": "65001",
+                    "prefixes": ["10.0.0.0/16"],
+                },
+                {
+                    "peer_as": "65011",
+                    "origin_asn": "65001",
+                    "prefixes": ["10.0.0.0/16"],
+                },
+            ],
+        },
+        "records": [
+            # Announcement matches authorized parent origin (benign), so no alert generated
+            {
+                "type": "ANNOUNCEMENT",
+                "timestamp": 1200000000,
+                "peer_as": "65003",
+                "origin_asn": "65001",
+                "prefixes": ["10.0.0.0/16"],
+            }
+        ],
+    }), encoding="utf-8")
+
+    res_failed = engine.replay_incident(failed_fixture)
+    # Because no alert was generated for this expected incident, status must be FAILED_VERIFICATION
+    assert res_failed["verification_status"] == "FAILED_VERIFICATION"
+    assert res_failed["detection_achieved"] is False
+
 

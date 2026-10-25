@@ -11,8 +11,12 @@ Tests compliance with Phase 2 requirements:
 """
 
 import json
+import os
+import tempfile
 import pytest
+
 from horaq.collector import parse_ris_message, RISLiveCollector, get_collector_telemetry
+from horaq.database import db_session, init_db
 
 
 def test_parse_standard_as_path():
@@ -242,3 +246,118 @@ def test_collector_telemetry_tracking():
     finally:
         if os.path.exists(db_path):
             os.remove(db_path)
+
+
+def test_live_collector_peer_metadata_and_withdrawals():
+    """Verify live RIPE RIS peer metadata normalization, candidate promotion, and live withdrawal processing."""
+    fd, db_path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    init_db(db_path)
+
+    try:
+        collector = RISLiveCollector(db_path=db_path)
+
+        # 1. Realistic RIPE RIS Live announcement message
+        ris_announcement_1 = json.dumps({
+            "type": "ris_message",
+            "data": {
+                "timestamp": 1698240100.0,
+                "peer": "193.0.0.56",
+                "peer_asn": "3333",
+                "host": "rrc00",
+                "path": [3333, 1299, 64500],
+                "announcements": [{"prefixes": ["198.51.100.0/24"]}],
+                "withdrawals": [],
+            },
+        })
+
+        collector._handle_message(ris_announcement_1)
+        assert collector.messages_parsed == 1
+
+        # Check that observation was inserted with normalized peer_as, peer_ip, collector
+        with db_session(db_path) as conn:
+            obs1 = conn.execute("SELECT * FROM observations WHERE prefix = '198.51.100.0/24';").fetchone()
+            assert obs1 is not None
+            assert obs1["peer_as"] == "3333"
+            assert obs1["peer_ip"] == "193.0.0.56"
+            assert obs1["collector"] == "rrc00"
+            assert obs1["origin_asn"] == "AS64500"
+
+            # Check baseline: initial observation is CANDIDATE with peer_count = 1
+            base1 = conn.execute("SELECT * FROM baselines WHERE prefix = '198.51.100.0/24';").fetchone()
+            assert base1 is not None
+            assert base1["status"] == "CANDIDATE"
+            assert base1["peer_count"] == 1
+
+        # 2. Repeated announcement from the SAME peer (AS3333)
+        # Invariant: repeated announcements from same peer must NOT satisfy peer diversity
+        ris_announcement_repeat = json.dumps({
+            "type": "ris_message",
+            "data": {
+                "timestamp": 1698240105.0,
+                "peer": "193.0.0.56",
+                "peer_asn": "3333",
+                "host": "rrc00",
+                "path": [3333, 1299, 64500],
+                "announcements": [{"prefixes": ["198.51.100.0/24"]}],
+                "withdrawals": [],
+            },
+        })
+        collector._handle_message(ris_announcement_repeat)
+
+        with db_session(db_path) as conn:
+            base2 = conn.execute("SELECT * FROM baselines WHERE prefix = '198.51.100.0/24';").fetchone()
+            assert base2["status"] == "CANDIDATE"
+            assert base2["observation_count"] == 2
+            assert base2["peer_count"] == 1  # Still 1 peer!
+
+        # 3. Announcement from a DISTINCT peer (AS3549)
+        # Now peer diversity >= 2 is met, eligible for candidate promotion
+        ris_announcement_distinct = json.dumps({
+            "type": "ris_message",
+            "data": {
+                "timestamp": 1698240110.0,
+                "peer": "208.51.134.248",
+                "peer_asn": "3549",
+                "host": "rrc00",
+                "path": [3549, 64500],
+                "announcements": [{"prefixes": ["198.51.100.0/24"]}],
+                "withdrawals": [],
+            },
+        })
+        collector._handle_message(ris_announcement_distinct)
+
+        with db_session(db_path) as conn:
+            base3 = conn.execute("SELECT * FROM baselines WHERE prefix = '198.51.100.0/24';").fetchone()
+            assert base3["peer_count"] == 2
+            assert base3["status"] == "PROMOTED"
+
+        # 4. Realistic RIPE RIS Live withdrawal message
+        ris_withdrawal = json.dumps({
+            "type": "ris_message",
+            "data": {
+                "timestamp": 1698240120.0,
+                "peer": "193.0.0.56",
+                "peer_asn": "3333",
+                "host": "rrc00",
+                "withdrawals": ["198.51.100.0/24"],
+                "announcements": [],
+            },
+        })
+        collector._handle_message(ris_withdrawal)
+        assert collector.withdrawals_received == 1
+
+        # Check withdrawal was persisted to database with metadata
+        with db_session(db_path) as conn:
+            w_obs = conn.execute(
+                "SELECT * FROM observations WHERE prefix = '198.51.100.0/24' AND origin_asn = 'WITHDRAWAL';"
+            ).fetchone()
+            assert w_obs is not None
+            assert w_obs["peer_as"] == "3333"
+            assert w_obs["peer_ip"] == "193.0.0.56"
+            assert w_obs["collector"] == "rrc00"
+
+    finally:
+        if os.path.exists(db_path):
+            os.remove(db_path)
+

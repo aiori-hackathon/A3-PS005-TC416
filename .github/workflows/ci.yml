@@ -28,7 +28,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run Pytest Test Suite (78 Tests)
+      - name: Run Pytest Test Suite (81 Tests)
         working-directory: backend
         run: |
           pytest -v

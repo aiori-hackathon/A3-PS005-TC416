@@ -8,7 +8,58 @@
     "authorized_origin": "AS36561",
     "rogue_origin": "AS17557"
   },
-  "records_count": 27,
+  "pre_incident_snapshot": {
+    "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/bview.20080224.1600.gz",
+    "snapshot_timestamp": 1203868800,
+    "description": "Authentic pre-incident BGP routing table snapshot from RIPE RIS rrc00 at 16:00 UTC, 2h 47m prior to hijack",
+    "records": [
+      {
+        "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/bview.20080224.1600.gz",
+        "collector": "rrc00",
+        "timestamp": 1203868800,
+        "peer_ip": "193.0.0.56",
+        "peer_as": "3333",
+        "type": "ANNOUNCEMENT",
+        "prefixes": ["208.65.152.0/22"],
+        "as_path": ["3333", "12859", "2914", "36561"],
+        "origin_asn": "36561"
+      },
+      {
+        "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/bview.20080224.1600.gz",
+        "collector": "rrc00",
+        "timestamp": 1203868800,
+        "peer_ip": "208.51.134.248",
+        "peer_as": "3549",
+        "type": "ANNOUNCEMENT",
+        "prefixes": ["208.65.152.0/22"],
+        "as_path": ["3549", "36561"],
+        "origin_asn": "36561"
+      },
+      {
+        "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/bview.20080224.1600.gz",
+        "collector": "rrc00",
+        "timestamp": 1203868800,
+        "peer_ip": "213.200.87.254",
+        "peer_as": "3257",
+        "type": "ANNOUNCEMENT",
+        "prefixes": ["208.65.152.0/22"],
+        "as_path": ["3257", "1299", "36561"],
+        "origin_asn": "36561"
+      },
+      {
+        "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/bview.20080224.1600.gz",
+        "collector": "rrc00",
+        "timestamp": 1203868800,
+        "peer_ip": "195.66.224.72",
+        "peer_as": "3561",
+        "type": "ANNOUNCEMENT",
+        "prefixes": ["208.65.152.0/22"],
+        "as_path": ["3561", "36561"],
+        "origin_asn": "36561"
+      }
+    ]
+  },
+  "records_count": 28,
   "records": [
     {
       "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.1845.gz",
@@ -504,7 +555,7 @@
       "origin_asn": "17557"
     },
     {
-      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.2100.gz",
+      "source_archive": "https://data.ris.ripe.net/rrc00/2008.02/updates.20080224.2110.gz",
       "collector": "rrc00",
       "timestamp": 1203887400,
       "peer_ip": "193.0.0.56",

@@ -32,24 +32,6 @@ class ArchivalMrtReplayEngine:
             "summary": {},
         }
 
-    def establish_pre_incident_baseline(self, prefix: str, origin_asn: str, label: str = "") -> None:
-        """Establish authentic pre-incident reference state via peer-diverse announcements.
-        
-        This tests that the reference state is promoted naturally through the candidate
-        baseline promotion policy (requiring peer diversity >= 2), rather than a backdoor bypass.
-        """
-        pre_incident_peers = ["3356", "3549", "12859"]
-        for p in pre_incident_peers:
-            process_observation(
-                db_path=self.db_path,
-                prefix_raw=prefix,
-                origin_asn_raw=origin_asn,
-                collector="rrc00",
-                peer_as=p,
-                timestamp_raw="2008-02-24T12:00:00Z",
-                scenario="pre-incident-reference-state",
-            )
-
     def replay_incident(self, fixture_path: Path) -> Dict[str, Any]:
         with open(fixture_path, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -60,11 +42,44 @@ class ArchivalMrtReplayEngine:
         gt = data["ground_truth"]
         records = data.get("records", [])
 
-        # 1. Establish pre-incident reference state dynamically
-        if "parent_baseline_prefix" in gt:
-            self.establish_pre_incident_baseline(gt["parent_baseline_prefix"], gt["authorized_origin"], "Parent route")
-        elif "target_prefix" in gt and "authorized_origin" in gt:
-            self.establish_pre_incident_baseline(gt["target_prefix"], gt["authorized_origin"], "Authorized route")
+        # 1. Establish pre-incident reference state dynamically from authentic snapshot
+        snapshot = data.get("pre_incident_snapshot")
+        if not snapshot or not snapshot.get("records"):
+            return {
+                "incident_id": inc_id,
+                "verification_status": "INCOMPLETE_DATA",
+                "source_archive_url": source_url,
+                "incident_classification": inc_class,
+                "records_replayed_count": 0,
+                "detection_achieved": False,
+                "intellectual_honesty_note": (
+                    "No authentic pre-incident routing table snapshot (RIB bview) available to reconstruct baseline. "
+                    "Preserving scientific integrity, HORA-Q marks this evaluation as INCOMPLETE_DATA "
+                    "rather than fabricating synthetic data."
+                ),
+            }
+
+        snapshot_records = snapshot.get("records", [])
+        snapshot_archive = snapshot.get("source_archive")
+        snapshot_ts = snapshot.get("snapshot_timestamp")
+
+        for s_rec in snapshot_records:
+            s_collector = s_rec.get("collector", "rrc00")
+            s_peer_as = s_rec.get("peer_as")
+            s_peer_ip = s_rec.get("peer_ip")
+            s_origin = s_rec.get("origin_asn")
+            s_time = format_ts(s_rec.get("timestamp", snapshot_ts))
+            for s_pfx in s_rec.get("prefixes", []):
+                process_observation(
+                    db_path=self.db_path,
+                    prefix_raw=s_pfx,
+                    origin_asn_raw=s_origin,
+                    collector=s_collector,
+                    peer_as=s_peer_as,
+                    peer_ip=s_peer_ip,
+                    timestamp_raw=s_time,
+                    scenario=f"{inc_id}-pre-incident-snapshot",
+                )
 
         # 2. Chronologically replay BGP records (announcements AND withdrawals)
         alerts_recorded = []
@@ -137,18 +152,34 @@ class ArchivalMrtReplayEngine:
             if base_map.get(parent_pfx, {}).get("origin_asn") == rogue_asn:
                 anti_poisoning_intact = False
 
+        # Compute data-driven outcome
+        detection_achieved = len(alerts_recorded) > 0
+        if detection_achieved and anti_poisoning_intact:
+            verification_status = "VERIFIED_REAL_REPLAY"
+        else:
+            verification_status = "FAILED_VERIFICATION"
+
+        # Per-peer recovery verification: if withdrawals processed, check that withdrawal occurred
+        # without prematurely resolving alerts from non-withdrawn peers
+        recovery_verified = True
+        if withdrawals_processed > 0:
+            recovery_verified = resolved_alerts_count > 0
+
         return {
             "incident_id": inc_id,
-            "verification_status": "VERIFIED_REAL_REPLAY",
+            "verification_status": verification_status,
             "source_archive_url": source_url,
+            "pre_incident_snapshot_archive": snapshot_archive,
             "incident_classification": inc_class,
+            "pre_incident_snapshot_records_count": len(snapshot_records),
             "records_replayed_count": len(records),
             "distinct_observing_peers": len(peers_seen),
-            "detection_achieved": len(alerts_recorded) > 0,
+            "detection_achieved": detection_achieved,
             "alerts_count": len(alerts_recorded),
             "withdrawals_processed": withdrawals_processed,
             "resolved_alerts_count": resolved_alerts_count,
-            "recovery_tracking_verified": resolved_alerts_count > 0 if withdrawals_processed > 0 else True,
+            "unresolved_alerts_count": len(alerts_recorded) - resolved_alerts_count,
+            "recovery_tracking_verified": recovery_verified,
             "detection_delay_seconds": first_alert_delay if first_alert_delay is not None else 0,
             "anti_poisoning_invariant_verified": anti_poisoning_intact,
             "first_alert": {
@@ -297,15 +328,39 @@ def run_full_historical_validation() -> Dict[str, Any]:
     except Exception:
         pass
 
+    # Data-driven summary calculation from actual replay results
+    verified_count = sum(1 for inc in incidents_results if inc.get("verification_status") == "VERIFIED_REAL_REPLAY")
+    incomplete_count = sum(1 for inc in incidents_results if inc.get("verification_status") == "INCOMPLETE_DATA")
+    boundary_count = sum(1 for inc in incidents_results if inc.get("verification_status") == "CAPABILITY_BOUNDARY")
+    failed_count = sum(1 for inc in incidents_results if inc.get("verification_status") == "FAILED_VERIFICATION")
+
+    all_real_detected = all(
+        inc.get("detection_achieved") for inc in incidents_results
+        if inc.get("verification_status") == "VERIFIED_REAL_REPLAY" and not inc.get("control_id")
+    )
+    anti_poisoning_all = all(
+        inc.get("anti_poisoning_invariant_verified", True) for inc in incidents_results
+        if inc.get("verification_status") == "VERIFIED_REAL_REPLAY" and not inc.get("control_id")
+    )
+    recovery_all = all(
+        inc.get("recovery_tracking_verified", True) for inc in incidents_results
+        if inc.get("verification_status") == "VERIFIED_REAL_REPLAY" and not inc.get("control_id")
+    )
+    benign_fps = sum(inc.get("false_positives_recorded", 0) for inc in incidents_results if inc.get("control_id"))
+
     summary = {
-        "verified_real_replays_count": 3,
-        "incomplete_data_evaluations_count": 1,
-        "capability_boundary_controls_count": 1,
-        "all_real_replays_detected": True,
-        "anti_poisoning_verified_across_all": True,
-        "withdrawal_and_recovery_verified": True,
-        "false_positives_on_benign_feed": 0,
+        "verified_real_replays_count": verified_count,
+        "incomplete_data_evaluations_count": incomplete_count,
+        "capability_boundary_controls_count": boundary_count,
+        "failed_verifications_count": failed_count,
+        "all_real_replays_detected": all_real_detected,
+        "anti_poisoning_verified_across_all": anti_poisoning_all,
+        "withdrawal_and_recovery_verified": recovery_all,
+        "false_positives_on_benign_feed": benign_fps,
     }
+
+    if failed_count > 0 or not all_real_detected or not anti_poisoning_all or benign_fps > 0:
+        raise RuntimeError(f"Historical replay verification failed dynamically: {summary}")
 
     final_report = {
         "report_id": "HISTORICAL-BGP-MRT-VALIDATION-v2",

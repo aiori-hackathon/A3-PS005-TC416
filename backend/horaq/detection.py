@@ -196,6 +196,9 @@ def process_observation(
                 "uncertainty_reason": uncertainty_reason,
                 "collector": collector,
                 "scenario": scenario,
+                "active_peers": [peer_as] if peer_as else [],
+                "withdrawn_peers": [],
+                "recovery_status": "UNCONFIRMED",
                 "evidence": {
                     "id": evidence_id,
                     "record": ev_record,
@@ -328,6 +331,9 @@ def process_observation(
                     "uncertainty_reason": uncertainty_reason,
                     "collector": collector,
                     "scenario": scenario,
+                    "active_peers": [peer_as] if peer_as else [],
+                    "withdrawn_peers": [],
+                    "recovery_status": "UNCONFIRMED",
                     "evidence": {
                         "id": evidence_id,
                         "record": ev_record,
@@ -348,8 +354,8 @@ def process_observation(
         for alert in generated_alerts:
             conn.execute(
                 "INSERT INTO alerts (id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
-                "parent_prefix, title, explanation, evidence_id, status, confidence, uncertainty_reason, collector, scenario) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                "parent_prefix, title, explanation, evidence_id, status, confidence, uncertainty_reason, collector, scenario, active_peers, withdrawn_peers, recovery_status) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                 (
                     alert["id"],
                     alert["created_at"],
@@ -367,6 +373,9 @@ def process_observation(
                     alert.get("uncertainty_reason"),
                     alert["collector"],
                     alert["scenario"],
+                    json.dumps(alert.get("active_peers", [])),
+                    json.dumps(alert.get("withdrawn_peers", [])),
+                    alert.get("recovery_status", "UNCONFIRMED"),
                 ),
             )
 
@@ -409,13 +418,15 @@ def process_withdrawal(
     scenario: Optional[str] = None,
     raw_metadata: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Process a BGP route withdrawal event and track anomaly recovery.
+    """Process a BGP route withdrawal event and track per-peer anomaly recovery.
 
-    Proposal Alignment:
-    Withdrawal and recovery tracking:
-    - Ingests BGP WITHDRAWAL message.
-    - Records event in observations audit table.
-    - Resolves any currently ACTIVE alerts affecting this prefix (Recovery Tracking).
+    Proposal & Review Alignment:
+    - Ingests BGP WITHDRAWAL message and records event in observations audit table.
+    - Tracks withdrawal state per peer. A single peer's withdrawal does NOT prematurely
+      resolve an entire incident if other peers are still actively announcing the anomalous route.
+    - If other peers still advertise the route, the alert remains ACTIVE with recovery_status 'PARTIAL'.
+    - Only when all active observing peers for that alert have withdrawn does the alert transition
+      to status 'RESOLVED' with recovery_status 'CONFIRMED'.
     - Transitions candidate routes to WITHDRAWN status.
     """
     norm_prefix, _ = normalize_prefix(prefix_raw)
@@ -431,9 +442,10 @@ def process_withdrawal(
     metadata_json = json.dumps(meta, sort_keys=True)
 
     resolved_alerts: List[Dict[str, Any]] = []
+    unresolved_alerts: List[Dict[str, Any]] = []
 
     with db_session(db_path) as conn:
-        # 1. Record withdrawal in observations
+        # 1. Record withdrawal in observations table
         cur = conn.execute(
             "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, created_at) "
             "VALUES (?, 'WITHDRAWAL', ?, ?, ?, ?, ?, ?, ?);",
@@ -441,29 +453,100 @@ def process_withdrawal(
         )
         obs_id = cur.lastrowid
 
-        # 2. Check active alerts on this prefix or child subprefixes (Recovery Tracking)
+        # 2. Check active alerts on this prefix (Per-Peer Recovery Tracking)
         active_alerts = conn.execute(
-            "SELECT id, title, kind, prefix, observed_asn, baseline_asn FROM alerts "
-            "WHERE prefix = ? AND status = 'ACTIVE';",
+            "SELECT id, title, kind, prefix, observed_asn, baseline_asn, "
+            "COALESCE(active_peers, '[]') as active_peers, "
+            "COALESCE(withdrawn_peers, '[]') as withdrawn_peers "
+            "FROM alerts WHERE prefix = ? AND status = 'ACTIVE';",
             (norm_prefix,),
         ).fetchall()
 
         for alt in active_alerts:
             alt_id = alt["id"]
-            recovery_note = (
-                f"\n[RECOVERY]: Route withdrawal observed from peer {peer_as or 'unknown'} ({collector}). "
-                f"Anomalous propagation terminated; routing state restored to baseline."
-            )
-            conn.execute(
-                "UPDATE alerts SET status = 'RESOLVED', explanation = explanation || ? WHERE id = ?;",
-                (recovery_note, alt_id),
-            )
-            resolved_alerts.append({
-                "alert_id": alt_id,
-                "prefix": norm_prefix,
-                "kind": alt["kind"],
-                "status": "RESOLVED",
-            })
+            try:
+                act_peers = json.loads(alt["active_peers"] or "[]")
+            except Exception:
+                act_peers = []
+            try:
+                wdr_peers = json.loads(alt["withdrawn_peers"] or "[]")
+            except Exception:
+                wdr_peers = []
+
+            if act_peers:
+                peer_matches = (peer_as is None) or (peer_as in act_peers)
+                if peer_matches:
+                    if peer_as and peer_as in act_peers:
+                        act_peers.remove(peer_as)
+                        if peer_as not in wdr_peers:
+                            wdr_peers.append(peer_as)
+                    elif peer_as is None:
+                        wdr_peers.extend([p for p in act_peers if p not in wdr_peers])
+                        act_peers.clear()
+
+                    if len(act_peers) == 0:
+                        recovery_note = (
+                            f"\n[RECOVERY]: Route withdrawal confirmed from all active observing peer(s) "
+                            f"({', '.join(wdr_peers)}). Anomalous propagation has ceased; alert resolved."
+                        )
+                        conn.execute(
+                            "UPDATE alerts SET status = 'RESOLVED', recovery_status = 'CONFIRMED', "
+                            "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
+                            (json.dumps(act_peers), json.dumps(wdr_peers), recovery_note, alt_id),
+                        )
+                        resolved_alerts.append({
+                            "alert_id": alt_id,
+                            "prefix": norm_prefix,
+                            "kind": alt["kind"],
+                            "status": "RESOLVED",
+                            "recovery_status": "CONFIRMED",
+                            "withdrawn_peers": wdr_peers,
+                        })
+                    else:
+                        partial_note = (
+                            f"\n[PEER_WITHDRAWAL]: Route withdrawn by peer {peer_as} ({collector}). "
+                            f"However, anomalous propagation remains active from peer(s): {', '.join(act_peers)}. "
+                            f"Global recovery unconfirmed; alert remains active."
+                        )
+                        conn.execute(
+                            "UPDATE alerts SET status = 'ACTIVE', recovery_status = 'PARTIAL', "
+                            "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
+                            (json.dumps(act_peers), json.dumps(wdr_peers), partial_note, alt_id),
+                        )
+                        unresolved_alerts.append({
+                            "alert_id": alt_id,
+                            "prefix": norm_prefix,
+                            "kind": alt["kind"],
+                            "status": "ACTIVE",
+                            "recovery_status": "PARTIAL",
+                            "remaining_active_peers": act_peers,
+                        })
+                else:
+                    unresolved_alerts.append({
+                        "alert_id": alt_id,
+                        "prefix": norm_prefix,
+                        "kind": alt["kind"],
+                        "status": "ACTIVE",
+                        "recovery_status": "UNCONFIRMED",
+                        "remaining_active_peers": act_peers,
+                    })
+            else:
+                recovery_note = (
+                    f"\n[RECOVERY]: Route withdrawal observed from peer {peer_as or 'unknown'} ({collector}). "
+                    f"Anomalous propagation terminated; routing state restored to baseline."
+                )
+                conn.execute(
+                    "UPDATE alerts SET status = 'RESOLVED', recovery_status = 'CONFIRMED', "
+                    "explanation = explanation || ? WHERE id = ?;",
+                    (recovery_note, alt_id),
+                )
+                resolved_alerts.append({
+                    "alert_id": alt_id,
+                    "prefix": norm_prefix,
+                    "kind": alt["kind"],
+                    "status": "RESOLVED",
+                    "recovery_status": "CONFIRMED",
+                })
 
         # 3. If baseline was a candidate prefix, transition to WITHDRAWN
         base_row = conn.execute("SELECT status FROM baselines WHERE prefix = ?;", (norm_prefix,)).fetchone()
@@ -483,5 +566,7 @@ def process_withdrawal(
         "peer_as": peer_as,
         "resolved_alerts_count": len(resolved_alerts),
         "resolved_alerts": resolved_alerts,
+        "unresolved_alerts_count": len(unresolved_alerts),
+        "unresolved_alerts": unresolved_alerts,
     }
 

@@ -37,14 +37,18 @@ from horaq.database import db_session, init_db
 from horaq.detection import process_observation, process_withdrawal
 
 
+import ipaddress
+
+
 class NaiveReferenceDetector:
     """Naïve baseline detector as specified in Proposal Page 6.
     
     Characteristics:
-    - Immediate promotion to trusted reference on first observation (no stability or peer diversity threshold).
-    - No anti-poisoning: suspicious or conflicting announcements directly overwrite baselines.
-    - No multi-source uncertainty estimation (binary alert/pass).
-    - Unsigned records (no cryptographic integrity proof).
+    - Implements the same underlying detection rules (origin conflict & subprefix containment) as HORA-Q.
+    - Flaw 1: Immediate unverified promotion to trusted baseline on first observation without stability or peer diversity.
+    - Flaw 2: Baseline poisoning / contamination: conflicting announcements or rogue subprefixes overwrite baselines.
+    - Flaw 3: Binary alerts without multi-source uncertainty correlation, confidence levels, or explainability.
+    - Flaw 4: Unsigned plain records without cryptographic proof or canonical hashes.
     """
 
     def __init__(self) -> None:
@@ -55,23 +59,50 @@ class NaiveReferenceDetector:
         prefix_clean = prefix.strip()
         asn_clean = f"AS{origin_asn.upper().replace('AS', '')}"
         alerts = []
+        net = ipaddress.ip_network(prefix_clean, strict=False)
 
-        if prefix_clean not in self.baselines:
-            # Flaw 1: Immediate unverified promotion without peer diversity or corroboration
-            self.baselines[prefix_clean] = asn_clean
-        else:
+        # 1. Exact match origin comparison
+        if prefix_clean in self.baselines:
             current_origin = self.baselines[prefix_clean]
             if current_origin != asn_clean:
-                # Flaw 2: Flags alert, but immediately overwrites baseline (baseline poisoning!)
                 alerts.append({
                     "kind": "ORIGIN_CONFLICT",
                     "prefix": prefix_clean,
                     "observed_asn": asn_clean,
                     "baseline_asn": current_origin,
-                    "confidence": "UNKNOWN",  # No multi-source correlation
+                    "confidence": "UNKNOWN",  # Binary alert without uncertainty handling
                     "signed": False,
                 })
-                # Poisoning happens here:
+                # Flaw 2: Baseline poisoning - rogue origin immediately overwrites trusted baseline
+                self.baselines[prefix_clean] = asn_clean
+        else:
+            # 2. Subprefix containment against existing baselines
+            parent_match = None
+            for base_pfx, base_origin in list(self.baselines.items()):
+                base_net = ipaddress.ip_network(base_pfx, strict=False)
+                if net.version == base_net.version and net.subnet_of(base_net) and net != base_net:
+                    if parent_match is None or base_net.prefixlen > parent_match[0].prefixlen:
+                        parent_match = (base_net, base_pfx, base_origin)
+
+            if parent_match:
+                base_net, base_pfx, base_origin = parent_match
+                if base_origin != asn_clean:
+                    alerts.append({
+                        "kind": "SUBPREFIX_HIJACK",
+                        "prefix": prefix_clean,
+                        "observed_asn": asn_clean,
+                        "baseline_asn": base_origin,
+                        "parent_prefix": base_pfx,
+                        "confidence": "UNKNOWN",
+                        "signed": False,
+                    })
+                    # Flaw 2: Baseline poisoning - rogue subprefix immediately accepted into baselines
+                    self.baselines[prefix_clean] = asn_clean
+                else:
+                    # Legitimate traffic engineering subprefix with same origin
+                    self.baselines[prefix_clean] = asn_clean
+            else:
+                # Flaw 1: Immediate unverified promotion without peer diversity or candidate quarantine
                 self.baselines[prefix_clean] = asn_clean
 
         self.alerts.extend(alerts)
@@ -283,13 +314,14 @@ def run_head_to_head_benchmark() -> Dict[str, Any]:
         {"prefix": "104.244.42.0/24", "origin_asn": "13414", "label": "Twitter authorized prefix"},
         {"prefix": "8.8.8.0/24", "origin_asn": "15169", "label": "Google DNS authorized prefix"},
         {"prefix": "198.51.100.0/24", "origin_asn": "64496", "label": "Documentation network"},
+        {"prefix": "2001:db8::/32", "origin_asn": "64496", "label": "IPv6 Documentation network"},
     ]
 
     for b in initial_baselines:
         naive.baselines[b["prefix"]] = f"AS{b['origin_asn']}"
         enhanced.seed_baseline(b["prefix"], b["origin_asn"])
 
-    # Expanded 14-case benchmark stream: attacks, controls, single-peer flapping, and multi-peer corroboration
+    # Reconciled 14-case benchmark stream: attacks, controls, single-peer flapping, and multi-peer corroboration
     benchmark_stream = [
         # 1. YouTube / PTCL Subprefix Hijack (ATTACK)
         {
@@ -392,9 +424,21 @@ def run_head_to_head_benchmark() -> Dict[str, Any]:
             "collector": "rrc01",
             "scenario": "multi-peer-corroboration",
         },
-        # 10. Genuine Normal RIPE RIS Announcement 1 (CONTROL)
+        # 10. Subprefix Hijack on Newly Promoted Route (ATTACK)
+        # Tests that newly promoted candidate baseline is protected against rogue subprefix
         {
             "id": "TC-10",
+            "name": "Subprefix Hijack on Newly Promoted Route",
+            "prefix": "192.0.2.128/25",
+            "origin_asn": "64599",
+            "peer_as": "64599",
+            "is_attack": True,
+            "collector": "rrc00",
+            "scenario": "promoted-subprefix-attack",
+        },
+        # 11. Genuine Normal RIPE RIS Announcement 1 (CONTROL)
+        {
+            "id": "TC-11",
             "name": "Benign RIS Route Announcement (148.208.203.0/24)",
             "prefix": "148.208.203.0/24",
             "origin_asn": "8151",
@@ -403,9 +447,9 @@ def run_head_to_head_benchmark() -> Dict[str, Any]:
             "collector": "rrc00",
             "scenario": "benign-feed",
         },
-        # 11. Genuine Normal RIPE RIS Announcement 2 (CONTROL)
+        # 12. Genuine Normal RIPE RIS Announcement 2 (CONTROL)
         {
-            "id": "TC-11",
+            "id": "TC-12",
             "name": "Benign RIS Route Announcement (193.247.95.0/24)",
             "prefix": "193.247.95.0/24",
             "origin_asn": "31592",
@@ -414,9 +458,9 @@ def run_head_to_head_benchmark() -> Dict[str, Any]:
             "collector": "rrc00",
             "scenario": "benign-feed",
         },
-        # 12. Genuine Normal RIPE RIS Announcement 3 (CONTROL)
+        # 13. Genuine Normal RIPE RIS Announcement 3 (CONTROL)
         {
-            "id": "TC-12",
+            "id": "TC-13",
             "name": "Benign RIS Route Announcement (212.187.164.0/24)",
             "prefix": "212.187.164.0/24",
             "origin_asn": "3356",
@@ -424,6 +468,17 @@ def run_head_to_head_benchmark() -> Dict[str, Any]:
             "is_attack": False,
             "collector": "rrc00",
             "scenario": "benign-feed",
+        },
+        # 14. Legitimate IPv6 Same-Origin Route Announcement (CONTROL)
+        {
+            "id": "TC-14",
+            "name": "Legitimate IPv6 Same-Origin Update",
+            "prefix": "2001:db8::/32",
+            "origin_asn": "64496",
+            "peer_as": "64496",
+            "is_attack": False,
+            "collector": "rrc00",
+            "scenario": "ipv6-legitimate-control",
         },
     ]
 
@@ -482,6 +537,7 @@ def run_head_to_head_benchmark() -> Dict[str, Any]:
         ("104.244.42.0/24", "AS8342"),
         ("8.8.8.0/24", "AS99999"),
         ("208.65.153.0/24", "AS17557"),
+        ("192.0.2.128/25", "AS64599"),
     ]
 
     for pfx, rogue_asn in attack_prefixes:
@@ -536,8 +592,8 @@ def run_head_to_head_benchmark() -> Dict[str, Any]:
         "benchmark_classification": "Controlled Testbed Benchmark (Proposal Page 6 Model Comparison)",
         "timestamp_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "test_dataset_size": len(benchmark_stream),
-        "total_attacks_tested": 3,
-        "total_controls_tested": len(benchmark_stream) - 3,
+        "total_attacks_tested": 4,
+        "total_controls_tested": len(benchmark_stream) - 4,
         "naive_reference_detector": {
             "classification_metrics": calc_scores(naive_metrics),
             "baseline_contamination_rate_pct": naive_contamination_rate,
