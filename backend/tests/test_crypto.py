@@ -204,3 +204,81 @@ def test_independent_verifier_mldsa_alignment():
     assert is_valid_tampered is False
 
 
+def test_authority_key_path_absolute_and_stable():
+    """Verify that the authority key path is absolute and independent of the process working directory."""
+    import os
+    from horaq.crypto import AuthorityKeyManager, get_default_authority_key_path
+
+    path = get_default_authority_key_path()
+    assert os.path.isabs(path)
+    assert path.endswith("horaq_authority_key.json")
+
+    mgr1 = AuthorityKeyManager()
+    mgr2 = AuthorityKeyManager()
+    assert os.path.isabs(mgr1.key_path)
+    assert mgr1.key_path == mgr2.key_path
+
+    # Fingerprints match across separate manager instances
+    if is_mldsa_available():
+        assert mgr1.fingerprint == mgr2.fingerprint
+
+
+def test_authority_key_unwritable_storage_raises_runtime_error(tmp_path):
+    """Verify that key generation fails explicitly with RuntimeError if persistent storage cannot be written."""
+    if not is_mldsa_available():
+        pytest.skip("ML-DSA provider not available in environment")
+
+    from horaq.crypto import AuthorityKeyManager
+
+    # Create a regular file and use it as a directory component in key_path
+    blocking_file = tmp_path / "blocking_file.txt"
+    blocking_file.write_text("not a directory", encoding="utf-8")
+    unwritable_key_path = str(blocking_file / "unwritable_key.json")
+
+    mgr = AuthorityKeyManager(key_path=unwritable_key_path)
+
+    with pytest.raises(RuntimeError, match="Failed to persist authority key"):
+        mgr.initialize_or_load()
+
+    # In-memory keys must be reset to None on failure
+    assert mgr._public_key is None
+    assert mgr._secret_key is None
+
+
+
+def test_authority_key_persistence_across_manager_instances_and_restarts(tmp_path):
+    """Verify that authority key fingerprint and keys survive simulated application restarts."""
+    if not is_mldsa_available():
+        pytest.skip("ML-DSA provider not available in environment")
+
+    from horaq.crypto import AuthorityKeyManager, verify_signature
+
+    test_key_file = str(tmp_path / "restart_test_key.json")
+
+    # Instance 1: Generate key and sign payload
+    mgr1 = AuthorityKeyManager(key_path=test_key_file)
+    pk1, sk1 = mgr1.initialize_or_load()
+    fp1 = mgr1.fingerprint
+    pub_b64_1 = mgr1.public_key_b64
+
+    test_payload = b"Payload for persistence verification across restart"
+    from horaq.crypto import sign_data
+    sig_b64, _ = sign_data(test_payload, secret_key=sk1, public_key=pk1)
+
+    # Instance 2: Simulate application restart by creating fresh manager pointing to same file
+    mgr2 = AuthorityKeyManager(key_path=test_key_file)
+    pk2, sk2 = mgr2.initialize_or_load()
+    fp2 = mgr2.fingerprint
+    pub_b64_2 = mgr2.public_key_b64
+
+    # Both instances must yield exact identical keys and fingerprints
+    assert pk1 == pk2
+    assert sk1 == sk2
+    assert fp1 == fp2
+    assert pub_b64_1 == pub_b64_2
+
+    # Signature made by Instance 1 must verify against Instance 2's loaded public key
+    assert verify_signature(test_payload, sig_b64, pub_b64_2) is True
+
+
+

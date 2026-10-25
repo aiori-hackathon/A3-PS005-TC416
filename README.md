@@ -2,7 +2,7 @@
 
 [![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-indigo.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
 [![Track](https://img.shields.io/badge/AIORI--3-Track%202%20Cyber%20Security%20(PS--005)-cyan.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
-[![Tests](https://img.shields.io/badge/Tests-50%20Passed%20(100%25)-emerald.svg)](backend/tests)
+[![Tests](https://img.shields.io/badge/Tests-60%20Passed%20(100%25)-emerald.svg)](backend/tests)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 **AIORI-3 Hackathon · Problem PS-005 · Track 2 Cyber Security**  
@@ -16,12 +16,13 @@
 **HORA-Q** is an explainable BGP origin and subprefix anomaly monitoring architecture engineered for AIORI-3. It normalizes BGP route announcements, maintains immutable per-prefix baselines, detects origin-AS conflicts and strict more-specific subprefix announcements without baseline poisoning, binds forensic findings into tamper-evident canonical evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
 
 ### Verification Status & Scope:
-- **Unit & Integration Tests**: 50 of 50 backend tests passing (100% pass rate).
-- **Post-Quantum Digital Signatures**: Standardized NIST FIPS 204 ML-DSA-65 implemented via `dilithium-py.ml_dsa.ML_DSA_65` and `liboqs`.
+- **Unit & Integration Tests**: 60 of 60 backend tests passing (100% pass rate).
+- **Post-Quantum Digital Signatures**: Standardized NIST FIPS 204 ML-DSA-65 implemented via `dilithium-py.ml_dsa.ML_DSA_65` and `liboqs`, backed by persistent authority key management.
 - **Evidence Canonicalization**: Deterministic RFC 8785 JSON Canonicalization Scheme (JCS) backed by the standard `rfc8785` package.
-- **Independent Verification**: CLI verifier (`verify_evidence.py`) confirms both authentic signatures and tamper rejection (exit code 1).
+- **Independent Verification**: CLI verifier (`verify_evidence.py`) confirms authentic signatures (exit 0), detects tamper (exit 1), and rejects unsigned records as non-authentic (exit 2).
 - **Live Ingestion & Resolvers**: Opt-in RIPE RIS Live WebSocket collector and RIPEstat RPKI origin validation resolver implemented.
 - **Deployment Status**: Fully verifiable local prototype; public cloud deployment is planned for post-hackathon staging.
+
 
 
 ---
@@ -183,18 +184,26 @@ The system includes pre-configured reproducible synthetic evaluation scenarios p
 HORA-Q provides an independent command-line verifier (`verify_evidence.py`) enabling external evaluators to cryptographically inspect and verify evidence records outside the browser:
 
 ```bash
-# Verify authentic ML-DSA-65 signed evidence record:
+# 1. Verify authentic ML-DSA-65 signed evidence record (Exit code 0):
 python verify_evidence.py audit/sample_evidence_signed.json
 
-# Demonstrate tamper detection (mutates in-memory record to prove rejection):
+# 2. Demonstrate tamper detection on signed record (Exit code 1):
 python verify_evidence.py audit/sample_evidence_signed.json --tamper
+
+# 3. Verify that an unsigned record cannot receive an authentic verdict (Exit code 2):
+python verify_evidence.py audit/sample_evidence_unsigned.json
+
+# 4. Demonstrate tamper detection on unsigned record (Exit code 1):
+python verify_evidence.py audit/sample_evidence_unsigned.json --tamper
 ```
 
-**Verification Guarantees**:
+**Verification Guarantees & State Machine**:
 - **RFC 8785 Canonical JSON**: Independent key sorting and byte canonicalization.
 - **SHA-256 Digest Match**: Verifies byte-level integrity against the attested record hash.
 - **NIST FIPS 204 ML-DSA-65**: Mathematical verification of lattice-based post-quantum signatures using `dilithium-py` or `liboqs`.
-- **Tamper Rejection**: Any modification to prefix, origin ASN, timestamp, or severity immediately results in `[FAIL] TAMPER DETECTED` with exit code `1`.
+- **Authenticity Separation**: A self-contained digest without an authority signature does NOT establish authenticity (`[UNSIGNED]`, exit code 2). Only mathematically valid digital signatures produce `[AUTHENTIC]` (exit code 0).
+- **Tamper Rejection**: Any modification to prefix, origin ASN, timestamp, or severity immediately results in `[FAIL] TAMPER DETECTED` with exit code `1` (`[COMPROMISED]`).
+
 
 
 ---

@@ -26,25 +26,49 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
-      - name: Run Pytest Test Suite (50 Tests)
+      - name: Run Pytest Test Suite (60 Tests)
         working-directory: backend
         run: |
           pytest -v
-
 
       - name: Run Independent Evidence Verifier (Authentic Sample)
         run: |
           python verify_evidence.py audit/sample_evidence_signed.json
 
-      - name: Verify Tamper Detection (Tamper Rejection Test)
+      - name: Verify Tamper Detection on Signed Sample (Exit Code 1)
         run: |
           # The verifier MUST return exit code 1 when tamper is simulated
           if python verify_evidence.py audit/sample_evidence_signed.json --tamper; then
-            echo "ERROR: Verifier failed to detect tampering!"
+            echo "ERROR: Verifier failed to detect tampering on signed record!"
             exit 1
           else
-            echo "SUCCESS: Tamper detected as expected (exit code 1)."
+            echo "SUCCESS: Tamper detected as expected on signed record (exit code 1)."
           fi
+
+      - name: Verify Unsigned Evidence Rejection (Exit Code 2)
+        run: |
+          # Unsigned evidence must never receive an AUTHENTIC verdict (exit code 2)
+          EXIT_CODE=0
+          python verify_evidence.py audit/sample_evidence_unsigned.json || EXIT_CODE=$?
+          if [ $EXIT_CODE -ne 2 ]; then
+            echo "ERROR: Expected exit code 2 for unsigned record, got $EXIT_CODE"
+            exit 1
+          else
+            echo "SUCCESS: Unsigned record rejected as non-authentic (exit code 2)."
+          fi
+
+      - name: Verify Tamper Detection on Unsigned Sample (Exit Code 1)
+        run: |
+          # Tampered unsigned evidence must detect digest mismatch and return exit code 1
+          EXIT_CODE=0
+          python verify_evidence.py audit/sample_evidence_unsigned.json --tamper || EXIT_CODE=$?
+          if [ $EXIT_CODE -ne 1 ]; then
+            echo "ERROR: Expected exit code 1 for tampered unsigned record, got $EXIT_CODE"
+            exit 1
+          else
+            echo "SUCCESS: Tamper detected as expected on unsigned record (exit code 1)."
+          fi
+
 
   frontend-build:
     name: Frontend Typecheck & Production Build

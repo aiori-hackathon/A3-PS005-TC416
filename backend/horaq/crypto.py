@@ -76,19 +76,38 @@ import json
 import os
 
 
+DEFAULT_KEY_FILENAME = "horaq_authority_key.json"
+
+
+def get_default_authority_key_path() -> str:
+    """Return the absolute path to the persistent authority key file.
+
+    Independent of the process working directory:
+    - If HORAQ_SIGNING_KEY environment variable is set, returns its absolute path.
+    - Otherwise defaults to the absolute path in the repository root directory.
+    """
+    env_path = os.getenv("HORAQ_SIGNING_KEY")
+    if env_path:
+        return os.path.abspath(env_path)
+
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
+    return os.path.join(repo_root, DEFAULT_KEY_FILENAME)
+
+
 class AuthorityKeyManager:
     """Manages the persistent ML-DSA-65 authority signing keypair for HORA-Q.
 
     Ensures durable signer identity across application runs. Generates and stores
     the authority keypair on first initialization, then reliably reloads it.
     Rejects corrupted or invalid key files without silent regeneration.
+    Fails explicitly if persistent storage is unwritable.
     """
 
     def __init__(self, key_path: Optional[str] = None) -> None:
         if key_path is None:
-            self.key_path = os.getenv("HORAQ_SIGNING_KEY", "horaq_authority_key.json")
+            self.key_path = get_default_authority_key_path()
         else:
-            self.key_path = key_path
+            self.key_path = os.path.abspath(key_path)
         self._public_key: Optional[bytes] = None
         self._secret_key: Optional[bytes] = None
 
@@ -114,6 +133,8 @@ class AuthorityKeyManager:
                         )
                 return self._public_key, self._secret_key
             except Exception as err:
+                self._public_key = None
+                self._secret_key = None
                 raise RuntimeError(
                     f"Corrupted or invalid authority key file at '{self.key_path}': {err}. "
                     f"Automatic regeneration is strictly prohibited by security specification to prevent "
@@ -123,28 +144,39 @@ class AuthorityKeyManager:
 
         # Generate fresh persistent authority keypair
         pk, sk = generate_keypair()
-        self._public_key = pk
-        self._secret_key = sk
+
+        key_data = {
+            "algorithm": ALGORITHM_NAME,
+            "standard": STANDARD_NAME if ALGORITHM_NAME == "ML-DSA-65" else "Round 3 NIST Submission",
+            "mechanism": _MECHANISM_NAME,
+            "provider": _PROVIDER_NAME,
+            "public_key": base64.b64encode(pk).decode("ascii"),
+            "secret_key": base64.b64encode(sk).decode("ascii"),
+            "fingerprint": hashlib.sha256(pk).hexdigest(),
+        }
 
         try:
-            key_data = {
-                "algorithm": ALGORITHM_NAME,
-                "standard": STANDARD_NAME if ALGORITHM_NAME == "ML-DSA-65" else "Round 3 NIST Submission",
-                "mechanism": _MECHANISM_NAME,
-                "provider": _PROVIDER_NAME,
-                "public_key": base64.b64encode(pk).decode("ascii"),
-                "secret_key": base64.b64encode(sk).decode("ascii"),
-                "fingerprint": hashlib.sha256(pk).hexdigest(),
-            }
+            parent_dir = os.path.dirname(self.key_path)
+            if parent_dir and not os.path.exists(parent_dir):
+                os.makedirs(parent_dir, exist_ok=True)
+
             with open(self.key_path, "w", encoding="utf-8") as f:
                 json.dump(key_data, f, indent=2)
             try:
                 os.chmod(self.key_path, 0o600)
             except Exception:
                 pass
-        except Exception:
-            pass
+        except Exception as err:
+            self._public_key = None
+            self._secret_key = None
+            raise RuntimeError(
+                f"Failed to persist authority key to '{self.key_path}': {err}. "
+                f"Suppressing storage failures is prohibited by security policy. "
+                f"Authority keys must be persistently stored before signing operations can proceed."
+            ) from err
 
+        self._public_key = pk
+        self._secret_key = sk
         return self._public_key, self._secret_key
 
     @property
@@ -190,22 +222,47 @@ def get_authority_key_fingerprint() -> str:
 
 def get_crypto_status() -> Dict[str, Any]:
     """Report ML-DSA cryptographic provider and persistent key status transparently."""
-    fingerprint = get_authority_key_fingerprint() if _AVAILABLE else "none"
-    return {
-        "available": _AVAILABLE,
-        "algorithm": ALGORITHM_NAME,
-        "mechanism": _MECHANISM_NAME if _AVAILABLE else "none",
-        "provider": _PROVIDER_NAME if _AVAILABLE else "none",
-        "status": "READY" if _AVAILABLE else "PROVIDER_UNAVAILABLE",
-        "key_lifecycle": "PERSISTENT_AUTHORITY_KEY" if _AVAILABLE else "NONE",
-        "public_key_fingerprint": fingerprint,
-        "key_path": _authority_manager.key_path if _AVAILABLE else "none",
-        "message": (
-            f"ML-DSA-65 post-quantum signing active via {_PROVIDER_NAME} with persistent authority key ({fingerprint[:12]}...)."
-            if _AVAILABLE
-            else _ERROR_MESSAGE
-        ),
-    }
+    if not _AVAILABLE:
+        return {
+            "available": False,
+            "algorithm": ALGORITHM_NAME,
+            "mechanism": "none",
+            "provider": "none",
+            "status": "PROVIDER_UNAVAILABLE",
+            "key_lifecycle": "NONE",
+            "public_key_fingerprint": "none",
+            "key_path": "none",
+            "message": _ERROR_MESSAGE,
+        }
+
+    try:
+        fingerprint = _authority_manager.fingerprint
+        return {
+            "available": True,
+            "algorithm": ALGORITHM_NAME,
+            "mechanism": _MECHANISM_NAME,
+            "provider": _PROVIDER_NAME,
+            "status": "READY",
+            "key_lifecycle": "PERSISTENT_AUTHORITY_KEY",
+            "public_key_fingerprint": fingerprint,
+            "key_path": _authority_manager.key_path,
+            "message": (
+                f"ML-DSA-65 post-quantum signing active via {_PROVIDER_NAME} with persistent authority key ({fingerprint[:12]}...)."
+            ),
+        }
+    except Exception as err:
+        return {
+            "available": True,
+            "algorithm": ALGORITHM_NAME,
+            "mechanism": _MECHANISM_NAME,
+            "provider": _PROVIDER_NAME,
+            "status": "KEY_STORAGE_ERROR",
+            "key_lifecycle": "FAILED",
+            "public_key_fingerprint": "none",
+            "key_path": _authority_manager.key_path,
+            "message": f"Authority key storage error: {err}",
+        }
+
 
 
 def generate_keypair() -> Tuple[bytes, bytes]:

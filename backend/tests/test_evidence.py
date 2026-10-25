@@ -139,3 +139,176 @@ def test_backend_and_independent_verifier_byte_parity():
     assert backend_bytes == verifier_bytes
     assert compute_sha256(backend_bytes) == verify_evidence.compute_sha256(verifier_bytes)
 
+
+def test_unsigned_evidence_record_cannot_be_authentic(tmp_path):
+    """Verify that unsigned evidence files cannot receive an AUTHENTIC verdict, exiting with code 2."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    record = {"alert_id": "alert-unsigned-01", "prefix": "198.51.100.0/24", "observed_asn": "AS65530"}
+    canon = verify_evidence.canonicalize_json(record)
+    digest = verify_evidence.compute_sha256(canon)
+
+    evidence_file = str(tmp_path / "unsigned_evidence.json")
+    with open(evidence_file, "w", encoding="utf-8") as f:
+        json.dump({"record": record, "record_hash": digest}, f)
+
+    # By default, unsigned evidence record must return verdict UNSIGNED and exit code 2
+    res = verify_evidence.verify_evidence_file(evidence_file)
+    assert res.verdict == "UNSIGNED"
+    assert res.exit_code == 2
+    assert bool(res) is False  # Cannot establish authenticity
+
+    # Only when explicitly allowed with allow_unsigned=True does exit code become 0
+    res_allowed = verify_evidence.verify_evidence_file(evidence_file, allow_unsigned=True)
+    assert res_allowed.verdict == "UNSIGNED"
+    assert res_allowed.exit_code == 0
+
+
+def test_tampered_unsigned_evidence_record_rejected(tmp_path):
+    """Verify that tampered unsigned records are rejected as COMPROMISED with exit code 1."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    record = {"alert_id": "alert-unsigned-02", "prefix": "198.51.100.0/24", "observed_asn": "AS65530"}
+    canon = verify_evidence.canonicalize_json(record)
+    digest = verify_evidence.compute_sha256(canon)
+
+    evidence_file = str(tmp_path / "unsigned_tamper_test.json")
+    with open(evidence_file, "w", encoding="utf-8") as f:
+        json.dump({"record": record, "record_hash": digest}, f)
+
+    # Simulating tamper must detect hash mismatch and yield COMPROMISED (exit code 1)
+    res = verify_evidence.verify_evidence_file(evidence_file, simulate_tamper=True)
+    assert res.verdict == "COMPROMISED"
+    assert res.exit_code == 1
+
+
+def test_missing_expected_hash_and_signature_incomplete(tmp_path):
+    """Verify that an unsigned record with no comparison hash yields INCOMPLETE (exit code 1)."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    record = {"alert_id": "alert-incomplete-01", "prefix": "203.0.113.0/24"}
+    evidence_file = str(tmp_path / "incomplete_evidence.json")
+    with open(evidence_file, "w", encoding="utf-8") as f:
+        json.dump({"record": record}, f)
+
+    res = verify_evidence.verify_evidence_file(evidence_file)
+    assert res.verdict == "INCOMPLETE"
+    assert res.exit_code == 1
+
+
+def test_signed_evidence_missing_public_key_or_algorithm(tmp_path):
+    """Verify that signed records missing a public key or algorithm metadata yield INCOMPLETE."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    record = {"alert_id": "alert-sig-incomplete", "prefix": "203.0.113.0/24"}
+    canon = verify_evidence.canonicalize_json(record)
+    digest = verify_evidence.compute_sha256(canon)
+
+    # Missing public key
+    f1 = str(tmp_path / "missing_pk.json")
+    with open(f1, "w", encoding="utf-8") as f:
+        json.dump({"record": record, "record_hash": digest, "signature": "AAAA", "algorithm": "ML-DSA-65"}, f)
+    res1 = verify_evidence.verify_evidence_file(f1)
+    assert res1.verdict == "INCOMPLETE"
+    assert res1.exit_code == 1
+
+    # Missing algorithm metadata
+    f2 = str(tmp_path / "missing_algo.json")
+    with open(f2, "w", encoding="utf-8") as f:
+        json.dump({"record": record, "record_hash": digest, "signature": "AAAA", "public_key": "BBBB"}, f)
+    res2 = verify_evidence.verify_evidence_file(f2)
+    assert res2.verdict == "INCOMPLETE"
+    assert res2.exit_code == 1
+
+
+def test_signed_evidence_unsupported_algorithm(tmp_path):
+    """Verify that signed records with unsupported algorithm yield UNSUPPORTED (exit code 1)."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    record = {"alert_id": "alert-unsupported-algo", "prefix": "203.0.113.0/24"}
+    canon = verify_evidence.canonicalize_json(record)
+    digest = verify_evidence.compute_sha256(canon)
+
+    test_file_path = str(tmp_path / "unsupported_algo.json")
+    with open(test_file_path, "w", encoding="utf-8") as fh:
+        json.dump({
+            "record": record,
+            "record_hash": digest,
+            "signature": "AAAA",
+            "public_key": "BBBB",
+            "algorithm": "RSA-4096-INCOMPATIBLE"
+        }, fh)
+    res = verify_evidence.verify_evidence_file(test_file_path)
+    assert res.verdict == "UNSUPPORTED"
+    assert res.exit_code == 1
+
+
+
+def test_authentic_sample_evidence_file_verified():
+    """Verify that audit/sample_evidence_signed.json yields AUTHENTIC (exit code 0)."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    sample_path = os.path.join(repo_root, "audit", "sample_evidence_signed.json")
+    assert os.path.exists(sample_path)
+
+    res = verify_evidence.verify_evidence_file(sample_path)
+    assert res.verdict == "AUTHENTIC"
+    assert res.exit_code == 0
+    assert bool(res) is True
+
+
+def test_tampered_sample_evidence_file_rejected():
+    """Verify that audit/sample_evidence_signed.json with --tamper yields COMPROMISED (exit code 1)."""
+    import sys
+    import os
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
+    import verify_evidence
+
+    sample_path = os.path.join(repo_root, "audit", "sample_evidence_signed.json")
+    assert os.path.exists(sample_path)
+
+    res = verify_evidence.verify_evidence_file(sample_path, simulate_tamper=True)
+    assert res.verdict == "COMPROMISED"
+    assert res.exit_code == 1
+    assert bool(res) is False
+
+
