@@ -83,17 +83,41 @@ export const OverviewView: React.FC = () => {
         {/* Single Data Source Indicator */}
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-bg-interactive border border-divider text-xs text-text-sub">
-            <span className="w-2 h-2 rounded-full bg-status-green" />
+            <span className={`w-2 h-2 rounded-full ${isCollectorConnected ? "bg-status-green" : "bg-brand-blue"}`} />
             <span className="font-medium text-text-main">
-              {overview?.data_mode === "LIVE_TELEMETRY" ? "RIPE RIS Live Stream" : "Evaluation Benchmark Mode"}
+              {overview?.evaluation_mode === "LIVE_TELEMETRY" ? "RIPE RIS Live Stream" : "Synthetic Evaluation Mode"}
             </span>
             <span className="text-text-dim">•</span>
             <span className="text-text-dim">
-              {overview?.data_mode === "LIVE_TELEMETRY" ? "Active Ingestion" : "RIPE RIS Telemetry & Replay"}
+              {isCollectorConnected ? "Active Ingestion" : "Evaluation Scenarios"}
             </span>
           </div>
         </div>
       </div>
+
+      {/* Synthetic Evaluation & Demo Protection Banner */}
+      <div className="p-3.5 rounded-lg border border-brand-blue/30 bg-brand-blue/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-status-green animate-pulse" />
+          <span className="font-semibold text-text-main">
+            {overview?.evaluation_mode === "LIVE_TELEMETRY"
+              ? "Live RIPE RIS Telemetry Ingestion Active"
+              : "AIORI-3 Evaluation Benchmark: Synthetic Anomaly Scenarios & FIPS 204 Evidence"}
+          </span>
+          <span className="text-text-dim">•</span>
+          <span className="text-text-sub">
+            {isCollectorConnected
+              ? "Connected to RIS Live WebSocket (rrc00, rrc01, rrc03)"
+              : "Live WebSocket collection is opt-in (HORAQ_LIVE_COLLECTOR=false for reproducible judging)"}
+          </span>
+        </div>
+        {overview?.demo_mode && (
+          <span className="self-start sm:self-auto px-2.5 py-0.5 rounded bg-brand-blue/10 text-brand-blue font-semibold border border-brand-blue/20">
+            Public Demo Protection Active
+          </span>
+        )}
+      </div>
+
 
       {/* 2. Operational Condition Callout */}
       {topIncident ? (

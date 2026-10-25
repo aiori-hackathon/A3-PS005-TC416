@@ -33,6 +33,14 @@ async def lifespan(app: FastAPI):
     logger.info(f"Initializing HORA-Q database at: {settings.database_path}")
     init_db(settings.database_path)
 
+    # In public demo mode, auto-seed clean initial demonstration baselines if empty
+    if settings.demo_mode:
+        from horaq.database import get_overview_counts, seed_demonstration_baseline
+        counts = get_overview_counts(settings.database_path)
+        if counts["tracked_routes"] == 0:
+            logger.info("Public Demo Mode: Seeding initial demonstration baseline routes...")
+            seed_demonstration_baseline(settings.database_path)
+
     # Optional background collector
     if settings.live_collector_enabled:
         logger.info("HORAQ_LIVE_COLLECTOR is enabled. Starting RIS Live collector task...")
@@ -58,11 +66,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
+# Configure CORS (disallow credentials with wildcard to satisfy standard browsers)
+is_wildcard = "*" in settings.cors_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_credentials=True,
+    allow_credentials=not is_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -75,7 +84,11 @@ async def root_health():
         "service": "horaq-backend",
         "team": "A3-PS005-TC416",
         "version": "1.0.0",
+        "demo_mode": settings.demo_mode,
+        "evaluation_mode": "LIVE_TELEMETRY" if settings.live_collector_enabled else "SYNTHETIC_EVALUATION",
+        "collector_enabled": settings.live_collector_enabled,
     }
+
 
 
 # Include API v1 routes

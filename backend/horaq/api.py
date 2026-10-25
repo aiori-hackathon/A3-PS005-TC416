@@ -8,7 +8,7 @@ Adheres strictly to Document 08:
 """
 
 from typing import Any, Dict, List, Optional
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
 from horaq.config import settings
@@ -32,12 +32,14 @@ from horaq.database import (
     list_evidence,
     list_routes,
     reset_database,
+    seed_demonstration_baseline,
     update_alert_status,
     update_evidence_signature,
 )
 from horaq.detection import process_observation
 from horaq.evidence import canonicalize_json, verify_evidence_hash
 from horaq.rpki import check_rpki_origin_validation
+
 
 
 router = APIRouter(prefix="/api/v1")
@@ -83,6 +85,9 @@ async def get_health() -> Dict[str, Any]:
         "service": "horaq-backend",
         "team": "A3-PS005-TC416",
         "version": "1.0.0",
+        "demo_mode": settings.demo_mode,
+        "evaluation_mode": "LIVE_TELEMETRY" if settings.live_collector_enabled else "SYNTHETIC_EVALUATION",
+        "collector_enabled": settings.live_collector_enabled,
     }
 
 
@@ -98,7 +103,10 @@ async def get_overview() -> Dict[str, Any]:
         "crypto_status": crypto_st,
         "collector_status": collector_st,
         "database": settings.database_path,
+        "demo_mode": settings.demo_mode,
+        "evaluation_mode": "LIVE_TELEMETRY" if settings.live_collector_enabled else "SYNTHETIC_EVALUATION",
     }
+
 
 
 @router.get("/collector/status")
@@ -185,8 +193,22 @@ async def patch_alert_status(alert_id: str, payload: AlertStatusUpdate) -> Dict[
 
 
 @router.post("/observations", status_code=status.HTTP_201_CREATED)
-async def post_observation(obs: ObservationRequest) -> Dict[str, Any]:
+async def post_observation(
+    obs: ObservationRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+) -> Dict[str, Any]:
     """Ingest a BGP route observation and execute the detection pipeline."""
+    if settings.demo_mode:
+        token = x_admin_token or (authorization.replace("Bearer ", "") if authorization else "")
+        if not settings.admin_token or token != settings.admin_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    "Arbitrary route observation submission is restricted in Public Evaluator Demo Mode. "
+                    "Evaluators can safely trigger the predefined synthetic test scenarios via the Scenarios view or API."
+                ),
+            )
     try:
         res = process_observation(
             db_path=settings.database_path,
@@ -203,6 +225,7 @@ async def post_observation(obs: ObservationRequest) -> Dict[str, Any]:
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(err),
         )
+
 
 
 @router.get("/evidence")
@@ -364,19 +387,48 @@ async def get_rpki_validation(
 # -----------------------------------------------------------------------------
 
 @router.post("/scenarios/{scenario_name}")
-async def run_scenario_endpoint(scenario_name: str) -> Dict[str, Any]:
+async def run_scenario_endpoint(
+    scenario_name: str,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+) -> Dict[str, Any]:
     """Execute reproducible synthetic test scenarios per Document 21."""
     s_name = scenario_name.strip().lower().replace("_", "-")
 
     if s_name in ("reset", "clear"):
-        reset_database(settings.database_path)
-        return {
-            "scenario": "reset",
-            "message": "Database cleared. Ready for fresh test run.",
-            "success": True,
-            "alerts_generated": 0,
-            "expected_alerts": 0,
-        }
+        if settings.demo_mode:
+            token = x_admin_token or (authorization.replace("Bearer ", "") if authorization else "")
+            if settings.admin_token and token == settings.admin_token:
+                reset_database(settings.database_path)
+                msg = "Database fully purged by authorized administrator."
+            else:
+                # Safe demonstration reset: clear scenario alerts and observations while re-seeding baseline
+                with db_session(settings.database_path) as conn:
+                    with conn:
+                        conn.execute("DELETE FROM alerts;")
+                        conn.execute("DELETE FROM evidence;")
+                        conn.execute("DELETE FROM observations WHERE scenario IS NOT NULL;")
+                seed_demonstration_baseline(settings.database_path)
+                msg = "Demonstration state safely reset to prepared baseline. Destructive total database wipe is restricted in Public Evaluation Demo Mode."
+            return {
+                "scenario": "reset",
+                "message": msg,
+                "success": True,
+                "alerts_generated": 0,
+                "expected_alerts": 0,
+                "demo_mode": settings.demo_mode,
+            }
+        else:
+            reset_database(settings.database_path)
+            return {
+                "scenario": "reset",
+                "message": "Database cleared. Ready for fresh test run.",
+                "success": True,
+                "alerts_generated": 0,
+                "expected_alerts": 0,
+                "demo_mode": False,
+            }
+
 
     if s_name in ("baseline", "scenario-1-baseline", "1-baseline"):
         # Seeding baseline scenario: 192.0.2.0/24 with AS64496

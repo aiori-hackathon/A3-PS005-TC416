@@ -19,7 +19,21 @@ export interface OverviewStats {
   database: string;
   data_mode?: string;
   mode_label?: string;
+  demo_mode?: boolean;
+  evaluation_mode?: string;
+  collector_status?: {
+    enabled: boolean;
+    running: boolean;
+    connected: boolean;
+    url?: string;
+    messages_received?: number;
+    messages_parsed?: number;
+    messages_skipped?: number;
+    last_message_at?: string | null;
+    last_error?: string | null;
+  };
 }
+
 
 export interface RouteBaseline {
   prefix: string;

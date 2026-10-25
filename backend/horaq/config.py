@@ -22,6 +22,9 @@ class Settings:
         except ValueError:
             self.rpki_timeout = 5.0
 
+        self.demo_mode: bool = os.getenv("HORAQ_DEMO_MODE", "false").lower() in ("true", "1", "yes")
+        self.admin_token: str = os.getenv("HORAQ_ADMIN_TOKEN", "")
+
         cors_env = os.getenv("HORAQ_CORS_ORIGINS", "")
         if cors_env.strip():
             self.cors_origins: List[str] = [orig.strip() for orig in cors_env.split(",") if orig.strip()]
@@ -40,8 +43,10 @@ class Settings:
             "live_collector_enabled": self.live_collector_enabled,
             "ris_url": self.ris_url,
             "rpki_timeout": self.rpki_timeout,
+            "demo_mode": self.demo_mode,
             "cors_origins": self.cors_origins,
         }
+
 
 
 settings = Settings()

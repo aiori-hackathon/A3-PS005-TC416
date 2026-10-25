@@ -8,6 +8,7 @@ Adheres to Document 09:
 """
 
 import json
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -17,6 +18,9 @@ from typing import Any, Dict, Generator, List, Optional, Tuple
 @contextmanager
 def db_session(db_path: str) -> Generator[sqlite3.Connection, None, None]:
     """Context manager that opens a connection, manages transaction, and closes it."""
+    parent_dir = os.path.dirname(os.path.abspath(db_path))
+    if parent_dir and not os.path.exists(parent_dir):
+        os.makedirs(parent_dir, exist_ok=True)
     conn = sqlite3.connect(db_path, timeout=10.0)
     conn.row_factory = sqlite3.Row
     try:
@@ -31,6 +35,9 @@ def db_session(db_path: str) -> Generator[sqlite3.Connection, None, None]:
 
 def get_db_connection(db_path: str) -> sqlite3.Connection:
     """Open a SQLite connection configured with row factory and pragmas."""
+    parent_dir = os.path.dirname(os.path.abspath(db_path))
+    if parent_dir and not os.path.exists(parent_dir):
+        os.makedirs(parent_dir, exist_ok=True)
     conn = sqlite3.connect(db_path, timeout=10.0)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")
@@ -41,10 +48,14 @@ def get_db_connection(db_path: str) -> sqlite3.Connection:
 
 def init_db(db_path: str) -> None:
     """Initialize database tables and indexes if they do not exist."""
+    parent_dir = os.path.dirname(os.path.abspath(db_path))
+    if parent_dir and not os.path.exists(parent_dir):
+        os.makedirs(parent_dir, exist_ok=True)
     with db_session(db_path) as conn:
         with conn:
             conn.executescript("""
             CREATE TABLE IF NOT EXISTS observations (
+
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 prefix TEXT NOT NULL,
                 origin_asn TEXT NOT NULL,
@@ -330,3 +341,29 @@ def update_evidence_signature(
                 (algorithm, signature, public_key, signer_status, evidence_id),
             )
             return res.rowcount > 0
+
+
+def seed_demonstration_baseline(db_path: str) -> None:
+    """Seed clean reference baseline routes for the demonstration suite."""
+    now_iso = datetime.now(timezone.utc).isoformat()
+    baselines_to_seed = [
+        ("192.0.2.0/24", "AS64496", 10),
+        ("198.51.100.0/24", "AS64497", 5),
+        ("203.0.113.0/24", "AS64500", 8),
+        ("2001:db8::/32", "AS64500", 12),
+    ]
+    with db_session(db_path) as conn:
+        with conn:
+            for prefix, asn, count in baselines_to_seed:
+                conn.execute(
+                    """
+                    INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(prefix) DO UPDATE SET
+                        origin_asn = excluded.origin_asn,
+                        last_seen = excluded.last_seen,
+                        updated_at = excluded.updated_at;
+                    """,
+                    (prefix, asn, now_iso, now_iso, count, now_iso),
+                )
+

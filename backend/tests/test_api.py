@@ -147,3 +147,42 @@ def test_collector_status_endpoint(client):
     assert "messages_received" in data
 
 
+def test_demo_mode_restricts_arbitrary_observation_submission(client, monkeypatch):
+    """Verify that when demo_mode is enabled, arbitrary observation submission is restricted."""
+    from horaq.config import settings
+
+    monkeypatch.setattr(settings, "demo_mode", True)
+    monkeypatch.setattr(settings, "admin_token", "test-admin-secret")
+
+    payload = {"prefix": "192.0.2.0/24", "origin_asn": 64496}
+
+    # 1. Submission without token is rejected with 403 Forbidden
+    resp = client.post("/api/v1/observations", json=payload)
+    assert resp.status_code == 403
+    assert "restricted in Public Evaluator Demo Mode" in resp.json()["detail"]
+
+    # 2. Submission with valid X-Admin-Token header succeeds
+    resp_authed = client.post("/api/v1/observations", json=payload, headers={"X-Admin-Token": "test-admin-secret"})
+    assert resp_authed.status_code == 201
+
+
+def test_demo_mode_safe_reset_protects_database(client, monkeypatch):
+    """Verify that in demo mode, reset safely preserves and seeds baseline routes rather than wiping clean."""
+    from horaq.config import settings
+
+    monkeypatch.setattr(settings, "demo_mode", True)
+
+    resp = client.post("/api/v1/scenarios/reset")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["scenario"] == "reset"
+    assert data["success"] is True
+    assert "safely reset to prepared baseline" in data["message"]
+
+    # Verify routes exist after safe demo reset
+    routes_resp = client.get("/api/v1/routes")
+    assert routes_resp.status_code == 200
+    assert routes_resp.json()["total"] >= 1
+
+
+
