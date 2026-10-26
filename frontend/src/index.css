@@ -2,10 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* HORA-Q "Aurora Obsidian" Design System (Google Material 3 Expressive × Apple Refined Depth) */
+/* HORA-Q High-Clarity Operations Design System */
 
 :root {
-  /* Google Cloud Console Light Theme (Primary Default) */
+  /* Daylight Theme (Primary Default) */
   --bg-app: #f8f9fa;
   --bg-header: #ffffff;
   --bg-sidebar: #ffffff;
@@ -49,7 +49,7 @@
 }
 
 html.dark {
-  /* Google Cloud Console Dark Mode */
+  /* High-Contrast Dark Mode */
   --bg-app: #18191c;
   --bg-header: #202124;
   --bg-sidebar: #202124;
@@ -114,7 +114,7 @@ html.dark {
   ::-webkit-scrollbar-thumb:hover { background: rgba(128, 134, 139, 0.5); }
 }
 
-/* Google Cloud Console Surfaces */
+/* Surface & Card Tokens */
 .card-panel {
   background-color: var(--bg-card);
   border: 1px solid var(--border-card);

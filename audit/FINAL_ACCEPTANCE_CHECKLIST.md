@@ -174,7 +174,7 @@
 
 ### Category G: Frontend & User Experience Design
 
-- [x] **G.1 Google Cloud Console Aesthetic**:
+- [x] **G.1 Operator-Grade Design System**:
   - *Criteria*: Daylight palette (`#F8F9FA` canvas, `#FFFFFF` surfaces, `#1A73E8` blue) with dark mode toggle, Inter typography, 1360px full desktop layout.
   - *Evidence*: `frontend/src/index.css`, verified in 10 full-desktop 16:9 screenshots.
   - *Status*: **VERIFIED**

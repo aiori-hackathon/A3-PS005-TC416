@@ -33,7 +33,7 @@ export const SettingsView: React.FC = () => {
     {
       id: "light",
       label: "Light Theme",
-      desc: "Google Cloud Console daylight palette",
+      desc: "Clean daylight operations palette",
       icon: Sun,
     },
     {

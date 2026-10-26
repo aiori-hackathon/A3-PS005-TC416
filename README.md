@@ -2,7 +2,7 @@
 
 [![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-indigo.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
 [![Track](https://img.shields.io/badge/AIORI--3-Track%202%20Cyber%20Security%20(PS--005)-cyan.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
-[![Tests](https://img.shields.io/badge/Tests-62%20Passed%20(100%25)-emerald.svg)](backend/tests)
+[![Tests](https://img.shields.io/badge/Tests-81%20Passed%20(100%25)-emerald.svg)](backend/tests)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Deployment](https://img.shields.io/badge/Deployment-Cloudflare%20Pages%20%2B%20Railway-blueviolet.svg)](DEPLOYMENT.md)
 
@@ -17,7 +17,7 @@
 **HORA-Q** is an explainable BGP origin and subprefix anomaly monitoring architecture engineered for AIORI-3. It normalizes BGP route announcements, maintains immutable per-prefix baselines, detects origin-AS conflicts and strict more-specific subprefix announcements without baseline poisoning, binds forensic findings into tamper-evident canonical evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
 
 ### Verification Status & Scope:
-- **Unit & Integration Tests**: 62 of 62 backend tests passing (100% pass rate).
+- **Unit & Integration Tests**: 81 of 81 backend tests passing (100% pass rate).
 - **Post-Quantum Digital Signatures**: Standardized NIST FIPS 204 ML-DSA-65 implemented via `dilithium-py.ml_dsa.ML_DSA_65` and `liboqs`, backed by persistent authority key management.
 - **Evidence Canonicalization**: Deterministic RFC 8785 JSON Canonicalization Scheme (JCS) backed by the standard `rfc8785` package.
 - **Independent Verification**: CLI verifier (`verify_evidence.py`) confirms authentic signatures (exit 0), detects tamper (exit 1), and rejects unsigned records as non-authentic (exit 2).
@@ -50,9 +50,9 @@
 4. **RPKI Context & RIPEstat Integration**:
    - Evaluates cryptographic Route Origin Authorizations (ROAs) with transparent `VALID`, `INVALID`, `UNKNOWN`, and `UNAVAILABLE` statuses.
 
-5. **Google Cloud Console × Apple Craftsmanship Operations Center**:
-   - Light-first daylight palette (`#F8F9FA` canvas, `#FFFFFF` surfaces, `#1A73E8` blue) with dark mode toggle.
-   - Full 1360px desktop workspace scale with structured tabular ledgers instead of nested cards.
+5. **Operator-Grade Web Operations Console**:
+   - Clean daylight palette with high-contrast dark mode toggle (`#F8F9FA` canvas, `#FFFFFF` surfaces, `#1A73E8` brand blue).
+   - Full 1360px desktop workspace scale with structured tabular ledgers instead of nested cards for rapid forensic triage.
 
 
 ---
@@ -83,14 +83,17 @@ d:\HORA-Q/
 │   │   ├── detection.py               # Detection pipeline & baseline manager
 │   │   ├── api.py                     # REST API router (/api/v1)
 │   │   └── main.py                    # Application entrypoint & CORS
-│   └── tests/                         # Pytest test suite (36 automated tests)
-│       ├── test_normalization.py
-│       ├── test_evidence.py
+│   └── tests/                         # Pytest test suite (81 automated tests)
+│       ├── test_api.py
+│       ├── test_benchmark.py
+│       ├── test_collector.py
 │       ├── test_crypto.py
 │       ├── test_detection.py
-│       ├── test_rpki.py
-│       └── test_api.py
-├── frontend/                          # React + TypeScript + Vite Dashboard (inficy-gateway feel)
+│       ├── test_evidence.py
+│       ├── test_historical_replay.py
+│       ├── test_normalization.py
+│       └── test_rpki.py
+├── frontend/                          # React + TypeScript + Vite Operations Console
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── vite.config.ts
