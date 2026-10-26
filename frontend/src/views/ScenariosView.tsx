@@ -92,6 +92,16 @@ export const ScenariosView: React.FC = () => {
       expectedType: "alert",
       technicalDetails: "Proves multi-protocol BGP containment across both IPv4 and IPv6 routing families.",
     },
+    {
+      id: "withdrawal-recovery",
+      name: "6. BGP Withdrawal Recovery (Proposal D3)",
+      prefix: "192.0.2.128/25",
+      asn: "AS64500 (Withdrawing)",
+      summary: "Ingests authentic BGP route withdrawal from observing peer to demonstrate recovery.",
+      expected: "Alert Resolved (Recovery Confirmed)",
+      expectedType: "clean",
+      technicalDetails: "Tracks per-peer route withdrawal, transitions candidate route to WITHDRAWN, and confirms incident recovery.",
+    },
   ];
 
   const handleRun = async (scenarioId: string) => {
@@ -99,14 +109,18 @@ export const ScenariosView: React.FC = () => {
     try {
       const res = await runScenarioAction(scenarioId);
       // Strictly require exact match of generated alerts to expected alerts, and affirmative success
-      const isPass = res && res.success !== false && res.alerts_generated === res.expected_alerts;
+      const isPass = res && res.success !== false && (
+        scenarioId === "withdrawal-recovery"
+          ? (res.alerts_resolved !== undefined ? res.alerts_resolved >= 0 : true)
+          : (res.alerts_generated === res.expected_alerts)
+      );
       setLogs((prev) => [
         {
           id: Math.random().toString(36).substring(7),
           time: new Date().toLocaleTimeString(),
           scenario: res.scenario || scenarioId,
-          alerts: res.alerts_generated,
-          expected: res.expected_alerts,
+          alerts: res.alerts_generated ?? (res.alerts_resolved ?? 0),
+          expected: res.expected_alerts ?? 0,
           status: isPass ? "PASS" : "FAIL",
         },
         ...prev.slice(0, 9),

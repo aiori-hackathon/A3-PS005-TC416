@@ -44,6 +44,13 @@ interface HoraqState {
   updateAlertStatus: (alertId: string, status: "ACTIVE" | "ACKNOWLEDGED" | "RESOLVED") => Promise<void>;
   dismissAllAlerts: () => Promise<void>;
   runScenarioAction: (name: string) => Promise<any>;
+  submitWithdrawalAction: (data: {
+    prefix: string;
+    peer_as?: string | number;
+    peer_ip?: string;
+    collector?: string;
+    scenario?: string;
+  }) => Promise<any>;
   resetDatabaseAction: () => Promise<void>;
   seedDemoDataAction: () => Promise<void>;
 }
@@ -206,6 +213,29 @@ export const useHoraqStore = create<HoraqState>((set, get) => ({
       return res;
     } catch (err: any) {
       get().showNotification(`Scenario execution failed: ${err.message}`, "error");
+      throw err;
+    }
+  },
+
+  submitWithdrawalAction: async (data) => {
+    try {
+      const res = await api.submitWithdrawal(data);
+      const resolvedCount = res.resolved_alerts?.length || 0;
+      if (resolvedCount > 0) {
+        get().showNotification(
+          `BGP withdrawal confirmed: ${resolvedCount} incident(s) resolved for ${data.prefix}`,
+          "success"
+        );
+      } else {
+        get().showNotification(
+          `Withdrawal processed for ${data.prefix}: route updated to WITHDRAWN`,
+          "info"
+        );
+      }
+      await get().fetchAllData();
+      return res;
+    } catch (err: any) {
+      get().showNotification(err.message || "Failed to process route withdrawal", "error");
       throw err;
     }
   },

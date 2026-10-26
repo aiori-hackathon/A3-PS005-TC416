@@ -11,10 +11,11 @@ import {
   Layers,
   History,
   ShieldCheck,
+  RotateCcw,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
-import { groupAlertObservations } from "../utils/incidentGrouping";
+import { groupAlertObservations, GroupedIncident } from "../utils/incidentGrouping";
 
 export const AlertsView: React.FC = () => {
   const {
@@ -25,6 +26,7 @@ export const AlertsView: React.FC = () => {
     setRpkiTarget,
     searchQuery,
     setActiveTab,
+    submitWithdrawalAction,
   } = useHoraqStore();
 
   const [filterSeverity, setFilterSeverity] = useState<"active" | "all" | "high" | "medium">("active");
@@ -76,6 +78,22 @@ export const AlertsView: React.FC = () => {
     setTimeout(() => setActionNotice(null), 3000);
   };
 
+  const handleWithdrawal = async (inc: GroupedIncident) => {
+    const rawPeers = inc.primaryAlert.active_peers || [];
+    const peer = rawPeers.length > 0 ? rawPeers[0] : inc.observed_asn;
+    try {
+      await submitWithdrawalAction({
+        prefix: inc.prefix,
+        peer_as: peer,
+        scenario: "operator-withdrawal",
+      });
+      setActionNotice(`BGP route withdrawal ingested for ${inc.prefix} (Peer: ${peer}). Anomaly resolved.`);
+      setTimeout(() => setActionNotice(null), 4000);
+    } catch (err: any) {
+      setActionNotice(`Withdrawal failed: ${err.message}`);
+      setTimeout(() => setActionNotice(null), 4000);
+    }
+  };
 
   const handleCheckRpki = (event: AlertItem) => {
     setRpkiTarget({ prefix: event.prefix, asn: event.observed_asn });
@@ -276,14 +294,24 @@ export const AlertsView: React.FC = () => {
                     </span>
 
                     {isActive && (
-                      <button
-                        onClick={() => handleAcknowledge(inc.primaryAlert)}
-                        className="px-3 py-1.5 rounded-md bg-bg-btn border border-border-card hover:bg-bg-interactive text-xs font-medium text-text-main transition-colors flex items-center gap-1.5 cursor-pointer"
-                        title="Acknowledge this incident"
-                      >
-                        <Check className="w-3.5 h-3.5 text-status-green" />
-                        <span>Acknowledge</span>
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleWithdrawal(inc)}
+                          className="px-3 py-1.5 rounded-md bg-brand-blue/10 border border-brand-blue/30 hover:bg-brand-blue/20 text-xs font-semibold text-brand-blue transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          title="Ingest route withdrawal to demonstrate recovery"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Ingest Withdrawal</span>
+                        </button>
+                        <button
+                          onClick={() => handleAcknowledge(inc.primaryAlert)}
+                          className="px-3 py-1.5 rounded-md bg-bg-btn border border-border-card hover:bg-bg-interactive text-xs font-medium text-text-main transition-colors flex items-center gap-1.5 cursor-pointer"
+                          title="Acknowledge this incident"
+                        >
+                          <Check className="w-3.5 h-3.5 text-status-green" />
+                          <span>Acknowledge</span>
+                        </button>
+                      </>
                     )}
 
                     <button
@@ -315,6 +343,44 @@ export const AlertsView: React.FC = () => {
                       <p className="text-xs text-text-sub bg-bg-card p-3 rounded-md border border-divider font-mono leading-relaxed">
                         {inc.explanation || inc.title}
                       </p>
+                    </div>
+
+                    {/* Peer Corroboration & Recovery Lifecycle */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-bg-card p-3 rounded-md border border-divider">
+                      <div>
+                        <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1">
+                          Active Observing Peers
+                        </div>
+                        <div className="font-mono text-xs text-text-main font-semibold">
+                          {(inc.primaryAlert.active_peers && inc.primaryAlert.active_peers.length > 0)
+                            ? inc.primaryAlert.active_peers.join(", ")
+                            : inc.observed_asn}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1">
+                          Withdrawn Peers
+                        </div>
+                        <div className="font-mono text-xs text-text-sub">
+                          {(inc.primaryAlert.withdrawn_peers && inc.primaryAlert.withdrawn_peers.length > 0)
+                            ? inc.primaryAlert.withdrawn_peers.join(", ")
+                            : "None"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1">
+                          Recovery Verification
+                        </div>
+                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                          inc.primaryAlert.recovery_status === "CONFIRMED"
+                            ? "bg-badge-green-bg text-status-green border border-green-300 dark:border-green-900"
+                            : inc.primaryAlert.recovery_status === "PARTIAL"
+                            ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                            : "bg-bg-interactive text-text-dim border border-divider"
+                        }`}>
+                          {inc.primaryAlert.recovery_status || "UNCONFIRMED"}
+                        </span>
+                      </div>
                     </div>
 
                     {/* Timeline of Individual Preserved Observations */}

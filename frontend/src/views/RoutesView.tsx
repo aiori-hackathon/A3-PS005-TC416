@@ -127,9 +127,24 @@ export const RoutesView: React.FC = () => {
                         {firstSeenStr}
                       </td>
                       <td className="py-3 px-4">
-                        <span className="inline-block px-2 py-0.5 rounded text-[11px] font-medium bg-badge-green-bg text-status-green border border-green-300 dark:border-green-900">
-                          Non-Poisoning
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                              route.status === "PROMOTED"
+                                ? "bg-badge-green-bg text-status-green border border-green-300 dark:border-green-900"
+                                : route.status === "CANDIDATE"
+                                ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
+                                : "bg-bg-interactive text-text-dim border border-divider"
+                            }`}
+                          >
+                            {route.status || "PROMOTED"}
+                          </span>
+                          {route.peer_count && route.peer_count > 1 && (
+                            <span className="text-[10px] font-mono text-text-dim px-1.5 py-0.5 rounded bg-bg-interactive border border-divider">
+                              {route.peer_count} peers
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-right">
                         <button

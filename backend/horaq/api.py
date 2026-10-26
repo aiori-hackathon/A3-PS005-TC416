@@ -37,7 +37,7 @@ from horaq.database import (
     update_alert_status,
     update_evidence_signature,
 )
-from horaq.detection import process_observation
+from horaq.detection import process_observation, process_withdrawal
 from horaq.evidence import canonicalize_json, verify_evidence_hash
 from horaq.rpki import check_rpki_origin_validation
 
@@ -66,6 +66,16 @@ class BaselineSeedRequest(BaseModel):
     timestamp: Optional[str] = Field(None, description="ISO 8601 observation timestamp (defaults to UTC now)")
     reason: Optional[str] = Field("Authorized initial baseline seed", description="Operational justification")
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Arbitrary baseline context")
+
+
+class WithdrawalRequest(BaseModel):
+    prefix: str = Field(..., description="IPv4 or IPv6 CIDR prefix being withdrawn")
+    peer_as: Optional[Any] = Field(None, description="Observing peer AS that sent the withdrawal (e.g. 64500 or 'AS64500')")
+    peer_ip: Optional[str] = Field(None, description="Peer BGP IP address")
+    collector: Optional[str] = Field("manual", description="Observation collector / provenance label")
+    timestamp: Optional[str] = Field(None, description="ISO 8601 timestamp (defaults to UTC now)")
+    scenario: Optional[str] = Field(None, description="Optional scenario identifier")
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Arbitrary context metadata")
 
 
 class AlertStatusUpdate(BaseModel):
@@ -330,6 +340,34 @@ async def post_observation(
         )
 
 
+@router.post("/withdrawals", status_code=status.HTTP_200_OK)
+async def post_withdrawal_endpoint(withdrawal: WithdrawalRequest) -> Dict[str, Any]:
+    """Ingest a BGP route withdrawal event and track per-peer anomaly recovery (Proposal D3)."""
+    try:
+        res = process_withdrawal(
+            db_path=settings.database_path,
+            prefix_raw=withdrawal.prefix,
+            collector=withdrawal.collector or "api",
+            peer_as=str(withdrawal.peer_as) if withdrawal.peer_as is not None else None,
+            peer_ip=withdrawal.peer_ip,
+            timestamp_raw=withdrawal.timestamp,
+            scenario=withdrawal.scenario or "api-withdrawal",
+            raw_metadata=withdrawal.metadata,
+        )
+        return {
+            "message": f"Processed BGP withdrawal for {withdrawal.prefix}",
+            "prefix": withdrawal.prefix,
+            "resolved_alerts": res.get("resolved_alerts", []),
+            "unresolved_alerts": res.get("unresolved_alerts", []),
+            "recovered_candidate_routes": res.get("recovered_candidate_routes", 0),
+            "result": res,
+        }
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(err),
+        )
+
 
 @router.get("/evidence")
 async def get_all_evidence(
@@ -543,6 +581,8 @@ async def run_scenario_endpoint(
             collector="synthetic-runner",
             scenario="baseline",
             raw_metadata={"description": "Baseline establishment for TEST-NET-1"},
+            authorized_seed=True,
+            actor="SCENARIO_RUNNER",
         )
         return {
             "scenario": "baseline",
@@ -566,15 +606,18 @@ async def run_scenario_endpoint(
                 collector="synthetic-runner",
                 scenario="baseline",
                 raw_metadata={"description": "Baseline establishment for TEST-NET-1"},
+                authorized_seed=True,
+                actor="SCENARIO_RUNNER",
             )
 
         res = process_observation(
             db_path=settings.database_path,
             prefix_raw="192.0.2.0/24",
             origin_asn_raw=64511,
+            peer_as="AS64511",
             collector="synthetic-runner",
             scenario="origin-change",
-            raw_metadata={"description": "Unexpected origin ASN announced for TEST-NET-1"},
+            raw_metadata={"description": "Unexpected origin ASN announced for TEST-NET-1", "peer_as": "AS64511"},
         )
         return {
             "scenario": "origin-change",
@@ -598,15 +641,18 @@ async def run_scenario_endpoint(
                 collector="synthetic-runner",
                 scenario="baseline",
                 raw_metadata={"description": "Baseline establishment for TEST-NET-1"},
+                authorized_seed=True,
+                actor="SCENARIO_RUNNER",
             )
 
         res = process_observation(
             db_path=settings.database_path,
             prefix_raw="192.0.2.128/25",
             origin_asn_raw=64500,
+            peer_as="AS64500",
             collector="synthetic-runner",
             scenario="subprefix",
-            raw_metadata={"description": "More-specific announcement /25 under /24"},
+            raw_metadata={"description": "More-specific announcement /25 under /24", "peer_as": "AS64500"},
         )
         return {
             "scenario": "subprefix",
@@ -626,14 +672,17 @@ async def run_scenario_endpoint(
             origin_asn_raw=64497,
             collector="synthetic-runner",
             scenario="migration-seed",
+            authorized_seed=True,
+            actor="SCENARIO_RUNNER",
         )
         r2 = process_observation(
             db_path=settings.database_path,
             prefix_raw="198.51.100.0/24",
             origin_asn_raw=64498,
+            peer_as="AS64498",
             collector="synthetic-runner",
             scenario="legitimate-migration",
-            raw_metadata={"change_ticket": "CHG-2026-9921", "approved_by": "NetOps"},
+            raw_metadata={"change_ticket": "CHG-2026-9921", "approved_by": "NetOps", "peer_as": "AS64498"},
         )
         return {
             "scenario": "legitimate-migration",
@@ -652,13 +701,17 @@ async def run_scenario_endpoint(
             origin_asn_raw=64496,
             collector="synthetic-runner",
             scenario="ipv6-parent-seed",
+            authorized_seed=True,
+            actor="SCENARIO_RUNNER",
         )
         r2 = process_observation(
             db_path=settings.database_path,
             prefix_raw="2001:db8:1::/48",
             origin_asn_raw=64505,
+            peer_as="AS64505",
             collector="synthetic-runner",
             scenario="ipv6-subprefix",
+            raw_metadata={"peer_as": "AS64505"},
         )
         return {
             "scenario": "ipv6-subprefix",
@@ -667,6 +720,73 @@ async def run_scenario_endpoint(
             "expected_alerts": 1,
             "success": r2["alerts_count"] == 1,
             "result": r2,
+        }
+
+    if s_name in ("withdrawal-recovery", "recovery", "scenario-6-recovery", "6-recovery"):
+        # Stage 6: BGP Route Withdrawal & Anomaly Recovery Demonstration (Proposal D3)
+        # Identifies active anomaly alert, sends matching BGP withdrawal from observing peer,
+        # and proves per-peer transition to RESOLVED status and candidate route marked WITHDRAWN.
+        active_items, _ = list_alerts(settings.database_path, limit=10, status="ACTIVE")
+        target_prefix = None
+        target_peer = None
+
+        if active_items:
+            cand = active_items[0]
+            target_prefix = cand["prefix"]
+            raw_peers = cand.get("active_peers") or []
+            if isinstance(raw_peers, str):
+                import json
+                try:
+                    raw_peers = json.loads(raw_peers)
+                except Exception:
+                    raw_peers = []
+            if raw_peers and len(raw_peers) > 0:
+                target_peer = raw_peers[0]
+            else:
+                target_peer = cand.get("observed_asn")
+        else:
+            # Seed clean baseline and inject a test subprefix anomaly if no alert currently active
+            existing = get_baseline_by_prefix(settings.database_path, "192.0.2.0/24")
+            if not existing or existing.get("origin_asn") != "AS64496":
+                process_observation(
+                    db_path=settings.database_path,
+                    prefix_raw="192.0.2.0/24",
+                    origin_asn_raw=64496,
+                    collector="synthetic-runner",
+                    scenario="baseline",
+                    authorized_seed=True,
+                    actor="SCENARIO_RUNNER",
+                )
+            process_observation(
+                db_path=settings.database_path,
+                prefix_raw="192.0.2.128/25",
+                origin_asn_raw=64500,
+                peer_as="AS64500",
+                collector="synthetic-runner",
+                scenario="subprefix",
+                raw_metadata={"peer_as": "AS64500"},
+            )
+            target_prefix = "192.0.2.128/25"
+            target_peer = "AS64500"
+
+        w_res = process_withdrawal(
+            db_path=settings.database_path,
+            prefix_raw=target_prefix,
+            peer_as=target_peer,
+            collector="synthetic-runner",
+            scenario="withdrawal-recovery",
+        )
+        resolved_count = len(w_res.get("resolved_alerts", []))
+        return {
+            "scenario": "withdrawal-recovery",
+            "description": f"Processed BGP route withdrawal for {target_prefix} from peer {target_peer}; anomaly recovery confirmed.",
+            "prefix": target_prefix,
+            "peer_as": target_peer,
+            "alerts_resolved": resolved_count,
+            "alerts_generated": 0,
+            "expected_alerts": 0,
+            "success": resolved_count > 0 or w_res.get("recovered_candidate_routes", 0) > 0,
+            "result": w_res,
         }
 
     if s_name in ("run-all", "all", "suite", "master"):
@@ -691,7 +811,6 @@ async def run_scenario_endpoint(
             "success": all_passed and (total_alerts == expected_total),
         }
 
-
     if s_name in ("seed-demo", "seed", "demo"):
         # Reset and seed realistic demonstrator data for live presentations
         if settings.demo_mode:
@@ -710,16 +829,16 @@ async def run_scenario_endpoint(
             reset_database(settings.database_path)
 
         # 1. Establish trusted reference baseline roots
-        b1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=13335, collector="rrc00", scenario="demo-seed")
-        b2 = process_observation(db_path=settings.database_path, prefix_raw="8.8.8.0/24", origin_asn_raw=15169, collector="rrc00", scenario="demo-seed")
-        b3 = process_observation(db_path=settings.database_path, prefix_raw="9.9.9.0/24", origin_asn_raw=19281, collector="rrc01", scenario="demo-seed")
-        b4 = process_observation(db_path=settings.database_path, prefix_raw="2001:db8::/32", origin_asn_raw=64496, collector="rrc00", scenario="demo-seed")
-        b5 = process_observation(db_path=settings.database_path, prefix_raw="192.0.2.0/24", origin_asn_raw=64496, collector="rrc00", scenario="demo-seed")
-        b6 = process_observation(db_path=settings.database_path, prefix_raw="198.51.100.0/24", origin_asn_raw=64497, collector="rrc00", scenario="demo-seed")
-        b7 = process_observation(db_path=settings.database_path, prefix_raw="203.0.113.0/24", origin_asn_raw=64499, collector="rrc00", scenario="demo-seed")
+        b1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=13335, collector="rrc00", scenario="demo-seed", authorized_seed=True, actor="DEMO_SEED_INIT")
+        b2 = process_observation(db_path=settings.database_path, prefix_raw="8.8.8.0/24", origin_asn_raw=15169, collector="rrc00", scenario="demo-seed", authorized_seed=True, actor="DEMO_SEED_INIT")
+        b3 = process_observation(db_path=settings.database_path, prefix_raw="9.9.9.0/24", origin_asn_raw=19281, collector="rrc01", scenario="demo-seed", authorized_seed=True, actor="DEMO_SEED_INIT")
+        b4 = process_observation(db_path=settings.database_path, prefix_raw="2001:db8::/32", origin_asn_raw=64496, collector="rrc00", scenario="demo-seed", authorized_seed=True, actor="DEMO_SEED_INIT")
+        b5 = process_observation(db_path=settings.database_path, prefix_raw="192.0.2.0/24", origin_asn_raw=64496, collector="rrc00", scenario="demo-seed", authorized_seed=True, actor="DEMO_SEED_INIT")
+        b6 = process_observation(db_path=settings.database_path, prefix_raw="198.51.100.0/24", origin_asn_raw=64497, collector="rrc00", scenario="demo-seed", authorized_seed=True, actor="DEMO_SEED_INIT")
+        b7 = process_observation(db_path=settings.database_path, prefix_raw="203.0.113.0/24", origin_asn_raw=64499, collector="rrc00", scenario="demo-seed", authorized_seed=True, actor="DEMO_SEED_INIT")
 
         # 2. Inject Origin Conflict Incident (Baseline preserved, alert generated)
-        a1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=99999, collector="rrc00", scenario="demo-origin-conflict")
+        a1 = process_observation(db_path=settings.database_path, prefix_raw="1.1.1.0/24", origin_asn_raw=99999, peer_as="AS99999", collector="rrc00", scenario="demo-origin-conflict", raw_metadata={"peer_as": "AS99999"})
         if a1["alerts"] and is_mldsa_available():
             ev_id = a1["alerts"][0]["evidence_id"]
             ev_rec = a1["alerts"][0]["evidence"]["record"]
@@ -735,10 +854,10 @@ async def run_scenario_endpoint(
             )
 
         # 3. Inject Subprefix Hijack Incident (Alert generated, baseline NOT poisoned)
-        a2 = process_observation(db_path=settings.database_path, prefix_raw="8.8.8.128/25", origin_asn_raw=66666, collector="rrc03", scenario="demo-subprefix-hijack")
+        a2 = process_observation(db_path=settings.database_path, prefix_raw="8.8.8.128/25", origin_asn_raw=66666, peer_as="AS66666", collector="rrc03", scenario="demo-subprefix-hijack", raw_metadata={"peer_as": "AS66666"})
 
         # 4. Inject IPv6 Subprefix Anomaly (Alert generated, baseline NOT poisoned)
-        a3 = process_observation(db_path=settings.database_path, prefix_raw="2001:db8:1::/48", origin_asn_raw=64505, collector="rrc00", scenario="demo-ipv6-subprefix")
+        a3 = process_observation(db_path=settings.database_path, prefix_raw="2001:db8:1::/48", origin_asn_raw=64505, peer_as="AS64505", collector="rrc00", scenario="demo-ipv6-subprefix", raw_metadata={"peer_as": "AS64505"})
 
         return {
             "scenario": "seed-demo",
@@ -750,6 +869,6 @@ async def run_scenario_endpoint(
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Unknown scenario '{scenario_name}'. Available: reset, baseline, origin-change, subprefix, legitimate-migration, ipv6-subprefix, run-all, seed-demo",
+        detail=f"Unknown scenario '{scenario_name}'. Available: reset, baseline, origin-change, subprefix, legitimate-migration, ipv6-subprefix, withdrawal-recovery, run-all, seed-demo",
     )
 

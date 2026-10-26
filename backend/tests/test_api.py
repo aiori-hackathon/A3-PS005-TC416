@@ -297,6 +297,66 @@ def test_api_authorized_seeding_requires_auth_in_demo_mode(client, monkeypatch):
     assert auth_resp.json()["status"] == "PROMOTED"
 
 
+def test_api_post_withdrawal_endpoint(client, monkeypatch):
+    """Verify POST /api/v1/withdrawals resolves matching active alert."""
+    from horaq.config import settings
+
+    monkeypatch.setattr(settings, "demo_mode", False)
+
+    # 1. Seed baseline
+    client.post(
+        "/api/v1/baselines/seed",
+        json={"prefix": "192.0.2.0/24", "origin_asn": "AS64496"},
+    )
+
+    # 2. Inject subprefix anomaly
+    obs_resp = client.post(
+        "/api/v1/observations",
+        json={
+            "prefix": "192.0.2.128/25",
+            "origin_asn": 64500,
+            "metadata": {"peer_as": "AS64500"},
+        },
+    )
+    assert obs_resp.status_code == 201
+    assert obs_resp.json()["alerts_count"] == 1
+
+    # 3. Post withdrawal from peer AS64500
+    w_resp = client.post(
+        "/api/v1/withdrawals",
+        json={
+            "prefix": "192.0.2.128/25",
+            "peer_as": "AS64500",
+        },
+    )
+    assert w_resp.status_code == 200
+    data = w_resp.json()
+    assert len(data["resolved_alerts"]) == 1
+    assert data["resolved_alerts"][0]["status"] == "RESOLVED"
+    assert data["resolved_alerts"][0]["recovery_status"] == "CONFIRMED"
+
+    # 4. Confirm no active alerts remain on this prefix
+    alerts_resp = client.get("/api/v1/alerts?status=ACTIVE")
+    active = [a for a in alerts_resp.json()["items"] if a["prefix"] == "192.0.2.128/25"]
+    assert len(active) == 0
+
+
+def test_api_withdrawal_recovery_scenario(client, monkeypatch):
+    """Verify /api/v1/scenarios/withdrawal-recovery executes full recovery lifecycle."""
+    from horaq.config import settings
+
+    monkeypatch.setattr(settings, "demo_mode", False)
+
+    # Run withdrawal-recovery scenario
+    sc_resp = client.post("/api/v1/scenarios/withdrawal-recovery")
+    assert sc_resp.status_code == 200
+    sc_data = sc_resp.json()
+    assert sc_data["scenario"] == "withdrawal-recovery"
+    assert sc_data["success"] is True
+    assert sc_data["alerts_resolved"] >= 1
+
+
+
 
 
 

@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { groupAlertObservations, GroupedIncident } from "../utils/incidentGrouping";
+import { EvaluatorGuideCard } from "../components/EvaluatorGuideCard";
 
 export const OverviewView: React.FC = () => {
   const {
@@ -122,6 +123,8 @@ export const OverviewView: React.FC = () => {
         )}
       </div>
 
+      {/* Evaluator Interactive Guided Walkthrough */}
+      <EvaluatorGuideCard />
 
       {/* 2. Operational Condition Callout */}
       {topIncident ? (

@@ -42,6 +42,9 @@ export interface RouteBaseline {
   last_seen: string;
   observation_count: number;
   updated_at: string;
+  status?: "PROMOTED" | "CANDIDATE" | "WITHDRAWN";
+  peer_count?: number;
+  distinct_peers?: string[];
 }
 
 export interface AlertItem {
@@ -59,6 +62,11 @@ export interface AlertItem {
   status: "ACTIVE" | "ACKNOWLEDGED" | "RESOLVED";
   collector: string;
   scenario: string | null;
+  confidence?: string;
+  uncertainty_reason?: string;
+  active_peers?: string[];
+  withdrawn_peers?: string[];
+  recovery_status?: "UNCONFIRMED" | "PARTIAL" | "CONFIRMED";
 }
 
 export interface EvidenceRecord {
@@ -112,5 +120,9 @@ export interface ScenarioRunResult {
   description: string;
   alerts_generated: number;
   expected_alerts: number;
+  alerts_resolved?: number;
+  success?: boolean;
+  prefix?: string;
+  peer_as?: string;
   result?: any;
 }

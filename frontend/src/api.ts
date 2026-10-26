@@ -129,4 +129,24 @@ export const api = {
     const q = new URLSearchParams({ prefix, asn });
     return request<RPKIResult>(`/rpki/validate?${q.toString()}`);
   },
+
+  submitWithdrawal: (data: {
+    prefix: string;
+    peer_as?: string | number;
+    peer_ip?: string;
+    collector?: string;
+    scenario?: string;
+    metadata?: Record<string, any>;
+  }) =>
+    request<{
+      message: string;
+      prefix: string;
+      resolved_alerts: any[];
+      unresolved_alerts: any[];
+      recovered_candidate_routes: number;
+      result: any;
+    }>("/withdrawals", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
 };
