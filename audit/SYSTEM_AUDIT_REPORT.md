@@ -69,7 +69,7 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
 
 ### 3.1. Baseline Poisoning Resolution
 - **Issue**: Previously, when an incoming announcement triggered a `SUBPREFIX_ANOMALY` alert, execution fell through to `if existing_baseline is None:`, which erroneously inserted the rogue subprefix into the `baselines` table.
-- **Remediation**: Added guard logic in [`horaq/detection.py`](file:///d:/HORA-Q/backend/horaq/detection.py):
+- **Remediation**: Added guard logic in [`horaq/detection.py`](../backend/horaq/detection.py):
   ```python
   if generated_alerts:
       # Anomaly detected: Suspicious announcements MUST NOT establish or poison baselines!
@@ -159,20 +159,20 @@ All tests executed via `python -m pytest -v` from `backend/`:
 
 ## 5. Visual Artifacts & Screenshot Audit (16:9 Desktop 1920×1080)
 
-All screenshots are stored in [`audit/screenshots/`](file:///d:/HORA-Q/audit/screenshots) and committed to the Git repository:
+All screenshots are stored in [`audit/screenshots/`](../audit/screenshots) and committed to the Git repository:
 
 | Screenshot | Aspect Ratio | Resolution | Key Elements Displayed |
 | :--- | :--- | :--- | :--- |
-| [`01_overview.png`](file:///d:/HORA-Q/audit/screenshots/01_overview.png) | 16:9 | 1920×1080 | 3 Active Anomalies, 7 Tracked Baselines, 10–13 Updates Evaluated, 3 RIPE RIS Feeds (`rrc00`, `rrc01`, `rrc03`). |
-| [`02_alerts.png`](file:///d:/HORA-Q/audit/screenshots/02_alerts.png) | 16:9 | 1920×1080 | 3 distinct grouped incidents with observed origin, baseline origin, occurrence count, and review CTA. |
-| [`03_evidence_modal.png`](file:///d:/HORA-Q/audit/screenshots/03_evidence_modal.png) | 16:9 | 1920×1080 | Cryptographic evidence modal with RFC 8785 canonical JSON, SHA-256 digest, and ML-DSA-65 digital signature badge. |
-| [`04_tamper_verification.png`](file:///d:/HORA-Q/audit/screenshots/04_tamper_verification.png) | 16:9 | 1920×1080 | Interactive tampering demonstration showing computed vs expected hash failure upon payload mutation. |
-| [`05_baselines.png`](file:///d:/HORA-Q/audit/screenshots/05_baselines.png) | 16:9 | 1920×1080 | Clean 7 monitored baselines with `Non-Poisoning` policy tags (`8.8.8.128/25` and `2001:db8:1::/48` absent). |
-| [`06_scenarios.png`](file:///d:/HORA-Q/audit/screenshots/06_scenarios.png) | 16:9 | 1920×1080 | Deterministic evaluation suite with 6 benchmark scenarios and live execution triggers. |
-| [`07_audit_ledger.png`](file:///d:/HORA-Q/audit/screenshots/07_audit_ledger.png) | 16:9 | 1920×1080 | Cryptographic Audit Ledger showing 3 Anomaly Evidence Records (1 `ML-DSA-65 Signed`, 2 `Digest Recorded`). |
-| [`08_rpki_inspector.png`](file:///d:/HORA-Q/audit/screenshots/08_rpki_inspector.png) | 16:9 | 1920×1080 | Live RPKI Origin Validation card displaying `Origin Authorized (VALID)` for `1.1.1.0/24` with `AS13335`. |
-| [`09_inject_route.png`](file:///d:/HORA-Q/audit/screenshots/09_inject_route.png) | 16:9 | 1920×1080 | Operator route injection console with pre-validation format checks and instant evaluation. |
-| [`10_settings.png`](file:///d:/HORA-Q/audit/screenshots/10_settings.png) | 16:9 | 1920×1080 | Cryptographic engine configuration showing `ML-DSA-65 (NIST FIPS 204)`, key length parameters, and collector health. |
+| [`01_overview.png`](../audit/screenshots/01_overview.png) | 16:9 | 1920×1080 | 3 Active Anomalies, 7 Tracked Baselines, 10–13 Updates Evaluated, 3 RIPE RIS Feeds (`rrc00`, `rrc01`, `rrc03`). |
+| [`02_alerts.png`](../audit/screenshots/02_alerts.png) | 16:9 | 1920×1080 | 3 distinct grouped incidents with observed origin, baseline origin, occurrence count, and review CTA. |
+| [`03_evidence_modal.png`](../audit/screenshots/03_evidence_modal.png) | 16:9 | 1920×1080 | Cryptographic evidence modal with RFC 8785 canonical JSON, SHA-256 digest, and ML-DSA-65 digital signature badge. |
+| [`04_tamper_verification.png`](../audit/screenshots/04_tamper_verification.png) | 16:9 | 1920×1080 | Interactive tampering demonstration showing computed vs expected hash failure upon payload mutation. |
+| [`05_baselines.png`](../audit/screenshots/05_baselines.png) | 16:9 | 1920×1080 | Clean 7 monitored baselines with `Non-Poisoning` policy tags (`8.8.8.128/25` and `2001:db8:1::/48` absent). |
+| [`06_scenarios.png`](../audit/screenshots/06_scenarios.png) | 16:9 | 1920×1080 | Deterministic evaluation suite with 6 benchmark scenarios and live execution triggers. |
+| [`07_audit_ledger.png`](../audit/screenshots/07_audit_ledger.png) | 16:9 | 1920×1080 | Cryptographic Audit Ledger showing 3 Anomaly Evidence Records (1 `ML-DSA-65 Signed`, 2 `Digest Recorded`). |
+| [`08_rpki_inspector.png`](../audit/screenshots/08_rpki_inspector.png) | 16:9 | 1920×1080 | Live RPKI Origin Validation card displaying `Origin Authorized (VALID)` for `1.1.1.0/24` with `AS13335`. |
+| [`09_inject_route.png`](../audit/screenshots/09_inject_route.png) | 16:9 | 1920×1080 | Operator route injection console with pre-validation format checks and instant evaluation. |
+| [`10_settings.png`](../audit/screenshots/10_settings.png) | 16:9 | 1920×1080 | Cryptographic engine configuration showing `ML-DSA-65 (NIST FIPS 204)`, key length parameters, and collector health. |
 
 ---
 

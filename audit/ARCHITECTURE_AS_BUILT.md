@@ -7,7 +7,7 @@
 
 ## 1. System Pipeline: As-Built
 
-The actual runtime data flow implemented across [`horaq/`](file:///d:/HORA-Q/backend/horaq) follows seven distinct, auditable stages:
+The actual runtime data flow implemented across [`horaq/`](../backend/horaq) follows seven distinct, auditable stages:
 ```
 [ Stage 1: INGESTION & NORMALIZATION (horaq/normalization.py) ]
   • normalize_prefix(): Strips host bits via ipaddress.ip_network(strict=False)

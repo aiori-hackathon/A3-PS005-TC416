@@ -1,10 +1,11 @@
 # HORA-Q — Explainable BGP Origin and Subprefix Anomaly Monitor
 
+[![CI](https://github.com/aiori-hackathon/A3-PS005-TC416/actions/workflows/ci.yml/badge.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416/actions/workflows/ci.yml)
 [![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-indigo.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
 [![Track](https://img.shields.io/badge/AIORI--3-Track%202%20Cyber%20Security%20(PS--005)-cyan.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
-[![Tests](https://img.shields.io/badge/Tests-81%20Passed%20(100%25)-emerald.svg)](backend/tests)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Deployment](https://img.shields.io/badge/Deployment-Cloudflare%20Pages%20%2B%20Railway-blueviolet.svg)](DEPLOYMENT.md)
+[![Tests](https://img.shields.io/badge/Tests-92%20Passed%20(100%25)-emerald.svg)](backend/tests)
+[![License](https://img.shields.io/badge/License-Evaluation%20(Pending%20Team%20Confirmation)-lightgrey.svg)](#license)
+[![Deployment](https://img.shields.io/badge/Deployment-Standby%20Guide-blueviolet.svg)](DEPLOYMENT.md)
 
 **AIORI-3 Hackathon · Problem PS-005 · Track 2 Cyber Security**  
 **Team Code:** `A3-PS005-TC416` | **Institution:** Al-Ameen College  
@@ -14,37 +15,35 @@
 
 ---
 
-**HORA-Q** is an explainable BGP origin and subprefix anomaly monitoring architecture engineered for AIORI-3. It normalizes BGP route announcements, maintains immutable per-prefix baselines, detects origin-AS conflicts and strict more-specific subprefix announcements without baseline poisoning, binds forensic findings into tamper-evident canonical evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
+**HORA-Q** is an explainable BGP origin and subprefix anomaly monitoring architecture engineered for AIORI-3. It normalizes BGP route announcements, maintains multi-peer corroborated baselines with append-only version history, detects origin-AS conflicts and strict more-specific subprefix announcements without baseline poisoning, tracks per-peer withdrawal recovery, binds forensic findings into tamper-evident canonical evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
 
-### Verification Status & Scope:
-- **Unit & Integration Tests**: 81 of 81 backend tests passing (100% pass rate).
+### Empirical Verification Status:
+- **Unit & Integration Tests**: 92 of 92 backend tests passing (100% pass rate in CI).
 - **Post-Quantum Digital Signatures**: Standardized NIST FIPS 204 ML-DSA-65 implemented via `dilithium-py.ml_dsa.ML_DSA_65` and `liboqs`, backed by persistent authority key management.
 - **Evidence Canonicalization**: Deterministic RFC 8785 JSON Canonicalization Scheme (JCS) backed by the standard `rfc8785` package.
-- **Independent Verification**: CLI verifier (`verify_evidence.py`) confirms authentic signatures (exit 0), detects tamper (exit 1), and rejects unsigned records as non-authentic (exit 2).
-- **Public Evaluation Demo Protection**: Protects against destructive database wipes and arbitrary observation injection (`HORAQ_DEMO_MODE=true`).
-- **Production Deployment Guide**: Complete step-by-step instructions for Cloudflare Pages (Frontend) and Railway (Backend + Volume Mount) in [`DEPLOYMENT.md`](DEPLOYMENT.md).
-- **Live Ingestion & Resolvers**: Opt-in RIPE RIS Live WebSocket collector and RIPEstat RPKI origin validation resolver implemented.
-
-
-
+- **Independent Verification**: Standalone CLI verifier (`verify_evidence.py`) confirms authentic signatures (exit 0), detects tamper (exit 1), and rejects unsigned records as non-authentic (exit 2).
+- **Interactive Evaluator Walkthrough**: 6-stage guided evaluator walkthrough embedded directly in the web operations console (`OverviewView.tsx`).
+- **Production Deployment Guide**: Complete topology specification for Cloudflare Pages (Frontend) and Railway (Backend + Volume Mount) in [`DEPLOYMENT.md`](DEPLOYMENT.md). Deployment URLs are documented as placeholders pending team hosting.
+- **Live Ingestion & Resolvers**: Opt-in RIPE RIS Live WebSocket collector and RIPEstat RPKI origin validation resolver.
 
 ---
 
-## ⚡ Verified Technical Capabilities
+## ⚡ Technical Capabilities
 
 1. **Deterministic BGP Anomaly Detection Engine**:
    - **Baseline Seeding**: Initial observation seeds reference origin without false positives.
+   - **Candidate Quarantine**: Single-peer flapping routes enter as `CANDIDATE`; promotion to `PROMOTED` requires multi-source peer corroboration (`peer_count >= 2` AND `observation_count >= 3`).
    - **Origin-AS Conflict Detection**: Flags unauthorized origin announcements while strictly preventing baseline poisoning.
-   - **Subprefix Containment Detection**: Flags more-specific announcements (/25 under /24, /48 under /32) across both IPv4 and IPv6 families.
-   - **Observation Grouping**: Deduplicates repeated telemetry updates, preserving genuine observation counts.
+   - **Subprefix Containment Detection**: Flags more-specific announcements (/25 under /24, /48 under /32) across IPv4 and IPv6 address families.
+   - **Per-Peer Withdrawal Recovery**: Ingests BGP `WITHDRAWAL` messages; tracks recovery per observing peer; resolves incidents only when all active announcing peers have withdrawn.
 
 2. **Explainable Root Cause Reasoning**:
-   - Generates transparent, human-readable forensic explanations distinguishing unauthorized route hijacking, dual-origin provider migration, DDoS scrubbing, and route leaks.
+   - Generates transparent, human-readable forensic explanations distinguishing unauthorized route hijacking, dual-origin provider migration, DDoS scrubbing, and multi-homing.
 
 3. **Post-Quantum Cryptography & Tamper-Evident Evidence**:
-   - **RFC 8785 Canonical JSON**: Deterministic key sorting and whitespace-free encoding.
+   - **RFC 8785 Canonical JSON**: Deterministic UTF-16 code unit key sorting and compact encoding.
    - **SHA-256 Digest**: Immutable content integrity binding.
-   - **FIPS 204 ML-DSA-65 Post-Quantum Signatures**: Real cryptographic key generation, signing, and verification via `dilithium-py` / `liboqs` with strict no-fallback enforcement.
+   - **FIPS 204 ML-DSA-65 Post-Quantum Signatures**: Real cryptographic key generation, signing, and verification via `dilithium-py` / `liboqs` with strict refusal of classical substitution.
    - **Independent CLI Verifier** (`verify_evidence.py`): External verification outside the browser that validates hashes, verifies post-quantum signatures, and reliably catches tampered records.
 
 4. **RPKI Context & RIPEstat Integration**:
@@ -54,74 +53,40 @@
    - Clean daylight palette with high-contrast dark mode toggle (`#F8F9FA` canvas, `#FFFFFF` surfaces, `#1A73E8` brand blue).
    - Full 1360px desktop workspace scale with structured tabular ledgers instead of nested cards for rapid forensic triage.
 
-
 ---
 
 ## 📂 Repository Structure
 
 ```
-d:\HORA-Q/
+A3-PS005-TC416/
 ├── README.md                          # Project documentation and quickstart
-├── .gitignore                         # Git exclusion rules
-├── HORAQ_Documentation/               # 43 engineering specifications & acceptance guides
-│   ├── 00_START_HERE.md
-│   ├── 01_PROJECT_BRIEF.md
-│   ├── 02_REQUIREMENTS.md
-│   ├── ...
-│   └── INDEX.md
+├── DEPLOYMENT.md                      # Production deployment guide & topology
+├── PROPOSED_VS_BUILT_VERIFIED.md      # Proposal compliance & verification matrix
+├── verify_evidence.py                 # Standalone independent evidence verification CLI
+├── docs/                              # Consolidated technical engineering documentation
+│   ├── README.md                      # Documentation index
+│   ├── ARCHITECTURE.md                # System pipeline & component boundaries
+│   ├── DETECTION_AND_BASELINES.md     # Baseline lifecycle, detection algorithms & withdrawals
+│   ├── API_AND_DATA_MODEL.md          # REST API reference (/api/v1) & database schema
+│   ├── EVIDENCE_AND_CRYPTOGRAPHY.md   # RFC 8785 JCS, SHA-256 & NIST FIPS 204 ML-DSA-65
+│   ├── TESTING_AND_EVALUATION.md      # Pytest test suite, benchmarks & historical replays
+│   ├── DEMO_GUIDE.md                  # 6-Stage interactive evaluator demo walkthrough
+│   ├── THREAT_MODEL_AND_LIMITATIONS.md# Threat analysis & scientific scope boundaries
+│   └── OPERATIONS.md                  # Operational configuration & CI pipeline
 ├── backend/                           # FastAPI backend service
 │   ├── requirements.txt               # Python dependencies
-│   ├── horaq/                         # Core Python package
-│   │   ├── __init__.py
-│   │   ├── config.py                  # Operational configuration
-│   │   ├── normalization.py           # IPv4/IPv6 CIDR & ASN parser
-│   │   ├── database.py                # SQLite persistence & WAL transactions
-│   │   ├── evidence.py                # Canonical JSON & SHA-256 integrity
-│   │   ├── crypto.py                  # ML-DSA-65 post-quantum provider
-│   │   ├── rpki.py                    # RIPEstat origin validation client
-│   │   ├── collector.py               # RIPE RIS Live WebSocket collector
-│   │   ├── detection.py               # Detection pipeline & baseline manager
-│   │   ├── api.py                     # REST API router (/api/v1)
-│   │   └── main.py                    # Application entrypoint & CORS
-│   └── tests/                         # Pytest test suite (81 automated tests)
-│       ├── test_api.py
-│       ├── test_benchmark.py
-│       ├── test_collector.py
-│       ├── test_crypto.py
-│       ├── test_detection.py
-│       ├── test_evidence.py
-│       ├── test_historical_replay.py
-│       ├── test_normalization.py
-│       └── test_rpki.py
+│   ├── horaq/                         # Core Python package (detection, crypto, api, etc.)
+│   ├── tests/                         # Pytest test suite (92 automated tests)
+│   └── scripts/                       # Replay and benchmark runner scripts
 ├── frontend/                          # React + TypeScript + Vite Operations Console
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.js             # High-contrast cyber dark / day theme tokens
-│   ├── index.html
-│   └── src/
-│       ├── types.ts                   # Domain types & API schemas
-│       ├── api.ts                     # Type-safe API client
-│       ├── index.css                  # Global styles & CSS variable tokens
-│       ├── stores/                    # Centralized reactive state
-│       │   └── useHoraqStore.ts       # Zustand store with live telemetry
-│       ├── components/
-│       │   ├── layout/
-│       │   │   ├── Header.tsx         # Navbar with live health status, search & theme toggle
-│       │   │   └── Sidebar.tsx        # Fixed categorised left navigation sidebar
-│       │   ├── EvidenceModal.tsx      # Evidence vault, SHA-256 diff & ML-DSA inspector
-│       │   └── RPKIModal.tsx          # Live RIPEstat RPKI validator dialog
-│       ├── views/                     # Modular canvas views
-│       │   ├── OverviewView.tsx       # KPI summary, 24h timeline & live activity
-│       │   ├── AlertsView.tsx         # Anomaly alerts with visual containment breakdown
-│       │   ├── RoutesView.tsx         # Baseline routes table with RPKI actions
-│       │   ├── ScenariosView.tsx      # Synthetic scenario suite with execution console
-│       │   ├── EvidenceVaultView.tsx  # Cryptographic records & hash integrity vault
-│       │   ├── RPKIInspectorView.tsx  # Interactive RPKI origin-validation tool
-│       │   ├── InjectRouteView.tsx    # Manual route announcement simulator
-│       │   └── SettingsView.tsx       # System parameters, themes & database reset
-│       ├── App.tsx                    # Main desktop application layout
-│       └── main.tsx                   # DOM bootstrap
+│   ├── package.json                   # Frontend dependencies
+│   └── src/                           # Components, views, stores, and API clients
+├── audit/                             # Evaluation evidence, benchmark data & screenshots
+│   ├── reference_detector_comparison.json
+│   ├── historical_attack_validation.json
+│   ├── UI_SCREENSHOTS_AUDIT.md        # Screenshot inventory & page descriptions
+│   └── screenshots/                   # 10 canonical 16:9 desktop screenshots
+└── scripts/maintenance/               # Maintenance scripts (capture_16_9.ps1)
 ```
 
 ---
@@ -130,21 +95,22 @@ d:\HORA-Q/
 
 ### 1. Prerequisites
 - **Python**: 3.10+ (tested on Python 3.13)
-- **Node.js**: v18+ (tested on Node v22.18.0)
+- **Node.js**: v18+ (tested on Node v20.x / v22.x)
 - **Git**
 
 ### 2. Backend Setup & Run
 
 ```bash
-cd d:\HORA-Q\backend
+cd backend
 
-# Activate virtual environment (created during setup)
-.venv\Scripts\activate
+# Create and activate virtual environment
+python -m venv .venv
+source .venv/bin/activate       # On Windows: .venv\Scripts\activate
 
-# Install dependencies (if not already installed)
+# Install dependencies
 pip install -r requirements.txt
 
-# Run the backend test suite (38 tests)
+# Run the automated test suite (92 tests)
 pytest -v
 
 # Start the FastAPI server on port 8000
@@ -155,12 +121,12 @@ Interactive OpenAPI Swagger docs will be available at: [http://127.0.0.1:8000/do
 ### 3. Frontend Setup & Run
 
 ```bash
-cd d:\HORA-Q\frontend
+cd frontend
 
-# Install dependencies (if not already installed)
+# Install dependencies
 npm install
 
-# Build production bundle
+# Build production bundle (verifies TypeScript types)
 npm run build
 
 # Start the Vite development server
@@ -170,24 +136,22 @@ Open your browser at: [http://localhost:5173](http://localhost:5173)
 
 ---
 
-## 🧪 Evaluation Scenarios
+## 🧪 6-Stage Evaluator Guided Walkthrough
 
-The system includes pre-configured reproducible synthetic evaluation scenarios per **Document 21**:
+The operations console includes an interactive stepper at the top of the **Overview** dashboard that guides evaluators through the complete verification lifecycle with one click per step:
 
-| Scenario | Injected Route | Origin ASN | Expected Outcome |
-| :--- | :--- | :--- | :--- |
-| **1. Baseline Seeding** | `192.0.2.0/24` | `AS64496` | Baseline created. **0 alerts**. |
-| **2. Origin-AS Conflict** | `192.0.2.0/24` | `AS64511` | `ORIGIN_CHANGE` alert fired (HIGH). Baseline preserved. |
-| **3. Subprefix Anomaly** | `192.0.2.128/25` | `AS64500` | `SUBPREFIX_ANOMALY` alert fired (parent: `192.0.2.0/24`). |
-| **4. Tagged Migration** | `198.51.100.0/24` | `AS64498` | Explainable alert generated noting migration tag context. |
-| **5. IPv6 Subprefix** | `2001:db8:1::/48` | `AS64505` | `SUBPREFIX_ANOMALY` alert fired under IPv6 `/32` parent. |
-| **6. Reset State** | Purge Tables | N/A | Environment reset for clean evaluation. |
+1. **Stage 1: Establish Clean Baseline**: Seeds `192.0.2.0/24` (AS64496). Proves zero false alarms on clean seeding and logs an `AUTHORIZED_SEED` entry in the versioned history ledger.
+2. **Stage 2: Trigger Routing Anomaly**: Injects subprefix hijack `192.0.2.128/25` from rogue AS64500. Proves instant subprefix containment without baseline poisoning.
+3. **Stage 3: Inspect Explanation**: Inspects plain-English root-cause rationale, confidence scoring, and active observing peer tracking.
+4. **Stage 4: Check Live RPKI Status**: Queries live RIPEstat ROA validation API to evaluate cryptographic origin authorization.
+5. **Stage 5: Verify Post-Quantum Evidence**: Opens Evidence Vault modal. Demonstrates RFC 8785 canonical byte inspection, SHA-256 hash match, and NIST FIPS 204 ML-DSA-65 post-quantum signature verification.
+6. **Stage 6: Ingest Route Withdrawal**: Ingests authentic BGP route withdrawal from observing peer AS64500. Confirms alert transition to `RESOLVED` with confirmed recovery notes.
 
 ---
 
 ## 🔐 Independent Evidence Verification (CLI)
 
-HORA-Q provides an independent command-line verifier (`verify_evidence.py`) enabling external evaluators to cryptographically inspect and verify evidence records outside the browser:
+HORA-Q provides a standalone command-line verifier (`verify_evidence.py`) enabling external evaluators to cryptographically inspect and verify evidence records outside the browser:
 
 ```bash
 # 1. Verify authentic ML-DSA-65 signed evidence record (Exit code 0):
@@ -203,29 +167,27 @@ python verify_evidence.py audit/sample_evidence_unsigned.json
 python verify_evidence.py audit/sample_evidence_unsigned.json --tamper
 ```
 
-**Verification Guarantees & State Machine**:
-- **RFC 8785 Canonical JSON**: Independent key sorting and byte canonicalization.
-- **SHA-256 Digest Match**: Verifies byte-level integrity against the attested record hash.
-- **NIST FIPS 204 ML-DSA-65**: Mathematical verification of lattice-based post-quantum signatures using `dilithium-py` or `liboqs`.
-- **Authenticity Separation**: A self-contained digest without an authority signature does NOT establish authenticity (`[UNSIGNED]`, exit code 2). Only mathematically valid digital signatures produce `[AUTHENTIC]` (exit code 0).
-- **Tamper Rejection**: Any modification to prefix, origin ASN, timestamp, or severity immediately results in `[FAIL] TAMPER DETECTED` with exit code `1` (`[COMPROMISED]`).
-
-
+**Verification Guarantees & Exit Codes**:
+- `Exit Code 0` (`[AUTHENTIC]`): RFC 8785 canonical bytes, SHA-256 digest match, and NIST FIPS 204 ML-DSA-65 digital signature verified mathematically.
+- `Exit Code 1` (`[COMPROMISED]`): Tamper detected. Payload modification detected via hash mismatch or corrupted signature.
+- `Exit Code 2` (`[UNSIGNED]`): Payload integrity confirmed via SHA-256, but unsigned; authenticity and signer identity cannot be established without an authority signature.
 
 ---
 
-## 📚 Complete Documentation Suite
+## 📚 Technical Documentation Suite
 
-All 43 engineering documents, architecture guides, data flows, and acceptance checklists can be reviewed in [`HORAQ_Documentation/`](HORAQ_Documentation):
-- [`00_START_HERE.md`](HORAQ_Documentation/00_START_HERE.md)
-- [`01_PROJECT_BRIEF.md`](HORAQ_Documentation/01_PROJECT_BRIEF.md)
-- [`02_REQUIREMENTS.md`](HORAQ_Documentation/02_REQUIREMENTS.md)
-- [`03_ARCHITECTURE.md`](HORAQ_Documentation/03_ARCHITECTURE.md)
-- [`08_API_REFERENCE.md`](HORAQ_Documentation/08_API_REFERENCE.md)
-- [`09_DATABASE.md`](HORAQ_Documentation/09_DATABASE.md)
-- [`12_DETECTION_ALGORITHMS.md`](HORAQ_Documentation/12_DETECTION_ALGORITHMS.md)
-- [`18_EVIDENCE.md`](HORAQ_Documentation/18_EVIDENCE.md)
-- [`19_ML_DSA.md`](HORAQ_Documentation/19_ML_DSA.md)
-- [`20_FRONTEND.md`](HORAQ_Documentation/20_FRONTEND.md)
-- [`21_SCENARIOS.md`](HORAQ_Documentation/21_SCENARIOS.md)
-- [`34_ACCEPTANCE.md`](HORAQ_Documentation/34_ACCEPTANCE.md)
+The complete engineering documentation is consolidated in [`docs/`](docs/):
+- **[System Architecture](docs/ARCHITECTURE.md)**
+- **[Detection Algorithms & Baseline Lifecycle](docs/DETECTION_AND_BASELINES.md)**
+- **[API Reference & Data Models](docs/API_AND_DATA_MODEL.md)**
+- **[Evidence Integrity & Cryptography](docs/EVIDENCE_AND_CRYPTOGRAPHY.md)**
+- **[Testing, Benchmarks & Evaluation](docs/TESTING_AND_EVALUATION.md)**
+- **[Evaluator Demonstration Guide](docs/DEMO_GUIDE.md)**
+- **[Threat Model & Scientific Boundaries](docs/THREAT_MODEL_AND_LIMITATIONS.md)**
+- **[Operations & Deployment](docs/OPERATIONS.md)**
+
+---
+
+## 📄 License
+
+**License Pending Team Confirmation**: This codebase and documentation are submitted for official evaluation in the **AIORI-3 Hackathon (Track 2 Cyber Security, Problem PS-005)** by Team `A3-PS005-TC416`. Open-source licensing will be finalized upon team confirmation.

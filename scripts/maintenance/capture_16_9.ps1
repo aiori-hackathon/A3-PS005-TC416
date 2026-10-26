@@ -1,7 +1,9 @@
 Add-Type -AssemblyName System.Drawing
 
 $edgePath = "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
-$outDir = "d:\HORA-Q\audit\screenshots"
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoRoot = (Get-Item "$scriptDir\..\..").FullName
+$outDir = Join-Path $repoRoot "audit\screenshots"
 
 $pages = @(
     @{ name = "01_overview.png"; url = "http://127.0.0.1:5173/?tab=overview" },

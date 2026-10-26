@@ -4,6 +4,9 @@
 **Hackathon**: AIORI-3 | Track 2 Cyber Security (Problem PS-005, Team A3-PS005-TC416)  
 **Target Architecture**: Cloudflare Pages (Frontend SPA) + Railway (FastAPI Backend + Persistent Volume)
 
+> [!NOTE]
+> **Deployment Status**: Standby / Planned Deployment Guide. The domains referenced below (e.g. `horaq-tc416.pages.dev`, `horaq-backend.up.railway.app`) are illustrative placeholders demonstrating the production multi-tier topology. Public deployment remains pending team deployment; the primary evaluation environment is the local reproducible environment documented in the root [README.md](README.md).
+
 ---
 
 ## 🏗️ Architecture Overview
