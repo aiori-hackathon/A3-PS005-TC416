@@ -29,6 +29,7 @@ from horaq.database import (
     get_overview_counts,
     get_baseline_by_prefix,
     list_alerts,
+    list_baseline_history,
     list_evidence,
     list_routes,
     reset_database,
@@ -56,6 +57,15 @@ class ObservationRequest(BaseModel):
     timestamp: Optional[str] = Field(None, description="ISO 8601 observation timestamp (defaults to UTC now)")
     scenario: Optional[str] = Field(None, description="Optional synthetic scenario identifier")
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Arbitrary route context")
+
+
+class BaselineSeedRequest(BaseModel):
+    prefix: str = Field(..., description="IPv4 or IPv6 CIDR prefix (e.g. 192.0.2.0/24)")
+    origin_asn: Any = Field(..., description="Autonomous System Number (e.g. 13335 or 'AS13335')")
+    collector: Optional[str] = Field("authorized-seed", description="Observation collector / authority label")
+    timestamp: Optional[str] = Field(None, description="ISO 8601 observation timestamp (defaults to UTC now)")
+    reason: Optional[str] = Field("Authorized initial baseline seed", description="Operational justification")
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Arbitrary baseline context")
 
 
 class AlertStatusUpdate(BaseModel):
@@ -131,6 +141,97 @@ async def get_routes(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.get("/baselines/history")
+async def get_baselines_history_endpoint(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    prefix: Optional[str] = Query(None, description="Optional prefix filter"),
+) -> Dict[str, Any]:
+    """Retrieve immutable baseline version history and transition decisions (Proposal D2)."""
+    items, total = list_baseline_history(
+        settings.database_path,
+        prefix=prefix,
+        limit=limit,
+        offset=offset,
+    )
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "prefix_filter": prefix,
+    }
+
+
+@router.get("/routes/{prefix:path}/history")
+async def get_route_history_endpoint(
+    prefix: str,
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+) -> Dict[str, Any]:
+    """Retrieve versioned transition history for a specific route prefix."""
+    items, total = list_baseline_history(
+        settings.database_path,
+        prefix=prefix,
+        limit=limit,
+        offset=offset,
+    )
+    return {
+        "prefix": prefix,
+        "history": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@router.post("/baselines/seed", status_code=status.HTTP_201_CREATED)
+async def seed_authorized_baseline_endpoint(
+    req: BaselineSeedRequest,
+    authorization: Optional[str] = Header(None),
+    x_admin_token: Optional[str] = Header(None),
+) -> Dict[str, Any]:
+    """Explicitly authorize and seed a trusted baseline route (Proposal D2/Versioned Baseline).
+
+    Strict Security Invariant:
+    Only this explicit endpoint (protected by authentication in demo mode) can establish
+    an immediately PROMOTED baseline. Wild route observations are always quarantined as CANDIDATE.
+    """
+    if settings.demo_mode:
+        token = x_admin_token or (authorization.replace("Bearer ", "") if authorization else "")
+        if not settings.admin_token or token != settings.admin_token:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Authorized baseline seeding requires administrator credentials in Demo Mode.",
+            )
+    actor = "OPERATOR_ADMIN" if (x_admin_token or authorization) else "OPERATOR"
+    try:
+        res = process_observation(
+            db_path=settings.database_path,
+            prefix_raw=req.prefix,
+            origin_asn_raw=req.origin_asn,
+            collector=req.collector or "authorized-seed",
+            timestamp_raw=req.timestamp,
+            scenario="authorized-baseline-seed",
+            raw_metadata=req.metadata,
+            authorized_seed=True,
+            actor=actor,
+        )
+        return {
+            "message": f"Prefix '{req.prefix}' successfully established as authorized PROMOTED baseline.",
+            "prefix": req.prefix,
+            "origin_asn": req.origin_asn,
+            "status": "PROMOTED",
+            "actor": actor,
+            "result": res,
+        }
+    except ValueError as err:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(err),
+        )
 
 
 @router.get("/alerts")
@@ -218,6 +319,8 @@ async def post_observation(
             timestamp_raw=obs.timestamp,
             scenario=obs.scenario,
             raw_metadata=obs.metadata,
+            authorized_seed=False,
+            actor="API_OBSERVATION",
         )
         return res
     except ValueError as err:

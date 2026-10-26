@@ -114,10 +114,26 @@ def init_db(db_path: str) -> None:
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS baseline_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                prefix TEXT NOT NULL,
+                origin_asn TEXT NOT NULL,
+                prior_status TEXT,
+                new_status TEXT NOT NULL,
+                transition_type TEXT NOT NULL,
+                reason TEXT NOT NULL,
+                peer_count INTEGER NOT NULL DEFAULT 1,
+                observation_count INTEGER NOT NULL DEFAULT 1,
+                triggering_observation_id INTEGER,
+                actor TEXT NOT NULL DEFAULT 'SYSTEM_POLICY',
+                created_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_obs_prefix_time ON observations (prefix, observed_at);
             CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts (created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_alerts_kind ON alerts (kind);
             CREATE INDEX IF NOT EXISTS idx_evidence_alert ON evidence (alert_id);
+            CREATE INDEX IF NOT EXISTS idx_baseline_history_prefix ON baseline_history (prefix, created_at DESC);
             """)
 
             # Safe column additions for pre-existing databases
@@ -245,7 +261,10 @@ def list_routes(
                 (pattern, pattern),
             ).fetchone()[0]
             cursor = conn.execute(
-                "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, updated_at "
+                "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
+                "COALESCE(status, 'PROMOTED') as status, "
+                "COALESCE(peer_count, 1) as peer_count, "
+                "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
                 "FROM baselines WHERE prefix LIKE ? OR origin_asn LIKE ? "
                 "ORDER BY last_seen DESC LIMIT ? OFFSET ?;",
                 (pattern, pattern, limit, offset),
@@ -253,7 +272,10 @@ def list_routes(
         else:
             count = conn.execute("SELECT COUNT(*) FROM baselines;").fetchone()[0]
             cursor = conn.execute(
-                "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, updated_at "
+                "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
+                "COALESCE(status, 'PROMOTED') as status, "
+                "COALESCE(peer_count, 1) as peer_count, "
+                "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
                 "FROM baselines ORDER BY last_seen DESC LIMIT ? OFFSET ?;",
                 (limit, offset),
             )
@@ -422,13 +444,110 @@ def seed_demonstration_baseline(db_path: str) -> None:
             for prefix, asn, count in baselines_to_seed:
                 conn.execute(
                     """
-                    INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, status, peer_count, updated_at)
+                    VALUES (?, ?, ?, ?, ?, 'PROMOTED', 2, ?)
                     ON CONFLICT(prefix) DO UPDATE SET
                         origin_asn = excluded.origin_asn,
                         last_seen = excluded.last_seen,
+                        status = 'PROMOTED',
+                        peer_count = 2,
                         updated_at = excluded.updated_at;
                     """,
                     (prefix, asn, now_iso, now_iso, count, now_iso),
                 )
+                record_baseline_transition(
+                    conn,
+                    prefix=prefix,
+                    origin_asn=asn,
+                    prior_status=None,
+                    new_status="PROMOTED",
+                    transition_type="AUTHORIZED_SEED",
+                    reason="Demonstration suite authorized reference baseline initialization",
+                    peer_count=2,
+                    observation_count=count,
+                    actor="DEMO_SEED_INIT",
+                    created_at=now_iso,
+                )
+
+
+def record_baseline_transition(
+    conn: sqlite3.Connection,
+    prefix: str,
+    origin_asn: str,
+    prior_status: Optional[str],
+    new_status: str,
+    transition_type: str,
+    reason: str,
+    peer_count: int = 1,
+    observation_count: int = 1,
+    triggering_observation_id: Optional[int] = None,
+    actor: str = "SYSTEM_POLICY",
+    created_at: Optional[str] = None,
+) -> int:
+    """Record an append-only baseline history transition (Proposal D2: Versioned baseline)."""
+    ts = created_at or datetime.now(timezone.utc).isoformat()
+    cursor = conn.execute(
+        """
+        INSERT INTO baseline_history (
+            prefix, origin_asn, prior_status, new_status, transition_type,
+            reason, peer_count, observation_count, triggering_observation_id,
+            actor, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        """,
+        (
+            prefix,
+            origin_asn,
+            prior_status,
+            new_status,
+            transition_type,
+            reason,
+            peer_count,
+            observation_count,
+            triggering_observation_id,
+            actor,
+            ts,
+        ),
+    )
+    return cursor.lastrowid or 0
+
+
+def list_baseline_history(
+    db_path: str,
+    prefix: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """Retrieve immutable baseline version history with optional prefix filter."""
+    with db_session(db_path) as conn:
+        if prefix:
+            total = conn.execute(
+                "SELECT COUNT(*) as count FROM baseline_history WHERE prefix = ?;", (prefix,)
+            ).fetchone()["count"]
+            rows = conn.execute(
+                """
+                SELECT id, prefix, origin_asn, prior_status, new_status, transition_type,
+                       reason, peer_count, observation_count, triggering_observation_id,
+                       actor, created_at
+                FROM baseline_history
+                WHERE prefix = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT ? OFFSET ?;
+                """,
+                (prefix, limit, offset),
+            ).fetchall()
+        else:
+            total = conn.execute("SELECT COUNT(*) as count FROM baseline_history;").fetchone()["count"]
+            rows = conn.execute(
+                """
+                SELECT id, prefix, origin_asn, prior_status, new_status, transition_type,
+                       reason, peer_count, observation_count, triggering_observation_id,
+                       actor, created_at
+                FROM baseline_history
+                ORDER BY created_at DESC, id DESC
+                LIMIT ? OFFSET ?;
+                """,
+                (limit, offset),
+            ).fetchall()
+        return [dict(r) for r in rows], total
+
 

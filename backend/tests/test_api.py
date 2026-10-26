@@ -210,5 +210,93 @@ def test_demo_mode_seed_demo_protects_live_observations(client, monkeypatch):
         assert row is not None, "Live BGP observation was wiped by unauthenticated seed-demo in demo mode!"
 
 
+def test_api_unauthorized_seed_escalation_blocked(client, monkeypatch):
+    """P1 Regression Test: Verify /api/v1/observations cannot promote baseline via scenario/metadata."""
+    from horaq.config import settings
+
+    # Ensure arbitrary observation submission is allowed (demo_mode=False)
+    monkeypatch.setattr(settings, "demo_mode", False)
+
+    # Caller submits observation with trusted_seed flag and seed scenario
+    resp = client.post(
+        "/api/v1/observations",
+        json={
+            "prefix": "198.51.200.0/24",
+            "origin_asn": 64515,
+            "scenario": "seed-my-baseline",
+            "metadata": {"trusted_seed": True, "authorized": True},
+        },
+    )
+    assert resp.status_code == 201
+
+    # Check baseline status in routes: MUST BE CANDIDATE, NOT PROMOTED
+    routes_resp = client.get("/api/v1/routes?search=198.51.200.0")
+    assert routes_resp.status_code == 200
+    items = routes_resp.json()["items"]
+    assert len(items) == 1
+    assert items[0]["status"] == "CANDIDATE", "Observation endpoint allowed caller to establish PROMOTED baseline!"
+
+
+def test_api_authorized_baseline_seeding_and_history(client, monkeypatch):
+    """P1 Regression Test: Verify /api/v1/baselines/seed and history endpoints."""
+    from horaq.config import settings
+
+    monkeypatch.setattr(settings, "demo_mode", False)
+
+    # 1. Authorize baseline seed via dedicated endpoint
+    seed_resp = client.post(
+        "/api/v1/baselines/seed",
+        json={
+            "prefix": "203.0.120.0/24",
+            "origin_asn": "AS64520",
+            "reason": "Authorized ISP upstream allocation",
+        },
+    )
+    assert seed_resp.status_code == 201
+    assert seed_resp.json()["status"] == "PROMOTED"
+
+    # 2. Verify route is PROMOTED
+    route_resp = client.get("/api/v1/routes?search=203.0.120.0")
+    assert route_resp.status_code == 200
+    assert route_resp.json()["items"][0]["status"] == "PROMOTED"
+
+    # 3. Verify history endpoint
+    hist_resp = client.get("/api/v1/baselines/history?prefix=203.0.120.0/24")
+    assert hist_resp.status_code == 200
+    hist_data = hist_resp.json()
+    assert hist_data["total"] >= 1
+    assert hist_data["items"][0]["transition_type"] == "AUTHORIZED_SEED"
+
+    # 4. Verify route-specific history endpoint
+    pfx_hist = client.get("/api/v1/routes/203.0.120.0/24/history")
+    assert pfx_hist.status_code == 200
+    assert pfx_hist.json()["total"] >= 1
+
+
+def test_api_authorized_seeding_requires_auth_in_demo_mode(client, monkeypatch):
+    """P1 Regression Test: Verify authorized baseline seeding requires credentials in demo mode."""
+    from horaq.config import settings
+
+    monkeypatch.setattr(settings, "demo_mode", True)
+    monkeypatch.setattr(settings, "admin_token", "secret-test-token")
+
+    # Unauthenticated attempt fails with 403
+    unauth_resp = client.post(
+        "/api/v1/baselines/seed",
+        json={"prefix": "192.0.2.0/24", "origin_asn": "AS64496"},
+    )
+    assert unauth_resp.status_code == 403
+
+    # Authenticated attempt succeeds
+    auth_resp = client.post(
+        "/api/v1/baselines/seed",
+        json={"prefix": "192.0.2.0/24", "origin_asn": "AS64496"},
+        headers={"X-Admin-Token": "secret-test-token"},
+    )
+    assert auth_resp.status_code == 201
+    assert auth_resp.json()["status"] == "PROMOTED"
+
+
+
 
 

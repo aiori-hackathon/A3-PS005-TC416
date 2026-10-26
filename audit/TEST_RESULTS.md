@@ -2,8 +2,9 @@
 
 **Project**: HORA-Q (Explainable BGP Origin and Subprefix Anomaly Monitor)  
 **Hackathon**: AIORI-3 | Track 2 Cyber Security (Problem PS-005, Team A3-PS005-TC416)  
-**Execution Timestamp**: 2026-10-25 16:35:00 UTC  
-**Environment**: Windows 11 / Linux (Ubuntu 24.04), Python 3.12 / 3.13.7, pytest 9.1.1, Node.js v20.x, Vite 5.4.21  
+**Execution Timestamp**: 2026-10-26 14:02:00 UTC  
+**Environment**: Windows 11 / Linux (Ubuntu 24.04), Python 3.13.7, pytest 8.4.2, Node.js v20.x, Vite 5.4.21  
+**Verification Scope**: 90 Automated Tests, Head-to-Head Reference Benchmark, Archival MRT Replay, Independent CLI Verifier, and Frontend Production Build.
 
 ---
 
@@ -14,7 +15,7 @@
 python -m pytest backend/tests -v
 ```
 
-### Complete Test Results Output (81 Tests)
+### Complete Test Results Output (90 Tests)
 ```text
 ============================= test session starts =============================
 platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0 -- C:\Python313\python.exe
@@ -22,91 +23,100 @@ cachedir: .pytest_cache
 rootdir: D:\HORA-Q
 plugins: anyio-4.10.0, asyncio-1.3.0
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collecting ... collected 81 items
+collecting ... collected 90 items
 
 backend/tests/test_api.py::test_root_health PASSED                       [  1%]
 backend/tests/test_api.py::test_overview_endpoint PASSED                 [  2%]
 backend/tests/test_api.py::test_post_observation_valid PASSED            [  3%]
-backend/tests/test_api.py::test_post_observation_invalid_prefix PASSED   [  5%]
-backend/tests/test_api.py::test_post_observation_invalid_asn PASSED      [  6%]
-backend/tests/test_api.py::test_run_synthetic_scenarios PASSED           [  7%]
-backend/tests/test_api.py::test_evidence_verify_hash_endpoint PASSED     [  8%]
-backend/tests/test_api.py::test_crypto_public_key_endpoint PASSED        [ 10%]
-backend/tests/test_api.py::test_collector_status_endpoint PASSED         [ 11%]
-backend/tests/test_api.py::test_demo_mode_restricts_arbitrary_observation_submission PASSED [ 12%]
-backend/tests/test_api.py::test_demo_mode_safe_reset_protects_database PASSED [ 14%]
-backend/tests/test_api.py::test_demo_mode_seed_demo_protects_live_observations PASSED [ 15%]
-backend/tests/test_benchmark.py::test_head_to_head_benchmark_metrics PASSED [ 16%]
-backend/tests/test_benchmark.py::test_cryptographic_benchmark PASSED     [ 17%]
-backend/tests/test_collector.py::test_parse_standard_as_path PASSED      [ 19%]
-backend/tests/test_collector.py::test_parse_single_element_as_set PASSED [ 20%]
-backend/tests/test_collector.py::test_parse_multi_element_as_set_skipped PASSED [ 21%]
+backend/tests/test_api.py::test_post_observation_invalid_prefix PASSED   [  4%]
+backend/tests/test_api.py::test_post_observation_invalid_asn PASSED      [  5%]
+backend/tests/test_api.py::test_run_synthetic_scenarios PASSED           [  6%]
+backend/tests/test_api.py::test_evidence_verify_hash_endpoint PASSED     [  7%]
+backend/tests/test_api.py::test_crypto_public_key_endpoint PASSED        [  8%]
+backend/tests/test_api.py::test_collector_status_endpoint PASSED         [ 10%]
+backend/tests/test_api.py::test_demo_mode_restricts_arbitrary_observation_submission PASSED [ 11%]
+backend/tests/test_api.py::test_demo_mode_safe_reset_protects_database PASSED [ 12%]
+backend/tests/test_api.py::test_demo_mode_seed_demo_protects_live_observations PASSED [ 13%]
+backend/tests/test_api.py::test_api_unauthorized_seed_escalation_blocked PASSED [ 14%]
+backend/tests/test_api.py::test_api_authorized_baseline_seeding_and_history PASSED [ 15%]
+backend/tests/test_api.py::test_api_authorized_seeding_requires_auth_in_demo_mode PASSED [ 16%]
+backend/tests/test_benchmark.py::test_head_to_head_benchmark_metrics PASSED [ 17%]
+backend/tests/test_benchmark.py::test_cryptographic_benchmark PASSED     [ 18%]
+backend/tests/test_collector.py::test_parse_standard_as_path PASSED      [ 20%]
+backend/tests/test_collector.py::test_parse_single_element_as_set PASSED [ 21%]
+backend/tests/test_collector.py::test_parse_multi_element_as_set_skipped PASSED [ 22%]
 backend/tests/test_collector.py::test_parse_empty_as_set PASSED          [ 23%]
 backend/tests/test_collector.py::test_parse_withdrawal_only_message PASSED [ 24%]
 backend/tests/test_collector.py::test_parse_duplicate_prefixes_deduplication PASSED [ 25%]
 backend/tests/test_collector.py::test_parse_missing_as_path PASSED       [ 26%]
-backend/tests/test_collector.py::test_parse_non_update_message_types PASSED [ 28%]
+backend/tests/test_collector.py::test_parse_non_update_message_types PASSED [ 27%]
 backend/tests/test_collector.py::test_collector_telemetry_tracking PASSED [ 28%]
-backend/tests/test_collector.py::test_live_collector_peer_metadata_and_withdrawals PASSED [ 29%]
-backend/tests/test_crypto.py::test_crypto_status_reporting PASSED        [ 30%]
+backend/tests/test_collector.py::test_live_collector_peer_metadata_and_withdrawals PASSED [ 30%]
+backend/tests/test_crypto.py::test_crypto_status_reporting PASSED        [ 31%]
 backend/tests/test_crypto.py::test_crypto_behavior PASSED                [ 32%]
 backend/tests/test_crypto.py::test_corrupted_signature_rejected PASSED   [ 33%]
 backend/tests/test_crypto.py::test_persistent_authority_key_lifecycle PASSED [ 34%]
 backend/tests/test_crypto.py::test_custom_secret_key_requires_public_key PASSED [ 35%]
-backend/tests/test_crypto.py::test_mldsa65_fips204_parameters_and_dimensions PASSED [ 37%]
-backend/tests/test_crypto.py::test_wrong_public_key_rejected PASSED      [ 38%]
-backend/tests/test_crypto.py::test_corrupted_authority_key_file_rejected_without_silent_regeneration PASSED [ 39%]
-backend/tests/test_crypto.py::test_independent_verifier_mldsa_alignment PASSED [ 41%]
-backend/tests/test_crypto.py::test_authority_key_path_absolute_and_stable PASSED [ 42%]
-backend/tests/test_crypto.py::test_authority_key_unwritable_storage_raises_runtime_error PASSED [ 43%]
-backend/tests/test_crypto.py::test_authority_key_persistence_across_manager_instances_and_restarts PASSED [ 44%]
-backend/tests/test_detection.py::test_baseline_seeding_creates_no_alert PASSED [ 46%]
-backend/tests/test_detection.py::test_same_origin_updates_observation_count PASSED [ 47%]
-backend/tests/test_detection.py::test_origin_change_generates_alert_and_preserves_baseline PASSED [ 48%]
-backend/tests/test_detection.py::test_subprefix_anomaly_detection PASSED [ 50%]
-backend/tests/test_detection.py::test_ipv6_subprefix_anomaly_detection PASSED [ 51%]
-backend/tests/test_detection.py::test_suspicious_subprefix_does_not_poison_baseline PASSED [ 52%]
-backend/tests/test_detection.py::test_candidate_policy_peer_diversity_invariant PASSED [ 53%]
-backend/tests/test_detection.py::test_withdrawal_recovery_resolution PASSED [ 54%]
-backend/tests/test_detection.py::test_multi_peer_withdrawal_recovery_semantics PASSED [ 55%]
-backend/tests/test_evidence.py::test_canonicalize_json_sorted_keys PASSED [ 56%]
-backend/tests/test_evidence.py::test_create_and_verify_evidence_hash PASSED [ 57%]
-backend/tests/test_evidence.py::test_verify_evidence_hash_detects_tampering PASSED [ 58%]
-backend/tests/test_evidence.py::test_rfc8785_canonicalization_compliance PASSED [ 60%]
-backend/tests/test_evidence.py::test_rfc8785_utf16_surrogate_pair_ordering_vs_codepoints PASSED [ 61%]
-backend/tests/test_evidence.py::test_rfc8785_number_and_float_serialization PASSED [ 62%]
-backend/tests/test_evidence.py::test_backend_and_independent_verifier_byte_parity PASSED [ 64%]
-backend/tests/test_evidence.py::test_unsigned_evidence_record_cannot_be_authentic PASSED [ 65%]
-backend/tests/test_evidence.py::test_tampered_unsigned_evidence_record_rejected PASSED [ 66%]
-backend/tests/test_evidence.py::test_missing_expected_hash_and_signature_incomplete PASSED [ 67%]
-backend/tests/test_evidence.py::test_signed_evidence_missing_public_key_or_algorithm PASSED [ 69%]
-backend/tests/test_evidence.py::test_signed_evidence_unsupported_algorithm PASSED [ 70%]
-backend/tests/test_evidence.py::test_authentic_sample_evidence_file_verified PASSED [ 71%]
-backend/tests/test_evidence.py::test_tampered_sample_evidence_file_rejected PASSED [ 73%]
-backend/tests/test_historical_replay.py::test_historical_incidents_execution PASSED [ 74%]
-backend/tests/test_historical_replay.py::test_archival_mrt_replay_validation PASSED [ 75%]
-backend/tests/test_historical_replay.py::test_replay_outcomes_data_driven_and_failure_detection PASSED [ 76%]
-backend/tests/test_normalization.py::test_normalize_prefix_ipv4_valid PASSED [ 77%]
-backend/tests/test_normalization.py::test_normalize_prefix_host_bit_normalization PASSED [ 78%]
-backend/tests/test_normalization.py::test_normalize_prefix_ipv6_valid PASSED [ 79%]
-backend/tests/test_normalization.py::test_normalize_prefix_whitespace PASSED [ 80%]
-backend/tests/test_normalization.py::test_normalize_prefix_invalid_missing_mask PASSED [ 82%]
-backend/tests/test_normalization.py::test_normalize_prefix_invalid_characters PASSED [ 83%]
-backend/tests/test_normalization.py::test_normalize_asn_integer PASSED   [ 84%]
-backend/tests/test_normalization.py::test_normalize_asn_string PASSED    [ 85%]
-backend/tests/test_normalization.py::test_normalize_asn_as0_rejected PASSED [ 87%]
-backend/tests/test_normalization.py::test_normalize_asn_negative_rejected PASSED [ 88%]
-backend/tests/test_normalization.py::test_normalize_asn_out_of_range PASSED [ 89%]
-backend/tests/test_normalization.py::test_normalize_asn_asdot_rejected PASSED [ 91%]
-backend/tests/test_normalization.py::test_normalize_timestamp_default PASSED [ 92%]
-backend/tests/test_normalization.py::test_normalize_timestamp_iso PASSED [ 93%]
-backend/tests/test_normalization.py::test_normalize_timestamp_invalid PASSED [ 94%]
+backend/tests/test_mldsa65_fips204_parameters_and_dimensions PASSED       [ 36%]
+backend/tests/test_crypto.py::test_wrong_public_key_rejected PASSED      [ 37%]
+backend/tests/test_crypto.py::test_corrupted_authority_key_file_rejected_without_silent_regeneration PASSED [ 38%]
+backend/tests/test_crypto.py::test_independent_verifier_mldsa_alignment PASSED [ 40%]
+backend/tests/test_crypto.py::test_authority_key_path_absolute_and_stable PASSED [ 41%]
+backend/tests/test_crypto.py::test_authority_key_unwritable_storage_raises_runtime_error PASSED [ 42%]
+backend/tests/test_crypto.py::test_authority_key_persistence_across_manager_instances_and_restarts PASSED [ 43%]
+backend/tests/test_detection.py::test_baseline_seeding_creates_no_alert PASSED [ 44%]
+backend/tests/test_detection.py::test_same_origin_updates_observation_count PASSED [ 45%]
+backend/tests/test_detection.py::test_origin_change_generates_alert_and_preserves_baseline PASSED [ 46%]
+backend/tests/test_detection.py::test_subprefix_anomaly_detection PASSED [ 47%]
+backend/tests/test_detection.py::test_ipv6_subprefix_anomaly_detection PASSED [ 48%]
+backend/tests/test_detection.py::test_suspicious_subprefix_does_not_poison_baseline PASSED [ 50%]
+backend/tests/test_detection.py::test_candidate_policy_peer_diversity_invariant PASSED [ 51%]
+backend/tests/test_detection.py::test_withdrawal_recovery_resolution PASSED [ 52%]
+backend/tests/test_detection.py::test_multi_peer_withdrawal_recovery_semantics PASSED [ 53%]
+backend/tests/test_detection.py::test_unauthorized_seed_escalation_blocked PASSED [ 54%]
+backend/tests/test_detection.py::test_baseline_history_append_only_audit_trail PASSED [ 55%]
+backend/tests/test_detection.py::test_withdrawal_with_missing_peer_leaves_alert_active PASSED [ 56%]
+backend/tests/test_detection.py::test_withdrawal_with_unrelated_peer_leaves_alert_active PASSED [ 57%]
+backend/tests/test_detection.py::test_withdrawal_duplicate_is_idempotent PASSED [ 58%]
+backend/tests/test_detection.py::test_repeated_announcement_after_withdrawal PASSED [ 60%]
+backend/tests/test_evidence.py::test_canonicalize_json_sorted_keys PASSED [ 61%]
+backend/tests/test_evidence.py::test_create_and_verify_evidence_hash PASSED [ 62%]
+backend/tests/test_evidence.py::test_verify_evidence_hash_detects_tampering PASSED [ 63%]
+backend/tests/test_evidence.py::test_rfc8785_canonicalization_compliance PASSED [ 64%]
+backend/tests/test_evidence.py::test_rfc8785_utf16_surrogate_pair_ordering_vs_codepoints PASSED [ 65%]
+backend/tests/test_evidence.py::test_rfc8785_number_and_float_serialization PASSED [ 66%]
+backend/tests/test_evidence.py::test_backend_and_independent_verifier_byte_parity PASSED [ 67%]
+backend/tests/test_evidence.py::test_unsigned_evidence_record_cannot_be_authentic PASSED [ 68%]
+backend/tests/test_evidence.py::test_tampered_unsigned_evidence_record_rejected PASSED [ 70%]
+backend/tests/test_evidence.py::test_missing_expected_hash_and_signature_incomplete PASSED [ 71%]
+backend/tests/test_evidence.py::test_signed_evidence_missing_public_key_or_algorithm PASSED [ 72%]
+backend/tests/test_evidence.py::test_signed_evidence_unsupported_algorithm PASSED [ 73%]
+backend/tests/test_evidence.py::test_authentic_sample_evidence_file_verified PASSED [ 74%]
+backend/tests/test_evidence.py::test_tampered_sample_evidence_file_rejected PASSED [ 75%]
+backend/tests/test_historical_replay.py::test_historical_incidents_execution PASSED [ 76%]
+backend/tests/test_historical_replay.py::test_archival_mrt_replay_validation PASSED [ 77%]
+backend/tests/test_historical_replay.py::test_replay_outcomes_data_driven_and_failure_detection PASSED [ 78%]
+backend/tests/test_normalization.py::test_normalize_prefix_ipv4_valid PASSED [ 80%]
+backend/tests/test_normalization.py::test_normalize_prefix_host_bit_normalization PASSED [ 81%]
+backend/tests/test_normalization.py::test_normalize_prefix_ipv6_valid PASSED [ 82%]
+backend/tests/test_normalization.py::test_normalize_prefix_whitespace PASSED [ 83%]
+backend/tests/test_normalization.py::test_normalize_prefix_invalid_missing_mask PASSED [ 84%]
+backend/tests/test_normalization.py::test_normalize_prefix_invalid_characters PASSED [ 85%]
+backend/tests/test_normalization.py::test_normalize_asn_integer PASSED   [ 86%]
+backend/tests/test_normalization.py::test_normalize_asn_string PASSED    [ 87%]
+backend/tests/test_normalization.py::test_normalize_asn_as0_rejected PASSED [ 88%]
+backend/tests/test_normalization.py::test_normalize_asn_negative_rejected PASSED [ 90%]
+backend/tests/test_normalization.py::test_normalize_asn_out_of_range PASSED [ 91%]
+backend/tests/test_normalization.py::test_normalize_asn_asdot_rejected PASSED [ 92%]
+backend/tests/test_normalization.py::test_normalize_timestamp_default PASSED [ 93%]
+backend/tests/test_normalization.py::test_normalize_timestamp_iso PASSED [ 94%]
+backend/tests/test_normalization.py::test_normalize_timestamp_invalid PASSED [ 95%]
 backend/tests/test_rpki.py::test_rpki_valid_response PASSED              [ 96%]
 backend/tests/test_rpki.py::test_rpki_invalid_response PASSED            [ 97%]
 backend/tests/test_rpki.py::test_rpki_timeout_yields_unavailable PASSED  [ 98%]
 backend/tests/test_rpki.py::test_rpki_http_error_yields_unavailable PASSED [100%]
 
-============================= 81 passed in 10.45s =============================
+============================= 90 passed in 12.53s =============================
 ```
 
 ---
@@ -152,6 +162,7 @@ File Source: D:\HORA-Q\audit\sample_evidence_signed.json
 
 ========================================================================
 FINAL VERDICT: [AUTHENTIC] Evidence record verified successfully with valid digital signature.
+Note: Signature verification establishes cryptographic authenticity and payload integrity under public-key trust assumptions. It does not prove that the underlying BGP observation was truthful.
 Exit Code: 0
 ========================================================================
 
@@ -176,7 +187,6 @@ FINAL VERDICT: [UNSIGNED] Content integrity matches recorded digest, but record 
                A self-contained digest without an authority signature cannot establish authenticity.
 Exit Code: 2
 ========================================================================
-
 ```
 
 Tamper check output (expected exit code 1):
@@ -209,16 +219,16 @@ rendering chunks...
 computing gzip size...
 dist/index.html                   1.12 kB │ gzip:  0.61 kB
 dist/assets/index-CRn6nD2u.css   26.76 kB │ gzip:  5.86 kB
-dist/assets/index-CHnOY5QJ.js   257.34 kB │ gzip: 69.91 kB
-✓ built in 2.98s
+dist/assets/index-VO35cXyC.js   257.33 kB │ gzip: 69.90 kB
+✓ built in 13.24s
 ```
 
 ---
 
 ## 4. Test Statistics Summary
-- **Total Tests Collected**: 81
-- **Tests Passed**: 81 (100.0%)
+- **Total Tests Collected**: 90
+- **Tests Passed**: 90 (100.0%)
 - **Tests Failed**: 0 (0.0%)
 - **Tests Skipped**: 0 (0.0%)
-- **Total Test Execution Duration**: 10.45 seconds
+- **Total Test Execution Duration**: 12.53 seconds
 - **Production Build Diagnostics / Lint Errors**: 0

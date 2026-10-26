@@ -13,7 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from horaq.database import db_session, get_all_baselines
+from horaq.database import db_session, get_all_baselines, record_baseline_transition
 from horaq.evidence import canonicalize_json, create_evidence_payload
 from horaq.normalization import normalize_asn, normalize_prefix, normalize_timestamp
 
@@ -61,6 +61,8 @@ def process_observation(
     raw_metadata: Optional[Dict[str, Any]] = None,
     peer_as: Optional[str] = None,
     peer_ip: Optional[str] = None,
+    authorized_seed: bool = False,
+    actor: str = "SYSTEM_POLICY",
 ) -> Dict[str, Any]:
     """Ingest and evaluate a BGP route observation against baselines.
 
@@ -69,7 +71,8 @@ def process_observation(
     2. Atomic check against stored baselines.
     3. Detection of origin change and/or subprefix anomaly.
     4. Generation of explainable alerts and cryptographic evidence records.
-    5. Atomic database persistence.
+    5. Immutable versioned baseline history recording (Proposal D2).
+    6. Atomic database persistence.
     """
     # 1. Normalization
     norm_prefix, ip_version = normalize_prefix(prefix_raw)
@@ -87,6 +90,7 @@ def process_observation(
     metadata_json = json.dumps(raw_metadata or {}, sort_keys=True)
 
     generated_alerts: List[Dict[str, Any]] = []
+    history_transitions: List[Dict[str, Any]] = []
 
     with db_session(db_path) as conn:
         # Fetch current baselines (including candidate status and peer tracking)
@@ -207,6 +211,21 @@ def process_observation(
             }
             generated_alerts.append(alert_obj)
 
+            # Record rejected anomaly attempt against baseline in immutable history
+            history_transitions.append({
+                "prefix": norm_prefix,
+                "origin_asn": norm_asn,
+                "prior_status": None,
+                "new_status": "REJECTED",
+                "transition_type": "REJECTED_ATTEMPT",
+                "reason": (
+                    f"Rejected anomalous more-specific prefix {norm_prefix} (Origin: {norm_asn}) "
+                    f"conflicting with parent baseline {parent_prefix} (Origin: {parent_asn}); baseline preserved unpoisoned."
+                ),
+                "peer_count": distinct_peer_count,
+                "observation_count": 1,
+            })
+
         # B. Check Origin-AS Change or Evaluate Candidate Baseline Policy
         if generated_alerts:
             # CRITICAL SECURITY RULE: Anomaly detected (e.g. Subprefix Containment Anomaly).
@@ -214,12 +233,12 @@ def process_observation(
             pass
         elif existing_baseline is None:
             # Candidate Baseline Policy:
-            # If explicitly seeded/pre-authorized, mark as PROMOTED immediately.
-            # If discovered from wild observations, mark as CANDIDATE pending corroboration threshold.
-            is_explicit_seed = bool(
-                (scenario and any(s in scenario.lower() for s in ("baseline", "seed", "demo-seed", "migration-seed", "ipv6-parent-seed")))
-                or (raw_metadata and raw_metadata.get("trusted_seed"))
-            )
+            # STRICT INVARIANT: Only an explicitly authorized operation (authorized_seed=True)
+            # can establish an immediately PROMOTED baseline.
+            # Free-form scenario strings (e.g. "seed", "baseline") or caller-supplied metadata
+            # flags (e.g. "trusted_seed") MUST NEVER grant immediate baseline trust.
+            # Untrusted observations are always quarantined as CANDIDATE.
+            is_explicit_seed = bool(authorized_seed)
             init_status = "PROMOTED" if is_explicit_seed else "CANDIDATE"
             peer_list = [peer_key]
 
@@ -228,6 +247,21 @@ def process_observation(
                 "VALUES (?, ?, ?, ?, 1, ?, ?, 1, ?);",
                 (norm_prefix, norm_asn, norm_time, norm_time, init_status, json.dumps(peer_list), now_utc),
             )
+
+            history_transitions.append({
+                "prefix": norm_prefix,
+                "origin_asn": norm_asn,
+                "prior_status": None,
+                "new_status": init_status,
+                "transition_type": "AUTHORIZED_SEED" if is_explicit_seed else "INITIAL_CANDIDATE",
+                "reason": (
+                    "Explicitly authorized baseline seed."
+                    if is_explicit_seed
+                    else "Discovered from observation; quarantined as candidate pending multi-peer corroboration."
+                ),
+                "peer_count": 1,
+                "observation_count": 1,
+            })
         else:
             baseline_asn = existing_baseline["origin_asn"]
             current_status = existing_baseline.get("status", "PROMOTED")
@@ -252,6 +286,19 @@ def process_observation(
                     new_status = "PROMOTED"
                 elif current_peer_count >= PROMOTION_PEER_THRESHOLD and new_count >= PROMOTION_OBS_THRESHOLD:
                     new_status = "PROMOTED"
+                    history_transitions.append({
+                        "prefix": norm_prefix,
+                        "origin_asn": norm_asn,
+                        "prior_status": "CANDIDATE",
+                        "new_status": "PROMOTED",
+                        "transition_type": "PROMOTED_CORROBORATED",
+                        "reason": (
+                            f"Corroborated across {current_peer_count} distinct peers and {new_count} observations; "
+                            f"promoted candidate to trusted baseline."
+                        ),
+                        "peer_count": current_peer_count,
+                        "observation_count": new_count,
+                    })
                 else:
                     new_status = "CANDIDATE"
 
@@ -342,6 +389,21 @@ def process_observation(
                 }
                 generated_alerts.append(alert_obj)
 
+                # Record rejected anomaly attempt against baseline in immutable history
+                history_transitions.append({
+                    "prefix": norm_prefix,
+                    "origin_asn": norm_asn,
+                    "prior_status": current_status,
+                    "new_status": current_status,  # Baseline preserved unpoisoned
+                    "transition_type": "REJECTED_ATTEMPT",
+                    "reason": (
+                        f"Rejected anomalous announcement (Origin: {norm_asn} vs Baseline: {baseline_asn}); "
+                        f"baseline preserved unpoisoned."
+                    ),
+                    "peer_count": distinct_peer_count,
+                    "observation_count": existing_baseline.get("observation_count", 1),
+                })
+
         # C. Insert Observation Record
         cur = conn.execute(
             "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, created_at) "
@@ -349,6 +411,23 @@ def process_observation(
             (norm_prefix, norm_asn, collector, norm_time, scenario, metadata_json, peer_as, peer_ip, now_utc),
         )
         obs_id = cur.lastrowid
+
+        # Record queued baseline transitions in immutable history (Proposal D2)
+        for ht in history_transitions:
+            record_baseline_transition(
+                conn,
+                prefix=ht["prefix"],
+                origin_asn=ht["origin_asn"],
+                prior_status=ht["prior_status"],
+                new_status=ht["new_status"],
+                transition_type=ht["transition_type"],
+                reason=ht["reason"],
+                peer_count=ht.get("peer_count", 1),
+                observation_count=ht.get("observation_count", 1),
+                triggering_observation_id=obs_id,
+                actor=actor,
+                created_at=norm_time,
+            )
 
         # D. Insert Alerts and Evidence Records
         for alert in generated_alerts:
@@ -437,6 +516,8 @@ def process_withdrawal(
         peer_as = peer_as or str(raw_metadata.get("peer_as") or "") or None
         peer_ip = peer_ip or str(raw_metadata.get("peer_ip") or "") or None
 
+    clean_peer_as = f"AS{str(peer_as).strip().upper().replace('AS', '')}" if (peer_as and str(peer_as).strip()) else None
+
     meta = dict(raw_metadata or {})
     meta["update_type"] = "WITHDRAWAL"
     metadata_json = json.dumps(meta, sort_keys=True)
@@ -457,7 +538,8 @@ def process_withdrawal(
         active_alerts = conn.execute(
             "SELECT id, title, kind, prefix, observed_asn, baseline_asn, "
             "COALESCE(active_peers, '[]') as active_peers, "
-            "COALESCE(withdrawn_peers, '[]') as withdrawn_peers "
+            "COALESCE(withdrawn_peers, '[]') as withdrawn_peers, "
+            "status, recovery_status "
             "FROM alerts WHERE prefix = ? AND status = 'ACTIVE';",
             (norm_prefix,),
         ).fetchall()
@@ -465,95 +547,124 @@ def process_withdrawal(
         for alt in active_alerts:
             alt_id = alt["id"]
             try:
-                act_peers = json.loads(alt["active_peers"] or "[]")
+                raw_act = json.loads(alt["active_peers"] or "[]")
             except Exception:
-                act_peers = []
+                raw_act = []
             try:
-                wdr_peers = json.loads(alt["withdrawn_peers"] or "[]")
+                raw_wdr = json.loads(alt["withdrawn_peers"] or "[]")
             except Exception:
-                wdr_peers = []
+                raw_wdr = []
 
-            if act_peers:
-                peer_matches = (peer_as is None) or (peer_as in act_peers)
-                if peer_matches:
-                    if peer_as and peer_as in act_peers:
-                        act_peers.remove(peer_as)
-                        if peer_as not in wdr_peers:
-                            wdr_peers.append(peer_as)
-                    elif peer_as is None:
-                        wdr_peers.extend([p for p in act_peers if p not in wdr_peers])
-                        act_peers.clear()
+            # Normalize peer format to AS<digits> for deterministic set matching
+            act_peers = [f"AS{str(p).strip().upper().replace('AS', '')}" for p in raw_act if str(p).strip()]
+            wdr_peers = [f"AS{str(p).strip().upper().replace('AS', '')}" for p in raw_wdr if str(p).strip()]
 
-                    if len(act_peers) == 0:
-                        recovery_note = (
-                            f"\n[RECOVERY]: Route withdrawal confirmed from all active observing peer(s) "
-                            f"({', '.join(wdr_peers)}). Anomalous propagation has ceased; alert resolved."
-                        )
-                        conn.execute(
-                            "UPDATE alerts SET status = 'RESOLVED', recovery_status = 'CONFIRMED', "
-                            "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
-                            (json.dumps(act_peers), json.dumps(wdr_peers), recovery_note, alt_id),
-                        )
-                        resolved_alerts.append({
-                            "alert_id": alt_id,
-                            "prefix": norm_prefix,
-                            "kind": alt["kind"],
-                            "status": "RESOLVED",
-                            "recovery_status": "CONFIRMED",
-                            "withdrawn_peers": wdr_peers,
-                        })
-                    else:
-                        partial_note = (
-                            f"\n[PEER_WITHDRAWAL]: Route withdrawn by peer {peer_as} ({collector}). "
-                            f"However, anomalous propagation remains active from peer(s): {', '.join(act_peers)}. "
-                            f"Global recovery unconfirmed; alert remains active."
-                        )
-                        conn.execute(
-                            "UPDATE alerts SET status = 'ACTIVE', recovery_status = 'PARTIAL', "
-                            "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
-                            (json.dumps(act_peers), json.dumps(wdr_peers), partial_note, alt_id),
-                        )
-                        unresolved_alerts.append({
-                            "alert_id": alt_id,
-                            "prefix": norm_prefix,
-                            "kind": alt["kind"],
-                            "status": "ACTIVE",
-                            "recovery_status": "PARTIAL",
-                            "remaining_active_peers": act_peers,
-                        })
+            if not clean_peer_as:
+                # INVARIANT: An unidentified peer (peer_as=None) MUST NOT be treated as proof
+                # that every relevant peer has withdrawn!
+                # Leaves recovery unconfirmed, alert remains ACTIVE.
+                unresolved_alerts.append({
+                    "alert_id": alt_id,
+                    "prefix": norm_prefix,
+                    "kind": alt["kind"],
+                    "status": "ACTIVE",
+                    "recovery_status": "UNCONFIRMED",
+                    "reason": "MISSING_PEER_METADATA",
+                    "remaining_active_peers": act_peers,
+                })
+            elif clean_peer_as in act_peers:
+                # Matching peer found!
+                act_peers.remove(clean_peer_as)
+                if clean_peer_as not in wdr_peers:
+                    wdr_peers.append(clean_peer_as)
+
+                if len(act_peers) == 0:
+                    # All observing peers for this alert have now withdrawn!
+                    recovery_note = (
+                        f"\n[RECOVERY]: Route withdrawal confirmed from all active observing peer(s) "
+                        f"({', '.join(wdr_peers)}). Anomalous propagation has ceased; alert resolved."
+                    )
+                    conn.execute(
+                        "UPDATE alerts SET status = 'RESOLVED', recovery_status = 'CONFIRMED', "
+                        "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
+                        (json.dumps(act_peers), json.dumps(wdr_peers), recovery_note, alt_id),
+                    )
+                    resolved_alerts.append({
+                        "alert_id": alt_id,
+                        "prefix": norm_prefix,
+                        "kind": alt["kind"],
+                        "status": "RESOLVED",
+                        "recovery_status": "CONFIRMED",
+                        "withdrawn_peers": wdr_peers,
+                    })
                 else:
+                    # Partial withdrawal: other peers are still announcing the anomaly
+                    partial_note = (
+                        f"\n[PEER_WITHDRAWAL]: Route withdrawn by peer {clean_peer_as} ({collector}). "
+                        f"However, anomalous propagation remains active from peer(s): {', '.join(act_peers)}. "
+                        f"Global recovery unconfirmed; alert remains active."
+                    )
+                    conn.execute(
+                        "UPDATE alerts SET status = 'ACTIVE', recovery_status = 'PARTIAL', "
+                        "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
+                        (json.dumps(act_peers), json.dumps(wdr_peers), partial_note, alt_id),
+                    )
                     unresolved_alerts.append({
                         "alert_id": alt_id,
                         "prefix": norm_prefix,
                         "kind": alt["kind"],
                         "status": "ACTIVE",
-                        "recovery_status": "UNCONFIRMED",
+                        "recovery_status": "PARTIAL",
+                        "withdrawn_peers": wdr_peers,
                         "remaining_active_peers": act_peers,
                     })
-            else:
-                recovery_note = (
-                    f"\n[RECOVERY]: Route withdrawal observed from peer {peer_as or 'unknown'} ({collector}). "
-                    f"Anomalous propagation terminated; routing state restored to baseline."
-                )
-                conn.execute(
-                    "UPDATE alerts SET status = 'RESOLVED', recovery_status = 'CONFIRMED', "
-                    "explanation = explanation || ? WHERE id = ?;",
-                    (recovery_note, alt_id),
-                )
-                resolved_alerts.append({
+            elif clean_peer_as in wdr_peers:
+                # Duplicate withdrawal from an already withdrawn peer (Idempotent)
+                unresolved_alerts.append({
                     "alert_id": alt_id,
                     "prefix": norm_prefix,
                     "kind": alt["kind"],
-                    "status": "RESOLVED",
-                    "recovery_status": "CONFIRMED",
+                    "status": "ACTIVE",
+                    "recovery_status": alt["recovery_status"],
+                    "reason": "DUPLICATE_WITHDRAWAL",
+                    "withdrawn_peers": wdr_peers,
+                    "remaining_active_peers": act_peers,
+                })
+            else:
+                # Unrelated peer: this peer never observed or announced the anomaly
+                unresolved_alerts.append({
+                    "alert_id": alt_id,
+                    "prefix": norm_prefix,
+                    "kind": alt["kind"],
+                    "status": "ACTIVE",
+                    "recovery_status": alt["recovery_status"],
+                    "reason": "UNRELATED_PEER",
+                    "remaining_active_peers": act_peers,
                 })
 
-        # 3. If baseline was a candidate prefix, transition to WITHDRAWN
-        base_row = conn.execute("SELECT status FROM baselines WHERE prefix = ?;", (norm_prefix,)).fetchone()
+        # 3. If baseline was a candidate prefix, transition to WITHDRAWN and record history
+        base_row = conn.execute(
+            "SELECT origin_asn, status, peer_count, observation_count FROM baselines WHERE prefix = ?;",
+            (norm_prefix,),
+        ).fetchone()
         if base_row and base_row["status"] == "CANDIDATE":
             conn.execute(
                 "UPDATE baselines SET status = 'WITHDRAWN', updated_at = ? WHERE prefix = ?;",
                 (now_utc, norm_prefix),
+            )
+            record_baseline_transition(
+                conn,
+                prefix=norm_prefix,
+                origin_asn=base_row["origin_asn"],
+                prior_status="CANDIDATE",
+                new_status="WITHDRAWN",
+                transition_type="WITHDRAWN",
+                reason=f"Candidate baseline withdrawn by observing peer ({clean_peer_as or 'unknown'}).",
+                peer_count=base_row["peer_count"] or 1,
+                observation_count=base_row["observation_count"] or 1,
+                triggering_observation_id=obs_id,
+                actor="PEER_WITHDRAWAL",
+                created_at=norm_time,
             )
 
         conn.commit()

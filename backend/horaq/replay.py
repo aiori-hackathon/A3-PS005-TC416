@@ -79,6 +79,8 @@ class ArchivalMrtReplayEngine:
                     peer_ip=s_peer_ip,
                     timestamp_raw=s_time,
                     scenario=f"{inc_id}-pre-incident-snapshot",
+                    authorized_seed=True,
+                    actor="PRE_INCIDENT_MRT_SNAPSHOT",
                 )
 
         # 2. Chronologically replay BGP records (announcements AND withdrawals)

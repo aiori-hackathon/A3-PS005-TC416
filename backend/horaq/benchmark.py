@@ -133,6 +133,8 @@ class EnhancedHoraqDetectorWrapper:
                 collector="rrc00",
                 peer_as=p,
                 scenario="baseline-seed",
+                authorized_seed=True,
+                actor="BENCHMARK_SEED",
             )
 
     def process(

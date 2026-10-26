@@ -53,6 +53,8 @@ def test_historical_incidents_execution(replay_samples, isolated_db):
             collector="baseline-seed",
             timestamp_raw="2000-01-01T00:00:00Z",
             scenario="baseline-seed",
+            authorized_seed=True,
+            actor="TEST_SEED",
         )
         assert len(seed_res["alerts"]) == 0
 
