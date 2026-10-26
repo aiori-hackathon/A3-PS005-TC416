@@ -2,7 +2,7 @@ name: HORA-Q CI / Verification Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, "chore/**", "fix/**", "feat/**" ]
   pull_request:
     branches: [ main ]
 
