@@ -159,11 +159,79 @@ class ArchivalMrtReplayEngine:
         else:
             verification_status = "FAILED_VERIFICATION"
 
-        # Per-peer recovery verification: if withdrawals processed, check that withdrawal occurred
-        # without prematurely resolving alerts from non-withdrawn peers
-        recovery_verified = True
+        # Per-peer recovery verification:
+        # Calculate recovery metrics directly from SQLite database alerts table, asserting:
+        # 1. Expected withdrawing peers resolved their matching alerts
+        # 2. No prematurely resolved alerts (active_peers must be empty for resolved alerts)
+        # 3. Withdrawn peers do NOT remain in remaining_active_peers
+        # 4. Alerts from other peers remain strictly in ACTIVE status with UNCONFIRMED/PARTIAL recovery
+        recovery_details = {
+            "withdrawals_processed": withdrawals_processed,
+            "resolved_alerts_count": resolved_alerts_count,
+            "expected_withdrawn_peers": [],
+            "actual_withdrawn_peers_in_resolved_alerts": [],
+            "remaining_active_peers_in_db": [],
+            "prematurely_resolved_alerts_count": 0,
+            "verified": True,
+        }
+
         if withdrawals_processed > 0:
-            recovery_verified = resolved_alerts_count > 0
+            with db_session(self.db_path) as conn:
+                db_alerts = conn.execute(
+                    "SELECT id, status, recovery_status, active_peers, withdrawn_peers FROM alerts WHERE scenario = ?;",
+                    (inc_id,)
+                ).fetchall()
+
+            db_resolved = [a for a in db_alerts if a["status"] == "RESOLVED"]
+            db_active = [a for a in db_alerts if a["status"] == "ACTIVE"]
+
+            withdrawing_peers = set()
+            for rec in records:
+                if rec.get("type") == "WITHDRAWAL":
+                    p_as = str(rec.get("peer_as") or "").upper().replace("AS", "")
+                    if p_as:
+                        withdrawing_peers.add(p_as)
+
+            recovery_details["expected_withdrawn_peers"] = [f"AS{p}" for p in sorted(list(withdrawing_peers))]
+
+            actual_resolved_peers = set()
+            for a in db_resolved:
+                try:
+                    w_peers = json.loads(a["withdrawn_peers"] or "[]")
+                except Exception:
+                    w_peers = []
+                for p in w_peers:
+                    actual_resolved_peers.add(str(p).upper().replace("AS", ""))
+                try:
+                    act_p = json.loads(a["active_peers"] or "[]")
+                except Exception:
+                    act_p = []
+                if len(act_p) > 0 or a["recovery_status"] != "CONFIRMED":
+                    recovery_details["prematurely_resolved_alerts_count"] += 1
+
+            recovery_details["actual_withdrawn_peers_in_resolved_alerts"] = [f"AS{p}" for p in sorted(list(actual_resolved_peers))]
+
+            remaining_active_peers = set()
+            for a in db_active:
+                try:
+                    act_p = json.loads(a["active_peers"] or "[]")
+                except Exception:
+                    act_p = []
+                for p in act_p:
+                    remaining_active_peers.add(str(p).upper().replace("AS", ""))
+
+            recovery_details["remaining_active_peers_in_db"] = [f"AS{p}" for p in sorted(list(remaining_active_peers))]
+
+            has_resolved = len(db_resolved) > 0
+            no_premature = recovery_details["prematurely_resolved_alerts_count"] == 0
+            peers_matched = bool(withdrawing_peers.issubset(actual_resolved_peers))
+            no_leakage = not bool(withdrawing_peers.intersection(remaining_active_peers))
+            active_persisted = len(remaining_active_peers) > 0
+
+            recovery_details["verified"] = has_resolved and no_premature and peers_matched and no_leakage and active_persisted
+            recovery_verified = recovery_details["verified"]
+        else:
+            recovery_verified = True
 
         return {
             "incident_id": inc_id,
@@ -180,6 +248,7 @@ class ArchivalMrtReplayEngine:
             "resolved_alerts_count": resolved_alerts_count,
             "unresolved_alerts_count": len(alerts_recorded) - resolved_alerts_count,
             "recovery_tracking_verified": recovery_verified,
+            "recovery_details": recovery_details if withdrawals_processed > 0 else None,
             "detection_delay_seconds": first_alert_delay if first_alert_delay is not None else 0,
             "anti_poisoning_invariant_verified": anti_poisoning_intact,
             "first_alert": {

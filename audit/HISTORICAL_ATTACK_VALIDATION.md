@@ -41,8 +41,13 @@ Unlike synthetic or hand-crafted unit tests, this validation processes raw BGP M
   - Detected on first observation (Detection Delay: 0.0s) across 11 distinct observing peers.
   - Alert Kind: `SUBPREFIX_ANOMALY`. Severity: `HIGH`.
   - Anti-Poisoning: YouTube parent `/22` remained strictly anchored to AS36561 (`Status: PROMOTED`). Rogue `/24` was quarantined in `alerts` and prevented from contaminating baselines.
-  - **Per-Peer Withdrawal & Recovery Tracking**: Subsequent withdrawal from Peer AS3333 (archive `updates.20080224.2110.gz`, timestamp `1203887400` / 21:10 UTC) was processed by `process_withdrawal`.
-  - Crucially, the withdrawal resolved **only** the 7 alerts matching Peer AS3333 (`recovery_status = 'CONFIRMED'`), leaving the 20 alerts from the other 10 non-withdrawn peers in `status = 'ACTIVE'` with `recovery_status = 'UNCONFIRMED'`. This demonstrates per-peer recovery semantics: a single peer's withdrawal does not prematurely declare global recovery while other peers are still propagating the anomalous announcement.
+  - **Per-Peer Withdrawal & Recovery Tracking (Database Asserted)**: Subsequent withdrawal from Peer AS3333 (archive `updates.20080224.2110.gz`, timestamp `1203887400` / 21:10 UTC) was processed by `process_withdrawal`.
+  - The replay engine directly queries and asserts the SQLite `alerts` table states:
+    - **Expected Withdrawing Peer**: `AS3333`
+    - **Resolved Alerts Count**: 7 alerts resolved exclusively for Peer AS3333 (`recovery_status = 'CONFIRMED'`, `active_peers = []`, `withdrawn_peers = ['AS3333']`).
+    - **Prematurely Resolved Alerts Count**: `0`
+    - **Remaining Active Peers in DB**: Exactly 10 peers (`AS16186`, `AS1930`, `AS3257`, `AS34225`, `AS3549`, `AS3741`, `AS4608`, `AS4777`, `AS6881`, `AS7018`) with 20 alerts strictly preserved in `status = 'ACTIVE'`.
+    - **Database Recovery Assertion**: `recovery_tracking_verified: true`. This empirically proves per-peer recovery semantics: a single peer's withdrawal does not prematurely declare global recovery while other peers continue propagating anomalous routes.
 
 ### 4.2. RTComm / Twitter Origin Conflict Hijack (`INC-2022-03-28-RTCOMM-TWITTER`)
 - **Background**: Rostelecom/RTComm (AS8342) announced Twitter's authorized prefix `104.244.42.0/24` (legitimate origin AS13414).

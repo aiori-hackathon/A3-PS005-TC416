@@ -1,6 +1,6 @@
 {
   "report_id": "HISTORICAL-BGP-MRT-VALIDATION-v2",
-  "timestamp_utc": "2026-10-25T16:42:16.926952+00:00",
+  "timestamp_utc": "2026-10-26T12:33:13.490128+00:00",
   "tool_used": "mrtparse 2.2.0 + SQLite isolated engine",
   "summary": {
     "verified_real_replays_count": 3,
@@ -28,6 +28,30 @@
       "resolved_alerts_count": 7,
       "unresolved_alerts_count": 20,
       "recovery_tracking_verified": true,
+      "recovery_details": {
+        "withdrawals_processed": 1,
+        "resolved_alerts_count": 7,
+        "expected_withdrawn_peers": [
+          "AS3333"
+        ],
+        "actual_withdrawn_peers_in_resolved_alerts": [
+          "AS3333"
+        ],
+        "remaining_active_peers_in_db": [
+          "AS16186",
+          "AS1930",
+          "AS3257",
+          "AS34225",
+          "AS3549",
+          "AS3741",
+          "AS4608",
+          "AS4777",
+          "AS6881",
+          "AS7018"
+        ],
+        "prematurely_resolved_alerts_count": 0,
+        "verified": true
+      },
       "detection_delay_seconds": 0,
       "anti_poisoning_invariant_verified": true,
       "first_alert": {
@@ -52,6 +76,7 @@
       "resolved_alerts_count": 0,
       "unresolved_alerts_count": 1,
       "recovery_tracking_verified": true,
+      "recovery_details": null,
       "detection_delay_seconds": 0,
       "anti_poisoning_invariant_verified": true,
       "first_alert": {

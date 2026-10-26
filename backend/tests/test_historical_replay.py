@@ -96,11 +96,23 @@ def test_archival_mrt_replay_validation():
     summary = report["summary"]
     assert summary["all_real_replays_detected"] is True
     assert summary["anti_poisoning_verified_across_all"] is True
+    assert summary["withdrawal_and_recovery_verified"] is True
     assert summary["false_positives_on_benign_feed"] == 0
     assert summary["verified_real_replays_count"] >= 2
     assert summary["incomplete_data_evaluations_count"] >= 1
     assert summary["capability_boundary_controls_count"] >= 1
     assert summary["failed_verifications_count"] == 0
+
+    # Explicit assertion of per-peer recovery from database results
+    yt = next(inc for inc in report["incidents"] if inc.get("incident_id") == "INC-2008-02-24-YOUTUBE-PTCL")
+    assert yt["recovery_tracking_verified"] is True
+    assert yt["recovery_details"] is not None
+    assert yt["recovery_details"]["verified"] is True
+    assert yt["recovery_details"]["expected_withdrawn_peers"] == ["AS3333"]
+    assert yt["recovery_details"]["actual_withdrawn_peers_in_resolved_alerts"] == ["AS3333"]
+    assert len(yt["recovery_details"]["remaining_active_peers_in_db"]) == 10
+    assert "AS3333" not in yt["recovery_details"]["remaining_active_peers_in_db"]
+    assert yt["recovery_details"]["prematurely_resolved_alerts_count"] == 0
 
 
 def test_replay_outcomes_data_driven_and_failure_detection(tmp_path):
