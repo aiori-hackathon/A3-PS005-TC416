@@ -175,7 +175,7 @@ def verify_evidence_file(
     print("=" * 72)
     print("HORA-Q Independent Evidence Verification")
     print(f"Evidence ID: {evidence_id}")
-    print(f"File Source: {os.path.abspath(file_path)}")
+    print(f"File Source: {file_path}")
     print("=" * 72)
 
     if simulate_tamper:

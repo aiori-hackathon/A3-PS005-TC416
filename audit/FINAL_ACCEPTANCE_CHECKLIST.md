@@ -212,7 +212,7 @@
   - *Evidence*: `audit/IMPLEMENTATION_MATRIX.md`, `audit/TEST_RESULTS.md`, `audit/SYSTEM_AUDIT_REPORT.md`.
   - *Status*: **VERIFIED**
 - [x] **H.3 Complete 10-Part Audit Package**:
-  - *Criteria*: All mandated audit deliverables are authored, formatted, and placed in `d:\HORA-Q\audit/`.
+  - *Criteria*: All mandated audit deliverables are authored, formatted, and placed in `audit/`.
   - *Evidence*: Files present under `audit/`.
   - *Status*: **VERIFIED**
 - [x] **H.4 Full-Desktop 16:9 Screenshots (1920×1080)**:

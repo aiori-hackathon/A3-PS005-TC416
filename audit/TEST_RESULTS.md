@@ -2,31 +2,32 @@
 
 **Project**: HORA-Q (Explainable BGP Origin and Subprefix Anomaly Monitor)  
 **Hackathon**: AIORI-3 | Track 2 Cyber Security (Problem PS-005, Team A3-PS005-TC416)  
-**Execution Timestamp**: 2026-10-26 14:22:00 UTC  
-**Environment**: Windows 11 / Linux (Ubuntu 24.04), Python 3.13.7, pytest 8.4.2, Node.js v20.x, Vite 5.4.21  
-**Verification Scope**: 92 Automated Tests, Head-to-Head Reference Benchmark, Archival MRT Replay, Independent CLI Verifier, and Frontend Production Build.
+**Execution Timestamp**: 2026-10-27 13:00:00 UTC<br/>
+**Environment**: Windows 11 / Linux (Ubuntu 24.04), Python 3.13.7, pytest 8.4.2, Node.js v20.x, Vite 5.4.21<br/>
+**Verification Scope**: 93 Automated Tests, Head-to-Head Reference Benchmark, Archival MRT Replay, Independent CLI Verifier, and Frontend Production Build.
 
 ---
 
 ## 1. Backend Pytest Execution
 
 ### Exact Command Executed
-```powershell
+```bash
 python -m pytest backend/tests -v
 ```
 
-### Complete Test Results Output (92 Tests)
+### Complete Test Results Output (93 Tests)
 ```text
 ============================= test session starts =============================
-platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0 -- C:\Python313\python.exe
+platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0
 cachedir: .pytest_cache
-rootdir: D:\HORA-Q
+rootdir: .
 plugins: anyio-4.10.0, asyncio-1.3.0
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collecting ... collected 92 items
+collecting ... collected 93 items
 
 backend/tests/test_api.py::test_root_health PASSED                       [  1%]
 backend/tests/test_api.py::test_overview_endpoint PASSED                 [  2%]
+backend/tests/test_api.py::test_observations_endpoint PASSED             [  3%]
 backend/tests/test_api.py::test_post_observation_valid PASSED            [  3%]
 backend/tests/test_api.py::test_post_observation_invalid_prefix PASSED   [  4%]
 backend/tests/test_api.py::test_post_observation_invalid_asn PASSED      [  5%]
@@ -143,7 +144,7 @@ python verify_evidence.py audit/sample_evidence_unsigned.json --tamper
 ========================================================================
 HORA-Q Independent Evidence Verification
 Evidence ID: ev-daac86d86f35
-File Source: D:\HORA-Q\audit\sample_evidence_signed.json
+File Source: audit/sample_evidence_signed.json
 ========================================================================
 
 1. Content Integrity (RFC 8785 Canonical JSON & SHA-256):
@@ -169,7 +170,7 @@ Exit Code: 0
 ========================================================================
 HORA-Q Independent Evidence Verification
 Evidence ID: ev-sample-unsigned-001
-File Source: D:\HORA-Q\audit\sample_evidence_unsigned.json
+File Source: audit/sample_evidence_unsigned.json
 ========================================================================
 
 1. Content Integrity (RFC 8785 Canonical JSON & SHA-256):
@@ -202,8 +203,8 @@ FINAL VERDICT: [COMPROMISED] Verification failed. Record has been tampered with 
 ## 3. Frontend Production Build & Type Checking
 
 ### Exact Command Executed
-```powershell
-cd d:\HORA-Q\frontend
+```bash
+cd frontend
 npm run build
 ```
 

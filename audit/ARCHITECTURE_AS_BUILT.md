@@ -62,7 +62,7 @@ The actual runtime data flow implemented across [`horaq/`](../backend/horaq) fol
 
 ## 2. Persistence Layer Schema (SQLite in WAL Mode)
 
-Database path: `d:\HORA-Q\backend\horaq.db` (configured via `settings.database_url`).
+Database path: `backend/horaq.db` (configured via `settings.database_url`).
 
 ### Core Tables
 1. **`baselines`**:
