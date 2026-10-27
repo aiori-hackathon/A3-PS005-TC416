@@ -30,7 +30,7 @@ export const AlertsView: React.FC = () => {
     submitWithdrawalAction,
   } = useHoraqStore();
 
-  const [filterSeverity, setFilterSeverity] = useState<"active" | "all" | "high" | "medium">("active");
+  const [statusFilter, setStatusFilter] = useState<"active" | "acknowledged" | "resolved" | "all">("active");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [actionNotice, setActionNotice] = useState<string | null>(null);
 
@@ -45,7 +45,12 @@ export const AlertsView: React.FC = () => {
 
   const allIncidents = groupAlertObservations(alerts);
   const activeIncidents = allIncidents.filter((inc) => inc.status === "ACTIVE");
+  const acknowledgedIncidents = allIncidents.filter((inc) => inc.status === "ACKNOWLEDGED");
+  const resolvedIncidents = allIncidents.filter((inc) => inc.status === "RESOLVED");
+
   const activeIncidentsCount = activeIncidents.length;
+  const acknowledgedCount = acknowledgedIncidents.length;
+  const resolvedCount = resolvedIncidents.length;
 
   const filteredIncidents = allIncidents.filter((inc) => {
     if (searchQuery) {
@@ -57,14 +62,10 @@ export const AlertsView: React.FC = () => {
         inc.title.toLowerCase().includes(q);
       if (!match) return false;
     }
-    if (filterSeverity === "active") {
-      return inc.status === "ACTIVE";
-    }
-    if (filterSeverity === "all") return true;
-    if (filterSeverity === "high") {
-      return inc.severity === "HIGH";
-    }
-    return inc.severity === "MEDIUM" || inc.severity === "LOW";
+    if (statusFilter === "active") return inc.status === "ACTIVE";
+    if (statusFilter === "acknowledged") return inc.status === "ACKNOWLEDGED";
+    if (statusFilter === "resolved") return inc.status === "RESOLVED";
+    return true; // "all"
   });
 
   const handleAcknowledge = (event: AlertItem) => {
@@ -149,53 +150,59 @@ export const AlertsView: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="inline-flex rounded-md border border-border-card bg-bg-card p-0.5 text-xs">
           <button
-            onClick={() => setFilterSeverity("active")}
+            onClick={() => setStatusFilter("active")}
             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-              filterSeverity === "active"
-                ? "bg-bg-selected text-brand-blue font-semibold"
+              statusFilter === "active"
+                ? "bg-bg-selected text-status-critical font-semibold"
                 : "text-text-sub hover:text-text-main"
             }`}
           >
             Active ({activeIncidentsCount})
           </button>
           <button
-            onClick={() => setFilterSeverity("all")}
+            onClick={() => setStatusFilter("acknowledged")}
             className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-              filterSeverity === "all"
+              statusFilter === "acknowledged"
+                ? "bg-bg-selected text-status-warning font-semibold"
+                : "text-text-sub hover:text-text-main"
+            }`}
+          >
+            Acknowledged ({acknowledgedCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("resolved")}
+            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+              statusFilter === "resolved"
+                ? "bg-bg-selected text-status-green font-semibold"
+                : "text-text-sub hover:text-text-main"
+            }`}
+          >
+            Resolved ({resolvedCount})
+          </button>
+          <button
+            onClick={() => setStatusFilter("all")}
+            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+              statusFilter === "all"
                 ? "bg-bg-selected text-brand-blue font-semibold"
                 : "text-text-sub hover:text-text-main"
             }`}
           >
             All Incidents ({allIncidents.length})
           </button>
-          <button
-            onClick={() => setFilterSeverity("high")}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-              filterSeverity === "high"
-                ? "bg-bg-selected text-status-critical font-semibold"
-                : "text-text-sub hover:text-text-main"
-            }`}
-          >
-            High Severity
-          </button>
-          <button
-            onClick={() => setFilterSeverity("medium")}
-            className={`px-3 py-1.5 rounded text-xs font-medium transition-colors cursor-pointer ${
-              filterSeverity === "medium"
-                ? "bg-bg-selected text-status-warning font-semibold"
-                : "text-text-sub hover:text-text-main"
-            }`}
-          >
-            Medium / Low
-          </button>
         </div>
 
         <div className="text-xs text-text-dim">
-          {filterSeverity === "active" && (
-            <span>Showing unresolved incidents requiring operator review.</span>
+          {statusFilter === "active" && (
+            <span>Showing active routing anomalies requiring operator attention.</span>
           )}
-          {filterSeverity === "all" && (
-            <span>Showing full history ({formatCount(alerts.length, "individual observation", "individual observations")} recorded).</span>
+          {statusFilter === "acknowledged" && (
+            <span>Showing operator-acknowledged incidents under investigation.</span>
+          )}
+          {statusFilter === "resolved" && (
+            <span>Showing remediated incidents verified via BGP route withdrawal or manual resolution.</span>
+          )}
+          {statusFilter === "all" && (
+            <span>Showing complete immutable audit trail ({formatCount(alerts.length, "observation", "observations")} recorded).</span>
           )}
         </div>
       </div>
@@ -205,14 +212,24 @@ export const AlertsView: React.FC = () => {
         <div className="card-panel p-10 text-center space-y-2">
           <CheckCircle2 className="w-8 h-8 text-status-green mx-auto" />
           <h2 className="text-sm font-semibold text-text-main">
-            {filterSeverity === "active"
-              ? "Zero Active Incidents"
-              : "No Incidents Matching Filter"}
+            {statusFilter === "active"
+              ? "Zero Active Anomalies"
+              : statusFilter === "acknowledged"
+              ? "Zero Acknowledged Anomalies"
+              : statusFilter === "resolved"
+              ? "Zero Resolved Anomalies"
+              : "No Anomalies Recorded"}
           </h2>
           <p className="text-xs text-text-sub max-w-sm mx-auto">
-            {filterSeverity === "active"
-              ? "All known routing anomalies are currently acknowledged or resolved."
-              : "Try adjusting your search query or filter selection."}
+            {statusFilter === "active"
+              ? resolvedCount > 0
+                ? `All detected anomalies have been resolved (${resolvedCount} resolved incident${resolvedCount > 1 ? "s" : ""} available under Resolved / All filter). Monitored prefixes currently conform to baseline policies.`
+                : "No active routing conflicts require operator attention. Monitored prefixes conform to baseline policies."
+              : statusFilter === "resolved"
+              ? "No incidents have been resolved yet. When a route is withdrawn or resolved by an operator, it remains visible here."
+              : statusFilter === "acknowledged"
+              ? "No incidents are currently in the acknowledged state."
+              : "No routing anomalies match your search filter."}
           </p>
         </div>
       ) : (

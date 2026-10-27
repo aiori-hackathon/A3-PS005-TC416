@@ -75,6 +75,30 @@ export const RoutesView: React.FC = () => {
         </div>
       </div>
 
+      {/* Operational Distinction Banner */}
+      <div className="p-3.5 rounded-lg border border-divider bg-bg-interactive/40 flex items-start gap-3 text-xs leading-relaxed">
+        <Globe className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
+        <div className="space-y-1 w-full">
+          <div className="font-semibold text-text-main">
+            Operational Concepts: Local Baselines vs RPKI ROAs vs BGP Observations
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 pt-1 text-text-sub">
+            <div className="p-2.5 rounded bg-bg-card border border-divider space-y-0.5">
+              <span className="font-semibold text-text-main block">1. Local Route Baseline</span>
+              <span>Trusted origin policy established via authorized operator seed or corroborated multi-peer observation history in SQLite.</span>
+            </div>
+            <div className="p-2.5 rounded bg-bg-card border border-divider space-y-0.5">
+              <span className="font-semibold text-text-main block">2. RPKI ROA</span>
+              <span>Cryptographic Route Origin Authorization published in global RPKI repositories by resource holders; checked independently.</span>
+            </div>
+            <div className="p-2.5 rounded bg-bg-card border border-divider space-y-0.5">
+              <span className="font-semibold text-text-main block">3. BGP Announcement</span>
+              <span>Live routing update received from BGP peers; evaluated by HORA-Q against baselines for origin conflicts and subprefix containment.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Structured Baselines Table */}
       <div className="card-panel overflow-hidden">
         <div className="overflow-x-auto">

@@ -48,6 +48,12 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
     return null;
   });
 
+  const [verifyingSig, setVerifyingSig] = useState(false);
+  const [sigResult, setSigResult] = useState<{
+    valid: boolean;
+    algorithm: string;
+  } | null>(null);
+
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
 
@@ -88,6 +94,26 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
     }
   };
 
+  // Verify ML-DSA-65 Signature
+  const handleVerifySignature = async () => {
+    if (!evidence?.signature || !evidence?.public_key) return;
+    setVerifyingSig(true);
+    setSignError(null);
+    try {
+      const res = await api.verifyEvidenceSignature(
+        record,
+        evidence.signature,
+        evidence.public_key
+      );
+      setSigResult({ valid: res.valid, algorithm: res.algorithm });
+    } catch (err: any) {
+      setSigResult({ valid: false, algorithm: "ML-DSA-65" });
+      setSignError(err.message || "Failed to verify signature via API");
+    } finally {
+      setVerifyingSig(false);
+    }
+  };
+
   // Payload Mutation Simulation Toggle (Simulated in-memory demo)
   const handleToggleTampering = () => {
     if (!isTampered) {
@@ -99,10 +125,12 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
       setTamperedData(cloned);
       setIsTampered(true);
       setHashResult(null);
+      setSigResult(null);
     } else {
       setIsTampered(false);
       setTamperedData(null);
       setHashResult(null);
+      setSigResult(null);
     }
   };
 
@@ -307,8 +335,19 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 <RefreshCw
                   className={`w-3.5 h-3.5 ${verifyingHash ? "animate-spin" : ""}`}
                 />
-                <span>{verifyingHash ? "Verifying..." : "Verify integrity"}</span>
+                <span>{verifyingHash ? "Verifying..." : "Verify Hash Integrity"}</span>
               </button>
+
+              {isSigned && (
+                <button
+                  onClick={handleVerifySignature}
+                  disabled={verifyingSig}
+                  className="px-3.5 py-1.5 rounded-xl bg-bg-card border border-border-card hover:border-brand-blue/40 text-text-main font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-2xs"
+                >
+                  <Lock className={`w-3.5 h-3.5 ${verifyingSig ? "animate-spin" : "text-brand-blue"}`} />
+                  <span>{verifyingSig ? "Authenticating..." : "Verify ML-DSA-65"}</span>
+                </button>
+              )}
 
               {!isSigned && (
                 <button
@@ -362,13 +401,13 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               </p>
             </div>
 
-            {/* Verification Result Toast */}
+            {/* Verification Result Toast - Hash */}
             {hashResult && (
               <div
                 className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
                   hashResult.valid
-                    ? "bg-status-green-bg text-status-green border-emerald-500/35"
-                    : "bg-status-red-bg text-status-red border-red-500/35"
+                    ? "bg-badge-green-bg text-status-green border-green-300 dark:border-green-900"
+                    : "bg-status-critical-bg text-status-critical border-red-300 dark:border-red-900"
                 }`}
               >
                 {hashResult.valid ? (
@@ -380,6 +419,29 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                   <>
                     <AlertTriangle className="w-4 h-4 shrink-0" />
                     <span>Integrity failed: Computed hash differs from recorded digest (payload mismatch detected).</span>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Verification Result Toast - Signature */}
+            {sigResult && (
+              <div
+                className={`p-2.5 rounded-xl border text-xs font-semibold flex items-center gap-2 ${
+                  sigResult.valid
+                    ? "bg-badge-green-bg text-status-green border-green-300 dark:border-green-900"
+                    : "bg-status-critical-bg text-status-critical border-red-300 dark:border-red-900"
+                }`}
+              >
+                {sigResult.valid ? (
+                  <>
+                    <Check className="w-4 h-4 shrink-0" />
+                    <span>Authenticity verified: ML-DSA-65 post-quantum digital signature valid under NIST FIPS 204.</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-4 h-4 shrink-0" />
+                    <span>Signature rejected: ML-DSA-65 cryptographic verification failed against modified payload.</span>
                   </>
                 )}
               </div>

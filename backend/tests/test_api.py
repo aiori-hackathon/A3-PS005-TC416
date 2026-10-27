@@ -44,7 +44,27 @@ def test_overview_endpoint(client):
     assert "tracked_routes" in data
     assert "total_observations" in data
     assert "total_alerts" in data
+    assert "active_alerts" in data
+    assert "resolved_alerts" in data
+    assert "unresolved_alerts" in data
+    assert "operating_mode" in data
+    assert data["operating_mode"] in ("LIVE", "SYNTHETIC", "HISTORICAL")
     assert "crypto_status" in data
+
+
+def test_observations_endpoint(client):
+    # Seed a baseline and inject an observation
+    client.post("/api/v1/scenarios/baseline")
+    resp = client.get("/api/v1/observations")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "items" in data
+    assert "total" in data
+    assert data["total"] >= 1
+    item = data["items"][0]
+    assert "prefix" in item
+    assert "origin_asn" in item
+    assert "collector" in item
 
 
 def test_post_observation_valid(client):

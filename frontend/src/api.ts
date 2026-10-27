@@ -2,6 +2,7 @@ import {
   AlertItem,
   CryptoStatus,
   EvidenceItem,
+  ObservationItem,
   OverviewStats,
   RouteBaseline,
   RPKIResult,
@@ -39,6 +40,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
 export const api = {
   getOverview: () => request<OverviewStats>("/overview"),
+
+  getObservations: (limit = 20, offset = 0, prefix?: string) => {
+    const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (prefix) q.append("prefix", prefix);
+    return request<{ items: ObservationItem[]; total: number; limit: number; offset: number }>(
+      `/observations?${q.toString()}`
+    );
+  },
 
   getRoutes: (limit = 100, offset = 0, search?: string) => {
     const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });

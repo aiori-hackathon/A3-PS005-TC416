@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { AlertItem, CryptoStatus, EvidenceItem, OverviewStats, RouteBaseline } from "../types";
+import { AlertItem, CryptoStatus, EvidenceItem, ObservationItem, OverviewStats, RouteBaseline } from "../types";
 import { api } from "../api";
 
 export type NavTab =
@@ -19,6 +19,7 @@ interface HoraqState {
   alerts: AlertItem[];
   routes: RouteBaseline[];
   evidence: EvidenceItem[];
+  observations: ObservationItem[];
   cryptoStatus: CryptoStatus | null;
   isLoading: boolean;
   isAutoRefresh: boolean;
@@ -112,6 +113,7 @@ export const useHoraqStore = create<HoraqState>((set, get) => ({
   alerts: [],
   routes: [],
   evidence: [],
+  observations: [],
   cryptoStatus: null,
   isLoading: false,
   isAutoRefresh: true,
@@ -153,12 +155,13 @@ export const useHoraqStore = create<HoraqState>((set, get) => ({
   fetchAllData: async () => {
     try {
       set({ isLoading: true });
-      const [overview, alertsRes, routesRes, evidenceRes, crypto] = await Promise.all([
+      const [overview, alertsRes, routesRes, evidenceRes, crypto, observationsRes] = await Promise.all([
         api.getOverview().catch(() => null),
         api.getAlerts(200, 0).catch(() => ({ items: [], total: 0 })),
         api.getRoutes(200, 0).catch(() => ({ items: [], total: 0 })),
         api.getEvidenceList(200, 0).catch(() => ({ items: [], total: 0 })),
         api.getCryptoStatus().catch(() => null),
+        api.getObservations(50, 0).catch(() => ({ items: [], total: 0 })),
       ]);
 
       const alerts = alertsRes.items || [];
@@ -171,6 +174,7 @@ export const useHoraqStore = create<HoraqState>((set, get) => ({
         alerts,
         routes: routesRes.items || [],
         evidence: evidenceRes.items || [],
+        observations: observationsRes.items || [],
         cryptoStatus: crypto || null,
         isLoading: false,
         ...(autoAlert ? { selectedAlert: autoAlert } : {}),

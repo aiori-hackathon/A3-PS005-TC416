@@ -42,7 +42,7 @@ export const EvidenceVaultView: React.FC = () => {
             </span>
           </div>
           <p className="text-sm text-text-sub mt-1">
-            Immutable forensic ledger preserving RFC 8785 canonical SHA-256 digests and ML-DSA-65 post-quantum signatures for detected routing anomalies. Baseline updates and routine telemetry are archived in the observations log.
+            Tamper-evident forensic ledger preserving RFC 8785 canonical SHA-256 digests and ML-DSA-65 post-quantum digital signatures for detected routing anomalies.
           </p>
         </div>
 
@@ -55,6 +55,17 @@ export const EvidenceVaultView: React.FC = () => {
             <span>Export Ledger (JSON)</span>
           </button>
         )}
+      </div>
+
+      {/* Cryptographic Guarantees Disclosure Callout */}
+      <div className="p-3.5 rounded-lg border border-divider bg-bg-interactive/40 flex items-start gap-3 text-xs leading-relaxed">
+        <Lock className="w-4 h-4 text-brand-blue shrink-0 mt-0.5" />
+        <div className="space-y-0.5">
+          <span className="font-semibold text-text-main">Cryptographic Tamper-Evidence & Verification Scope:</span>
+          <p className="text-text-sub">
+            Each evidence envelope binds the canonical observation payload (RFC 8785 JCS) to a SHA-256 digest and an optional ML-DSA-65 post-quantum digital signature (NIST FIPS 204). While the application layer enforces append-only semantics in SQLite, cryptographic signatures guarantee that any alteration to exported or stored records is immediately detected by the independent CLI verifier.
+          </p>
+        </div>
       </div>
 
       {/* Structured Ledger Table */}

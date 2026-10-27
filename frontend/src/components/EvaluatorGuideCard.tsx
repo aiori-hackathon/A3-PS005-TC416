@@ -19,11 +19,12 @@ import { groupAlertObservations } from "../utils/incidentGrouping";
 
 interface EvaluatorGuideCardProps {
   onSelectAlert?: (alertId: string) => void;
+  defaultCollapsed?: boolean;
 }
 
 type StepExecutionState = "IDLE" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
 
-export const EvaluatorGuideCard: React.FC<EvaluatorGuideCardProps> = () => {
+export const EvaluatorGuideCard: React.FC<EvaluatorGuideCardProps> = ({ defaultCollapsed = false }) => {
   const {
     alerts,
     setActiveTab,
@@ -45,7 +46,7 @@ export const EvaluatorGuideCard: React.FC<EvaluatorGuideCardProps> = () => {
     6: "IDLE",
   });
   const [stepErrors, setStepErrors] = useState<Record<number, string | null>>({});
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(defaultCollapsed);
   const [stepFeedback, setStepFeedback] = useState<string | null>(null);
 
   const groupedIncidents = groupAlertObservations(alerts);

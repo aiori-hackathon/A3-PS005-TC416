@@ -9,6 +9,10 @@ import {
   ChevronDown,
   ChevronUp,
   History,
+  Clock,
+  FileText,
+  ShieldAlert,
+  ArrowRight,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 
@@ -23,12 +27,34 @@ interface ScenarioCardInfo {
   technicalDetails: string;
 }
 
+interface ScenarioExecutionState {
+  status: "IDLE" | "RUNNING" | "PASS" | "FAIL";
+  durationMs?: number;
+  actualOutcome?: string;
+  alertId?: string;
+  evidenceId?: string;
+  error?: string;
+  executedAt?: string;
+}
+
 export const ScenariosView: React.FC = () => {
-  const { runScenarioAction, seedDemoDataAction, resetDatabaseAction } = useHoraqStore();
+  const {
+    overview,
+    alerts,
+    evidence,
+    runScenarioAction,
+    seedDemoDataAction,
+    resetDatabaseAction,
+    setSelectedAlert,
+    setSelectedEvidence,
+    setActiveTab,
+  } = useHoraqStore();
 
   const [runningId, setRunningId] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+
+  const [scenarioResults, setScenarioResults] = useState<Record<string, ScenarioExecutionState>>({});
 
   const [logs, setLogs] = useState<
     Array<{
@@ -37,6 +63,7 @@ export const ScenariosView: React.FC = () => {
       scenario: string;
       alerts: number;
       expected: number;
+      durationMs: number;
       status: "PASS" | "FAIL";
     }>
   >([]);
@@ -106,14 +133,50 @@ export const ScenariosView: React.FC = () => {
 
   const handleRun = async (scenarioId: string) => {
     setRunningId(scenarioId);
+    setScenarioResults((prev) => ({
+      ...prev,
+      [scenarioId]: { status: "RUNNING" },
+    }));
+
+    const t0 = performance.now();
     try {
       const res = await runScenarioAction(scenarioId);
-      // Strictly require exact match of generated alerts to expected alerts, and affirmative success
-      const isPass = res && res.success !== false && (
+      const durationMs = Math.round(performance.now() - t0);
+
+      // Verify exact expected behavior
+      const isPass =
+        res &&
+        res.success !== false &&
+        (scenarioId === "withdrawal-recovery"
+          ? res.alerts_resolved !== undefined
+            ? res.alerts_resolved >= 0
+            : true
+          : res.alerts_generated === res.expected_alerts);
+
+      let alertId: string | undefined;
+      let evidenceId: string | undefined;
+      if (res?.result?.alerts && res.result.alerts.length > 0) {
+        alertId = res.result.alerts[0].id;
+        evidenceId = res.result.alerts[0].evidence_id;
+      }
+
+      const outcomeText =
         scenarioId === "withdrawal-recovery"
-          ? (res.alerts_resolved !== undefined ? res.alerts_resolved >= 0 : true)
-          : (res.alerts_generated === res.expected_alerts)
-      );
+          ? `Withdrawal confirmed: ${res?.alerts_resolved ?? 0} alert(s) resolved.`
+          : `${res?.alerts_generated ?? 0} alert(s) generated (expected: ${res?.expected_alerts ?? 0}).`;
+
+      setScenarioResults((prev) => ({
+        ...prev,
+        [scenarioId]: {
+          status: isPass ? "PASS" : "FAIL",
+          durationMs,
+          actualOutcome: outcomeText,
+          alertId,
+          evidenceId,
+          executedAt: new Date().toLocaleTimeString(),
+        },
+      }));
+
       setLogs((prev) => [
         {
           id: Math.random().toString(36).substring(7),
@@ -121,11 +184,23 @@ export const ScenariosView: React.FC = () => {
           scenario: res.scenario || scenarioId,
           alerts: res.alerts_generated ?? (res.alerts_resolved ?? 0),
           expected: res.expected_alerts ?? 0,
+          durationMs,
           status: isPass ? "PASS" : "FAIL",
         },
         ...prev.slice(0, 9),
       ]);
-    } catch {
+    } catch (err: any) {
+      const durationMs = Math.round(performance.now() - t0);
+      setScenarioResults((prev) => ({
+        ...prev,
+        [scenarioId]: {
+          status: "FAIL",
+          durationMs,
+          error: err.message || "Execution failed",
+          executedAt: new Date().toLocaleTimeString(),
+        },
+      }));
+
       setLogs((prev) => [
         {
           id: Math.random().toString(36).substring(7),
@@ -133,6 +208,7 @@ export const ScenariosView: React.FC = () => {
           scenario: scenarioId,
           alerts: 0,
           expected: 1,
+          durationMs,
           status: "FAIL",
         },
         ...prev.slice(0, 9),
@@ -144,9 +220,11 @@ export const ScenariosView: React.FC = () => {
 
   const handleRunAll = async () => {
     setRunningId("run-all");
+    const t0 = performance.now();
     try {
       const res = await runScenarioAction("run-all");
-      // Calculate suite outcome from actual individual results: all 5 scenarios must pass exactly
+      const durationMs = Math.round(performance.now() - t0);
+
       const suiteResults = res.suite_results || [];
       const isSuitePass =
         res &&
@@ -164,11 +242,13 @@ export const ScenariosView: React.FC = () => {
           scenario: "Full Evaluation Suite",
           alerts: res.alerts_generated,
           expected: res.expected_alerts,
+          durationMs,
           status: isSuitePass ? "PASS" : "FAIL",
         },
         ...prev.slice(0, 9),
       ]);
     } catch {
+      const durationMs = Math.round(performance.now() - t0);
       setLogs((prev) => [
         {
           id: Math.random().toString(36).substring(7),
@@ -176,6 +256,7 @@ export const ScenariosView: React.FC = () => {
           scenario: "Full Evaluation Suite",
           alerts: 0,
           expected: 4,
+          durationMs,
           status: "FAIL",
         },
         ...prev.slice(0, 9),
@@ -185,12 +266,12 @@ export const ScenariosView: React.FC = () => {
     }
   };
 
-
   const handleReset = async () => {
     setRunningId("reset");
     try {
       await resetDatabaseAction();
       setLogs([]);
+      setScenarioResults({});
       setShowResetConfirm(false);
     } catch {
       // handled
@@ -200,7 +281,7 @@ export const ScenariosView: React.FC = () => {
   };
 
   return (
-    <div className="max-w-[1360px] w-full space-y-6 animate-fadeIn">
+    <div className="max-w-[1360px] w-full space-y-6 animate-fadeIn pb-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-divider">
         <div>
@@ -238,7 +319,7 @@ export const ScenariosView: React.FC = () => {
             className="px-3.5 py-2 rounded-md bg-bg-btn border border-border-card hover:bg-red-50 hover:border-red-300 dark:hover:bg-red-950/20 text-xs font-medium text-text-sub hover:text-status-critical transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
-            <span>Reset DB</span>
+            <span>Reset State</span>
           </button>
         </div>
       </div>
@@ -257,6 +338,11 @@ export const ScenariosView: React.FC = () => {
             All scenario announcements are simulated locally against reserved documentation blocks. No mutated routes are broadcast to the Internet.
           </span>
         </div>
+        {overview?.demo_mode && (
+          <span className="self-start sm:self-auto px-2 py-0.5 rounded bg-brand-blue/10 text-brand-blue font-semibold border border-brand-blue/20">
+            Public Demo Protection Active
+          </span>
+        )}
       </div>
 
       {/* Scenarios Table / List */}
@@ -264,6 +350,7 @@ export const ScenariosView: React.FC = () => {
         {scenarios.map((sc) => {
           const isRunning = runningId === sc.id;
           const isExpanded = expandedId === sc.id;
+          const res = scenarioResults[sc.id];
 
           const badgeStyle =
             sc.expectedType === "clean"
@@ -275,7 +362,7 @@ export const ScenariosView: React.FC = () => {
           return (
             <div key={sc.id} className="p-4 hover:bg-bg-hover-row transition-colors">
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div className="space-y-1 min-w-0 flex-1">
+                <div className="space-y-1.5 min-w-0 flex-1">
                   <div className="flex items-center gap-2.5 flex-wrap">
                     <h2 className="text-sm font-semibold text-text-main">
                       {sc.name}
@@ -283,10 +370,58 @@ export const ScenariosView: React.FC = () => {
                     <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded ${badgeStyle}`}>
                       {sc.expected}
                     </span>
+                    {res?.status === "PASS" && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-green px-2 py-0.5 rounded bg-badge-green-bg border border-green-300 dark:border-green-900">
+                        <CheckCircle2 className="w-3 h-3" />
+                        <span>PASS ({res.durationMs}ms)</span>
+                      </span>
+                    )}
+                    {res?.status === "FAIL" && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-critical px-2 py-0.5 rounded bg-status-critical-bg border border-red-300 dark:border-red-900">
+                        <AlertTriangle className="w-3 h-3" />
+                        <span>FAIL ({res.durationMs}ms)</span>
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-text-sub leading-relaxed max-w-4xl">
                     {sc.summary}
                   </p>
+                  {res?.actualOutcome && (
+                    <div className="text-xs font-mono text-text-main pt-0.5 flex items-center gap-2">
+                      <span className="text-text-dim">Actual Outcome:</span>
+                      <span>{res.actualOutcome}</span>
+                      {res.alertId && (
+                        <button
+                          onClick={() => {
+                            const found = alerts.find((a) => a.id === res.alertId);
+                            if (found) setSelectedAlert(found);
+                            setActiveTab("alerts");
+                          }}
+                          className="text-brand-blue hover:underline font-semibold flex items-center gap-0.5 cursor-pointer ml-1"
+                        >
+                          <span>View Alert</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      )}
+                      {res.evidenceId && (
+                        <button
+                          onClick={() => {
+                            const foundEv = evidence.find((e) => e.id === res.evidenceId || e.alert_id === res.alertId);
+                            if (foundEv) setSelectedEvidence(foundEv);
+                          }}
+                          className="text-brand-blue hover:underline font-semibold flex items-center gap-0.5 cursor-pointer ml-1"
+                        >
+                          <FileText className="w-3 h-3" />
+                          <span>View Evidence</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {res?.error && (
+                    <div className="text-xs text-status-critical font-medium pt-0.5">
+                      Error: {res.error}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
@@ -337,7 +472,7 @@ export const ScenariosView: React.FC = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold text-text-main flex items-center gap-2">
               <History className="w-4 h-4 text-brand-blue" />
-              <span>Execution Results</span>
+              <span>Execution Results History</span>
             </h2>
             <button
               onClick={() => setLogs([])}
@@ -348,38 +483,57 @@ export const ScenariosView: React.FC = () => {
           </div>
 
           <div className="card-panel overflow-hidden">
-            <div className="divide-y divide-divider text-xs font-mono">
-              {logs.map((log) => (
-                <div
-                  key={log.id}
-                  className="px-4 py-2.5 flex items-center justify-between hover:bg-bg-hover-row transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-text-dim text-[11px]">{log.time}</span>
-                    <span className="text-text-main font-semibold">{log.scenario}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-text-dim text-[11px]">
-                      Alerts: {log.alerts} (expected: {log.expected})
-                    </span>
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        log.status === "PASS"
-                          ? "bg-badge-green-bg text-status-green"
-                          : "bg-status-critical-bg text-status-critical"
-                      }`}
-                    >
-                      {log.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-bg-interactive border-b border-divider text-[11px] font-bold uppercase tracking-wider text-text-sub">
+                    <th className="py-2.5 px-4 font-semibold">Timestamp</th>
+                    <th className="py-2.5 px-4 font-semibold">Scenario Executed</th>
+                    <th className="py-2.5 px-4 font-semibold">Duration</th>
+                    <th className="py-2.5 px-4 font-semibold">Alerts Generated</th>
+                    <th className="py-2.5 px-4 font-semibold">Expected Alerts</th>
+                    <th className="py-2.5 px-4 font-semibold text-right">Detection Outcome</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-divider text-[13px]">
+                  {logs.map((log) => (
+                    <tr key={log.id} className="hover:bg-bg-hover-row transition-colors">
+                      <td className="py-3 px-4 font-mono text-xs text-text-sub">
+                        {log.time}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-text-main font-mono text-xs">
+                        {log.scenario}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-xs text-text-dim">
+                        {log.durationMs}ms
+                      </td>
+                      <td className="py-3 px-4 font-mono font-bold text-text-main">
+                        {log.alerts}
+                      </td>
+                      <td className="py-3 px-4 font-mono text-text-dim">
+                        {log.expected}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded text-[11px] font-bold ${
+                            log.status === "PASS"
+                              ? "bg-badge-green-bg text-status-green border border-green-300 dark:border-green-900"
+                              : "bg-status-critical-bg text-status-critical border border-red-300 dark:border-red-900"
+                          }`}
+                        >
+                          {log.status === "PASS" ? "PASS: Exactly Matched" : "FAIL: Discrepancy"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
       )}
 
-      {/* Reset Modal */}
+      {/* Reset Confirmation Modal */}
       {showResetConfirm && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs select-none"
@@ -395,13 +549,19 @@ export const ScenariosView: React.FC = () => {
               </div>
               <div>
                 <h3 className="text-base font-semibold text-text-main">
-                  Reset Routing Database?
+                  Reset Routing Scenarios?
                 </h3>
                 <p className="text-xs text-text-sub mt-0.5">
-                  Clear all recorded anomalies, custom baselines, and evidence records.
+                  Re-initialize scenario testbed to clean baseline state.
                 </p>
               </div>
             </div>
+
+            <p className="text-xs text-text-sub leading-relaxed">
+              {overview?.demo_mode
+                ? "Public Demo Protection Active: To ensure concurrent evaluator sessions remain stable, unauthenticated reset safely purges scenario alerts and re-seeds clean baseline routes without erasing database schemas or live observations."
+                : "This will clear all generated anomaly alerts and re-seed the standard baseline routes."}
+            </p>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button

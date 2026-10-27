@@ -31,6 +31,7 @@ from horaq.database import (
     list_alerts,
     list_baseline_history,
     list_evidence,
+    list_observations,
     list_routes,
     reset_database,
     seed_demonstration_baseline,
@@ -118,15 +119,44 @@ async def get_overview() -> Dict[str, Any]:
     crypto_st = get_crypto_status()
     from horaq.collector import get_collector_telemetry
     collector_st = get_collector_telemetry()
+
+    # Truthful operating mode derivation
+    if settings.live_collector_enabled and collector_st.get("connected") and collector_st.get("running"):
+        operating_mode = "LIVE"
+        mode_label = "Live RIPE RIS Telemetry Feed"
+    elif counts.get("total_observations", 0) > 0:
+        operating_mode = "SYNTHETIC"
+        mode_label = "Synthetic Evaluation Testbed (RFC 5737 / RFC 3849)"
+    else:
+        operating_mode = "HISTORICAL"
+        mode_label = "Historical Archive"
+
     return {
         **counts,
         "crypto_status": crypto_st,
         "collector_status": collector_st,
         "database": settings.database_path,
         "demo_mode": settings.demo_mode,
+        "operating_mode": operating_mode,
+        "mode_label": mode_label,
         "evaluation_mode": "LIVE_TELEMETRY" if settings.live_collector_enabled else "SYNTHETIC_EVALUATION",
     }
 
+
+@router.get("/observations")
+async def get_observations_endpoint(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    prefix: Optional[str] = Query(None),
+) -> Dict[str, Any]:
+    """Retrieve recorded BGP route observations with pagination and linked anomaly context."""
+    items, total = list_observations(settings.database_path, limit=limit, offset=offset, prefix=prefix)
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
 
 
 @router.get("/collector/status")

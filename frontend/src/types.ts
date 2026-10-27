@@ -12,13 +12,18 @@ export interface OverviewStats {
   total_observations: number;
   total_alerts: number;
   active_alerts: number;
+  resolved_alerts?: number;
+  acknowledged_alerts?: number;
+  unresolved_alerts?: number;
   total_evidence?: number;
   signed_evidence?: number;
   latest_observation_time: string | null;
+  latest_collector?: string | null;
   crypto_status: CryptoStatus;
   database: string;
   data_mode?: string;
   mode_label?: string;
+  operating_mode?: "LIVE" | "SYNTHETIC" | "HISTORICAL" | string;
   demo_mode?: boolean;
   evaluation_mode?: string;
   collector_status?: {
@@ -32,6 +37,25 @@ export interface OverviewStats {
     last_message_at?: string | null;
     last_error?: string | null;
   };
+}
+
+export interface ObservationItem {
+  id: number;
+  prefix: string;
+  origin_asn: string;
+  collector: string;
+  observed_at: string;
+  scenario?: string | null;
+  peer_as?: string | null;
+  peer_ip?: string | null;
+  created_at: string;
+  baseline_asn?: string | null;
+  baseline_status?: string | null;
+  alert_id?: string | null;
+  alert_kind?: string | null;
+  alert_status?: string | null;
+  alert_severity?: string | null;
+  evidence_id?: string | null;
 }
 
 

@@ -198,25 +198,75 @@ def get_overview_counts(db_path: str) -> Dict[str, Any]:
         active_alerts = conn.execute(
             "SELECT COUNT(*) FROM alerts WHERE status = 'ACTIVE';"
         ).fetchone()[0]
+        resolved_alerts = conn.execute(
+            "SELECT COUNT(*) FROM alerts WHERE status = 'RESOLVED';"
+        ).fetchone()[0]
+        acknowledged_alerts = conn.execute(
+            "SELECT COUNT(*) FROM alerts WHERE status = 'ACKNOWLEDGED';"
+        ).fetchone()[0]
         evidence_count = conn.execute("SELECT COUNT(*) FROM evidence;").fetchone()[0]
         signed_evidence = conn.execute(
             "SELECT COUNT(*) FROM evidence WHERE signer_status = 'SIGNED';"
         ).fetchone()[0]
         
         latest_row = conn.execute(
-            "SELECT observed_at FROM observations ORDER BY id DESC LIMIT 1;"
+            "SELECT observed_at, collector FROM observations ORDER BY id DESC LIMIT 1;"
         ).fetchone()
         latest_time = latest_row[0] if latest_row else None
+        latest_collector = latest_row[1] if latest_row else None
 
     return {
         "tracked_routes": routes_count,
         "total_observations": obs_count,
         "total_alerts": alerts_count,
         "active_alerts": active_alerts,
+        "resolved_alerts": resolved_alerts,
+        "acknowledged_alerts": acknowledged_alerts,
+        "unresolved_alerts": active_alerts + acknowledged_alerts,
         "total_evidence": evidence_count,
         "signed_evidence": signed_evidence,
         "latest_observation_time": latest_time,
+        "latest_collector": latest_collector,
     }
+
+
+def list_observations(
+    db_path: str,
+    limit: int = 50,
+    offset: int = 0,
+    prefix: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """List recorded BGP route observations with pagination and linked anomaly context."""
+    with db_session(db_path) as conn:
+        clauses = []
+        params: List[Any] = []
+        if prefix:
+            clauses.append("o.prefix LIKE ?")
+            params.append(f"%{prefix.strip()}%")
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+        count = conn.execute(
+            f"SELECT COUNT(*) FROM observations o {where_sql};", params
+        ).fetchone()[0]
+
+        cursor = conn.execute(
+            f"""
+            SELECT 
+                o.id, o.prefix, o.origin_asn, o.collector, o.observed_at, o.scenario,
+                o.peer_as, o.peer_ip, o.created_at,
+                b.origin_asn as baseline_asn, b.status as baseline_status,
+                a.id as alert_id, a.kind as alert_kind, a.status as alert_status, a.severity as alert_severity, a.evidence_id
+            FROM observations o
+            LEFT JOIN baselines b ON b.prefix = o.prefix
+            LEFT JOIN alerts a ON (a.prefix = o.prefix AND (a.observed_asn = o.origin_asn OR a.scenario = o.scenario))
+            {where_sql}
+            GROUP BY o.id
+            ORDER BY o.id DESC LIMIT ? OFFSET ?;
+            """,
+            params + [limit, offset],
+        )
+        observations = [dict(row) for row in cursor.fetchall()]
+        return observations, count
 
 
 def get_all_baselines(db_path: str) -> List[Dict[str, Any]]:
