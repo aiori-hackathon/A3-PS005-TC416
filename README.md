@@ -20,7 +20,7 @@
 - **Faculty Mentor**: Dr. Jyothy Joseph
 - **Team Introduction Video**: [https://youtu.be/oKoHllmyCMQ](https://youtu.be/oKoHllmyCMQ)
 - **Project Proposals**:
-  - [HORA Q — Explainable BGP Anomaly Monitor (AIORI-3 Proposal).pdf](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20(AIORI-3%20Proposal).pdf)
+  - [HORA Q — Explainable BGP Anomaly Monitor (AIORI-3 Proposal).pdf](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20%28AIORI-3%20Proposal%29.pdf)
   - [Proposed-structure-hackathon.pdf](Proposed-structure-hackathon.pdf)
 
 ---
@@ -199,7 +199,7 @@ python verify_evidence.py audit/sample_evidence_unsigned.json --tamper
 
 - **Team Introduction Video**: [YouTube Presentation](https://youtu.be/oKoHllmyCMQ)
 - **Official Proposals**:
-  - [HORA Q — AIORI-3 Proposal](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20(AIORI-3%20Proposal).pdf)
+  - [HORA Q — AIORI-3 Proposal](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20%28AIORI-3%20Proposal%29.pdf)
   - [Proposed Structure Hackathon](Proposed-structure-hackathon.pdf)
 - **Deployment Topology**: [`DEPLOYMENT.md`](DEPLOYMENT.md)
 - **Proposal vs. Built Verification**: [`PROPOSED_VS_BUILT_VERIFIED.md`](PROPOSED_VS_BUILT_VERIFIED.md)

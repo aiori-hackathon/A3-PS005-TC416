@@ -5,9 +5,9 @@
 
 ---
 
-## 1. Automated Test Suite (92 Tests)
+## 1. Automated Test Suite (93 Tests)
 
-The backend features 92 comprehensive automated tests executed via `pytest`. All tests execute deterministically against an in-memory SQLite database without requiring live external internet connections.
+The backend features 93 comprehensive automated tests executed via `pytest`. All tests execute deterministically against an in-memory SQLite database without requiring live external internet connections.
 
 ### Test Execution Command
 ```bash
@@ -18,7 +18,7 @@ python -m pytest backend/tests -v
 
 | Test Module | Tests | Primary Invariants Verified |
 | :--- | :--- | :--- |
-| [`test_api.py`](../backend/tests/test_api.py) | 17 | REST API status codes; Pydantic validation; Demo Mode protection; unauthorized seed barrier; authorized seeding; per-peer withdrawal endpoints; recovery scenarios. |
+| [`test_api.py`](../backend/tests/test_api.py) | 18 | REST API status codes; observations endpoint & schema; Pydantic validation; Demo Mode protection; unauthorized seed barrier; authorized seeding; per-peer withdrawal endpoints; recovery scenarios. |
 | [`test_detection.py`](../backend/tests/test_detection.py) | 15 | Origin conflict detection; subprefix containment; candidate baseline quarantine; peer diversity invariant; per-peer withdrawal recovery; duplicate withdrawal idempotency. |
 | [`test_evidence.py`](../backend/tests/test_evidence.py) | 16 | RFC 8785 canonical key ordering; surrogate pair sorting; SHA-256 tamper detection; byte parity with CLI; unsigned vs signed separation. |
 | [`test_crypto.py`](../backend/tests/test_crypto.py) | 12 | ML-DSA-65 FIPS 204 dimensions; transparent provider status; persistent authority key lifecycle; refusal of classical substitution; corrupted key rejection. |

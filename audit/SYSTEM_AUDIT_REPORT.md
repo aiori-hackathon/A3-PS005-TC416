@@ -94,7 +94,7 @@ A comprehensive, forensic system audit and runtime verification was conducted ac
 - **Strict Key Lifecycle & Non-Silent Failure**: Managed by persistent singleton `AuthorityKeyManager` in `backend/horaq/crypto.py` storing the authority keypair in `horaq_authority_key.json` with restricted permissions (`0o600`). If the authority key file is corrupted, malformed, or has incorrect key lengths, `AuthorityKeyManager` raises an explicit `RuntimeError` and refuses to silently regenerate a new key, preventing authority identity loss or unauthorized rotation.
 - **Genuine RFC 8785 Canonicalization (JCS)**: Required standard `rfc8785` library for byte-identical serialization across backend and independent CLI verifier. Tested against UTF-16 code unit ordering (BMP vs supplementary code points), floating point formatting, negative zero (`-0.0` -> `0`), and numeric precision limits.
 - **Strict Integrity**: Rejects fallback to classical algorithms (RSA/ECDSA). Reports `PROVIDER_UNAVAILABLE` if key material or provider is absent.
-- **Independent Verification Tool** ([`verify_evidence.py`](verify_evidence.py)):
+- **Independent Verification Tool** ([`verify_evidence.py`](../verify_evidence.py)):
   - Authentic verification: `python verify_evidence.py audit/sample_evidence_signed.json` -> `[PASS]`
   - Tamper verification: `python verify_evidence.py audit/sample_evidence_signed.json --tamper` -> `[FAIL] TAMPER DETECTED: Computed digest does NOT match!`, `[FAIL] INVALID SIGNATURE!` (Exit code: `1`)
 

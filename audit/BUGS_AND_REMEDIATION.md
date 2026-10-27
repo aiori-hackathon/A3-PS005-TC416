@@ -34,7 +34,7 @@ During the initial code audit and automated test execution, 4 defects were disco
 ---
 
 ### BUG-03: Subprefix Alert Parent-Prefix Property Naming (P2 — Medium)
-- **Component**: [`frontend/src/components/BGPTopologyGraph.tsx`](../frontend/src/components/BGPTopologyGraph.tsx)
+- **Component**: `frontend/src/components/BGPTopologyGraph.tsx` (Prototype component)
 - **Defect Description**: Subprefix diagram attempted to read `alert.baseline_prefix` instead of the typed `alert.parent_prefix`.
 - **Root Cause**: Naming mismatch between mock model draft and actual backend schema in [`types.ts`](../frontend/src/types.ts).
 - **Remediation**: Updated property access to `alert.parent_prefix` with fallback to `198.51.100.0/24`.
