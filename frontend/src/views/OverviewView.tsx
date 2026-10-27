@@ -14,6 +14,8 @@ import {
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { groupAlertObservations, GroupedIncident } from "../utils/incidentGrouping";
 import { EvaluatorGuideCard } from "../components/EvaluatorGuideCard";
+import { getCollectorStatusDisplay } from "../utils/collectorStatus";
+import { formatCount } from "../utils/format";
 
 export const OverviewView: React.FC = () => {
   const {
@@ -33,13 +35,8 @@ export const OverviewView: React.FC = () => {
   const updatesEvaluated = overview?.total_observations ?? 0;
   const anomaliesCount = overview?.total_alerts ?? alerts.length;
 
-  const collectorStatus = (overview as any)?.collector_status;
-  const isCollectorConnected = collectorStatus?.connected === true;
-  const isCollectorEnabled = collectorStatus?.enabled === true;
-  const risFeedStatusLabel = isCollectorConnected ? "CONNECTED" : (isCollectorEnabled ? "CONNECTING" : "OFFLINE (Opt-In)");
-  const risFeedSubtitle = isCollectorConnected
-    ? "Active WebSocket: rrc00, rrc01, rrc03"
-    : "Configured feeds: rrc00, rrc01, rrc03";
+  const collectorInfo = getCollectorStatusDisplay(overview?.collector_status);
+  const isCollectorConnected = collectorInfo.state === "CONNECTED";
 
   const recentIncidents = groupedIncidents.slice(0, 7);
 
@@ -84,7 +81,7 @@ export const OverviewView: React.FC = () => {
         {/* Single Data Source Indicator */}
         <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-bg-interactive border border-divider text-xs text-text-sub">
-            <span className={`w-2 h-2 rounded-full ${isCollectorConnected ? "bg-status-green animate-pulse" : "bg-brand-blue"}`} />
+            <span className={`w-2 h-2 rounded-full ${collectorInfo.dotStyle}`} />
             <span className="font-semibold text-text-main tracking-wide">
               {isCollectorConnected
                 ? "LIVE DATA"
@@ -103,17 +100,15 @@ export const OverviewView: React.FC = () => {
       {/* Synthetic Evaluation & Demo Protection Banner */}
       <div className="p-3.5 rounded-lg border border-brand-blue/30 bg-brand-blue/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2.5">
-          <span className="w-2 h-2 rounded-full bg-status-green animate-pulse" />
+          <span className={`w-2 h-2 rounded-full ${isCollectorConnected ? "bg-status-green animate-pulse" : "bg-brand-blue"}`} />
           <span className="font-semibold text-text-main">
-            {overview?.evaluation_mode === "LIVE_TELEMETRY"
+            {isCollectorConnected
               ? "Live RIPE RIS Telemetry Ingestion Active"
               : "AIORI-3 Evaluation Benchmark: Synthetic Anomaly Scenarios & FIPS 204 Evidence"}
           </span>
           <span className="text-text-dim">•</span>
           <span className="text-text-sub">
-            {isCollectorConnected
-              ? "Connected to RIS Live WebSocket (rrc00, rrc01, rrc03)"
-              : "Live WebSocket collection is opt-in (HORAQ_LIVE_COLLECTOR=false for reproducible judging)"}
+            {collectorInfo.description}
           </span>
         </div>
         {overview?.demo_mode && (
@@ -141,7 +136,7 @@ export const OverviewView: React.FC = () => {
               {topIncident.occurrenceCount > 1 && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-bg-card border border-divider text-text-sub">
                   <Layers className="w-3 h-3 text-brand-blue" />
-                  {topIncident.occurrenceCount} observations
+                  {formatCount(topIncident.occurrenceCount, "observation")}
                 </span>
               )}
               <span className="text-xs text-text-dim font-mono">
@@ -236,7 +231,7 @@ export const OverviewView: React.FC = () => {
               {updatesEvaluated}
             </div>
             <div className="text-xs text-text-dim">
-              {anomaliesCount} {anomaliesCount === 1 ? "anomaly flagged" : "anomalies flagged"}
+              {formatCount(anomaliesCount, "anomaly flagged", "anomalies flagged")}
             </div>
           </div>
 
@@ -244,13 +239,33 @@ export const OverviewView: React.FC = () => {
           <div className="p-5 space-y-1">
             <div className="text-xs font-medium text-text-sub flex items-center justify-between">
               <span>RIPE RIS Feed</span>
-              <Server className={`w-4 h-4 ${isCollectorConnected ? "text-status-green" : "text-text-dim"}`} />
+              <Server
+                className={`w-4 h-4 ${
+                  collectorInfo.state === "CONNECTED"
+                    ? "text-status-green"
+                    : collectorInfo.state === "CONNECTING"
+                    ? "text-amber-500"
+                    : "text-text-dim"
+                }`}
+              />
             </div>
-            <div className={`text-xl font-bold font-mono tracking-tight ${isCollectorConnected ? "text-status-green" : "text-text-main"}`}>
-              {risFeedStatusLabel}
+            <div
+              className={`text-xl font-bold font-mono tracking-tight ${
+                collectorInfo.state === "CONNECTED"
+                  ? "text-status-green"
+                  : collectorInfo.state === "CONNECTING"
+                  ? "text-amber-500"
+                  : collectorInfo.state === "DISCONNECTED"
+                  ? "text-status-critical"
+                  : "text-text-main"
+              }`}
+            >
+              {collectorInfo.label}
             </div>
             <div className="text-xs text-text-dim">
-              {risFeedSubtitle}
+              {collectorInfo.state === "CONNECTED"
+                ? "Active WebSocket: rrc00, rrc01, rrc03"
+                : "Configured feeds: rrc00, rrc01, rrc03 (Opt-in)"}
             </div>
           </div>
         </div>

@@ -16,6 +16,7 @@ import {
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
 import { groupAlertObservations, GroupedIncident } from "../utils/incidentGrouping";
+import { formatCount } from "../utils/format";
 
 export const AlertsView: React.FC = () => {
   const {
@@ -194,7 +195,7 @@ export const AlertsView: React.FC = () => {
             <span>Showing unresolved incidents requiring operator review.</span>
           )}
           {filterSeverity === "all" && (
-            <span>Showing full history ({alerts.length} individual observations recorded).</span>
+            <span>Showing full history ({formatCount(alerts.length, "individual observation", "individual observations")} recorded).</span>
           )}
         </div>
       </div>
@@ -248,7 +249,7 @@ export const AlertsView: React.FC = () => {
                         {inc.occurrenceCount > 1 && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-bg-interactive text-text-sub border border-divider">
                             <Layers className="w-3 h-3 text-brand-blue" />
-                            {inc.occurrenceCount} observations
+                            {formatCount(inc.occurrenceCount, "observation")}
                           </span>
                         )}
                       </div>

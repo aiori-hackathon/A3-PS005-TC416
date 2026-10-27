@@ -1,18 +1,19 @@
 import React, { useState } from "react";
 import {
-  Cpu,
   Moon,
   Sun,
   Laptop,
-  CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Server,
   Lock,
   Database,
   Radio,
+  AlertTriangle,
+  CheckCircle2,
+  HelpCircle,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
+import { getCollectorStatusDisplay } from "../utils/collectorStatus";
 
 export const SettingsView: React.FC = () => {
   const {
@@ -49,6 +50,10 @@ export const SettingsView: React.FC = () => {
       icon: Laptop,
     },
   ];
+
+  const collectorInfo = getCollectorStatusDisplay(overview?.collector_status);
+  const isDbHealthy = Boolean(overview?.database);
+  const isCryptoReady = cryptoStatus?.status === "READY";
 
   return (
     <div className="max-w-[1360px] w-full space-y-6 animate-fadeIn">
@@ -112,40 +117,99 @@ export const SettingsView: React.FC = () => {
       <div className="card-panel p-6 space-y-4">
         <div>
           <h2 className="text-base font-semibold text-text-main">System Health & Telemetry Status</h2>
-          <p className="text-xs text-text-sub mt-0.5">Active runtime parameters derived from live backend probes.</p>
+          <p className="text-xs text-text-sub mt-0.5">
+            Active runtime parameters derived from live backend probes. Live ingestion and application health are reported independently.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-1">
-            <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
-              <span>BGP Ingestion Engine</span>
-              <Radio className="w-4 h-4 text-status-green" />
+          {/* 1. BGP Ingestion Engine - Derived Truthfully from Collector Telemetry */}
+          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-2 flex flex-col justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
+                <span>BGP Ingestion Engine</span>
+                <span className="flex items-center gap-1.5">
+                  <span className={`w-2 h-2 rounded-full ${collectorInfo.dotStyle}`} />
+                  <Radio
+                    className={`w-4 h-4 ${
+                      collectorInfo.state === "CONNECTED"
+                        ? "text-status-green"
+                        : collectorInfo.state === "CONNECTING"
+                        ? "text-amber-500"
+                        : collectorInfo.state === "DISCONNECTED"
+                        ? "text-status-critical"
+                        : "text-text-dim"
+                    }`}
+                  />
+                </span>
+              </div>
+              <div className="text-base font-bold text-text-main flex items-center gap-2">
+                <span>{collectorInfo.label}</span>
+              </div>
+              <div className="text-xs text-text-dim leading-relaxed">
+                {collectorInfo.description}
+              </div>
             </div>
-            <div className="text-base font-bold text-text-main">Operational</div>
-            <div className="text-xs text-text-dim">RIPE RIS live stream parser active</div>
+
+            {collectorInfo.lastError && (
+              <div className="pt-2 border-t border-divider text-[11px] text-amber-500 font-mono flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate" title={collectorInfo.lastError}>
+                  {collectorInfo.lastError}
+                </span>
+              </div>
+            )}
           </div>
 
-          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-1">
-            <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
-              <span>Database Ledger (WAL)</span>
-              <Database className="w-4 h-4 text-status-green" />
+          {/* 2. Database Ledger (WAL) - Derived from Backend Overview Probe */}
+          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-2 flex flex-col justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
+                <span>Database Ledger (WAL)</span>
+                {isDbHealthy ? (
+                  <CheckCircle2 className="w-4 h-4 text-status-green" />
+                ) : (
+                  <HelpCircle className="w-4 h-4 text-text-dim" />
+                )}
+              </div>
+              <div className="text-base font-bold text-text-main">
+                {isDbHealthy ? "SQLite 3 (WAL Mode)" : "Database Unreachable"}
+              </div>
+              <div className="text-xs text-text-dim leading-relaxed">
+                {isDbHealthy
+                  ? `ACID-compliant storage at ${overview?.database.split(/[\\/]/).pop() || "local file"}`
+                  : "Database status could not be retrieved from overview endpoint."}
+              </div>
             </div>
-            <div className="text-base font-bold text-text-main">SQLite 3 (WAL Mode)</div>
-            <div className="text-xs text-text-dim">ACID-compliant atomic writes enabled</div>
+            {isDbHealthy && (
+              <div className="pt-2 border-t border-divider text-[11px] text-text-sub font-mono">
+                PRAGMA journal_mode = WAL (Atomic)
+              </div>
+            )}
           </div>
 
-          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-1">
-            <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
-              <span>Cryptographic Signer</span>
-              <Lock className="w-4 h-4 text-brand-blue" />
+          {/* 3. Cryptographic Signer - Derived from Crypto Status Provider */}
+          <div className="p-4 rounded-lg bg-bg-interactive border border-divider space-y-2 flex flex-col justify-between">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-xs font-semibold text-text-sub">
+                <span>Cryptographic Signer</span>
+                <Lock
+                  className={`w-4 h-4 ${
+                    isCryptoReady ? "text-brand-blue" : "text-text-dim"
+                  }`}
+                />
+              </div>
+              <div className="text-base font-bold text-text-main">
+                {cryptoStatus?.algorithm || "NIST ML-DSA-65"}
+              </div>
+              <div className="text-xs text-text-dim leading-relaxed">
+                {isCryptoReady
+                  ? `Active provider: ${cryptoStatus?.provider || "dilithium-py"} (NIST Level 3)`
+                  : cryptoStatus?.message || "Post-quantum signing engine is unavailable."}
+              </div>
             </div>
-            <div className="text-base font-bold text-text-main">
-              {cryptoStatus?.algorithm || "NIST ML-DSA-65"}
-            </div>
-            <div className="text-xs text-text-dim">
-              {cryptoStatus?.status === "READY"
-                ? `Active (${cryptoStatus.provider || "dilithium-py"})`
-                : (cryptoStatus?.message || "Provider Unavailable")}
+            <div className="pt-2 border-t border-divider text-[11px] text-text-sub font-mono">
+              Status: {cryptoStatus?.status || "UNKNOWN"}
             </div>
           </div>
         </div>

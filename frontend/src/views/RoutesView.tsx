@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Globe, Search, SearchCheck, Sparkles, X } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
+import { formatCount } from "../utils/format";
 
 export const RoutesView: React.FC = () => {
   const {
@@ -121,7 +122,7 @@ export const RoutesView: React.FC = () => {
                         {route.origin_asn}
                       </td>
                       <td className="py-3 px-4 text-xs font-mono text-text-sub">
-                        {route.observation_count.toLocaleString()} observations
+                        {formatCount(route.observation_count, "observation")}
                       </td>
                       <td className="py-3 px-4 text-xs text-text-dim">
                         {firstSeenStr}

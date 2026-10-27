@@ -30,7 +30,9 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 }) => {
   if (!alert && !evidence) return null;
 
-  const isAutoTamper = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("modal") === "tamper";
+  const isAutoTamper =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("modal") === "tamper";
 
   const [verifyingHash, setVerifyingHash] = useState(false);
   const [hashResult, setHashResult] = useState<{
@@ -38,7 +40,10 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
     computed: string;
   } | null>(() => {
     if (isAutoTamper) {
-      return { valid: false, computed: "a49aff62a8000000000000000000000000000000000000000000000000000000" };
+      return {
+        valid: false,
+        computed: "a49aff62a8000000000000000000000000000000000000000000000000000000",
+      };
     }
     return null;
   });
@@ -65,14 +70,19 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
   const record: any = isTampered && tamperedData ? tamperedData : originalRecord;
   const expectedHash = evidence?.record_hash || "";
 
+  const recordId = evidence?.id || alert?.evidence_id || "ev-record";
+  const exportFilename = `evidence-${recordId}.json`;
+  const cliCommand = `python verify_evidence.py "${exportFilename}"`;
+
   // Verify SHA-256 Integrity
   const handleVerifyHash = async () => {
     setVerifyingHash(true);
+    setSignError(null);
     try {
       const res = await api.verifyEvidenceHash(record, expectedHash);
       setHashResult({ valid: res.valid, computed: res.computed_hash });
     } catch (err: any) {
-      setSignError(err.message);
+      setSignError(err.message || "Failed to verify hash via API");
     } finally {
       setVerifyingHash(false);
     }
@@ -105,7 +115,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
       await api.signEvidence(evidence.id);
       onSigned();
     } catch (err: any) {
-      setSignError(err.message);
+      setSignError(err.message || "Cryptographic signing failed");
     } finally {
       setSigning(false);
     }
@@ -120,24 +130,36 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 
   // Copy Verification CLI Command
   const handleCopyCli = () => {
-    const compactJson = JSON.stringify(record);
-    const cmd = `echo '${compactJson}' | sha256sum`;
-    navigator.clipboard.writeText(cmd);
+    navigator.clipboard.writeText(cliCommand);
     setCopiedCli(true);
     setTimeout(() => setCopiedCli(false), 2000);
   };
 
-  // Export JSON file
+  // Export JSON envelope compatible with independent verify_evidence.py
   const handleDownload = () => {
+    const exportEnvelope = {
+      id: recordId,
+      alert_id: alert?.id || evidence?.alert_id || null,
+      record: record,
+      record_hash: expectedHash,
+      signature: isTampered
+        ? (evidence?.signature ? "TAMPERED_SIG_" + evidence.signature.slice(0, 30) : null)
+        : (evidence?.signature || null),
+      public_key: evidence?.public_key || null,
+      signer_status: isTampered
+        ? "TAMPERED"
+        : (evidence?.signer_status || (evidence?.signature ? "SIGNED" : "UNSIGNED")),
+      signature_algorithm: evidence?.algorithm || (evidence as any)?.signature_algorithm || "ML-DSA-65",
+      algorithm: evidence?.algorithm || "ML-DSA-65",
+      exported_at: new Date().toISOString(),
+    };
+
     const dataStr =
       "data:text/json;charset=utf-8," +
-      encodeURIComponent(JSON.stringify(record, null, 2));
+      encodeURIComponent(JSON.stringify(exportEnvelope, null, 2));
     const dlAnchor = document.createElement("a");
     dlAnchor.setAttribute("href", dataStr);
-    dlAnchor.setAttribute(
-      "download",
-      `evidence-${evidence?.id || alert?.id}.json`
-    );
+    dlAnchor.setAttribute("download", exportFilename);
     dlAnchor.click();
   };
 
@@ -166,7 +188,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 Forensic evidence record
               </h2>
               <span className="text-[11px] text-text-dim font-mono">
-                {evidence?.id || alert?.id || "Evidence"}
+                {recordId}
               </span>
             </div>
           </div>
@@ -236,13 +258,13 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                     <span>ML-DSA-65 Signed (NIST FIPS 204)</span>
                   </>
                 ) : (
-                  <span className="text-text-dim font-medium">Unsigned</span>
+                  <span className="text-text-dim font-medium">Unsigned (Digest Only)</span>
                 )}
               </div>
               <p className="text-[11px] text-text-dim leading-relaxed pt-0.5">
                 {isSigned
                   ? "Post-quantum digital signature verified under NIST FIPS 204."
-                  : "Digest recorded; signature key not yet attached."}
+                  : "Content digest is recorded via RFC 8785 JCS. To establish cryptographic non-repudiation, notarize with ML-DSA-65 below."}
               </p>
             </div>
           </div>
@@ -255,7 +277,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 <span>Simulated In-Memory Payload Mutation Active</span>
               </div>
               <p className="text-[11px] text-red-200 leading-relaxed">
-                Incident values were mutated in browser memory (severity downgraded, origin changed). Re-verifying will catch this payload mismatch.
+                Incident values were mutated in browser memory (severity downgraded to LOW, origin changed to AS0). Re-verifying will catch this payload mismatch.
               </p>
             </div>
           )}
@@ -300,6 +322,14 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
               )}
 
               <button
+                onClick={handleDownload}
+                className="px-2.5 py-1.5 rounded-xl bg-bg-card border border-border-card hover:border-brand-blue/40 text-xs font-semibold text-text-sub hover:text-text-main transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+              >
+                <Download className="w-3 h-3 text-text-dim" />
+                <span>Export JSON</span>
+              </button>
+
+              <button
                 onClick={handleCopyCli}
                 className="px-2.5 py-1.5 rounded-xl bg-bg-card border border-border-card hover:border-brand-blue/40 text-xs font-semibold text-text-sub hover:text-text-main transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
                 title="Copy terminal verification CLI"
@@ -307,14 +337,29 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
                 <Terminal className="w-3 h-3 text-text-dim" />
                 <span>{copiedCli ? "CLI Copied" : "Copy CLI"}</span>
               </button>
+            </div>
 
-              <button
-                onClick={handleDownload}
-                className="px-2.5 py-1.5 rounded-xl bg-bg-card border border-border-card hover:border-brand-blue/40 text-xs font-semibold text-text-sub hover:text-text-main transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-              >
-                <Download className="w-3 h-3 text-text-dim" />
-                <span>Export JSON</span>
-              </button>
+            {/* Independent CLI Instruction Card */}
+            <div className="p-3 rounded-lg bg-bg-card border border-border-card space-y-1.5">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="font-semibold text-text-main flex items-center gap-1.5">
+                  <Terminal className="w-3.5 h-3.5 text-brand-blue" />
+                  Independent CLI Verification Command
+                </span>
+                <span className="text-text-dim text-[10px]">Python 3 (RFC 8785 + FIPS 204)</span>
+              </div>
+              <div className="p-2 rounded bg-bg-interactive border border-divider text-text-main flex items-center justify-between gap-2 overflow-x-auto font-mono text-[11px]">
+                <code className="text-brand-blue select-all">{cliCommand}</code>
+                <button
+                  onClick={handleCopyCli}
+                  className="px-2 py-0.5 rounded bg-bg-card hover:bg-bg-selected text-text-sub hover:text-brand-blue border border-divider text-[10px] shrink-0 font-sans cursor-pointer transition-colors"
+                >
+                  {copiedCli ? "Copied" : "Copy Command"}
+                </button>
+              </div>
+              <p className="text-[10px] text-text-dim leading-relaxed">
+                Click <span className="font-semibold text-text-sub">Export JSON</span> to save <span className="font-mono text-text-sub">{exportFilename}</span> to your repository root, then run the copied command to verify canonical hash and digital signature independently.
+              </p>
             </div>
 
             {/* Verification Result Toast */}
@@ -396,7 +441,7 @@ export const EvidenceModal: React.FC<EvidenceModalProps> = ({
 
         {/* Footer */}
         <div className="h-12 border-t border-border-card bg-bg-elevated px-5 flex items-center justify-between shrink-0 text-[11px] text-text-dim font-mono">
-          <span>RFC 8785 Canonicalization</span>
+          <span>RFC 8785 Canonicalization • NIST FIPS 204</span>
           <button
             onClick={onClose}
             className="px-3 py-1 rounded-lg bg-bg-card border border-border-card hover:border-brand-blue/40 text-text-main text-xs font-semibold transition-colors cursor-pointer"
