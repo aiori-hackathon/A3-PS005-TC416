@@ -1,0 +1,254 @@
+=== PAGE 1 ===
+AIORI-3 Hackathon · PS-005 · Cyber Security
+HORA Q
+Explainable BGP Origin and Subprefix  
+Anomaly Monitor
+Poisoning-Aware Baseline Protection · Evidence Intelligence · Post-
+Quantum Verification
+Team code: A3-PS005-TC416
+Sankardev VS (Team Lead) · Adarsh A · Dr. Jyothy Joseph (Faculty Mentor) 
+Al-Ameen College
+HORA Q · A3-PS005-TC416 · October 2026 · 1 / 11
+
+=== PAGE 2 ===
+Abstract and Problem Description
+Abstract
+HORA Q is a prototype for detecting selected BGP origin-AS changes and  
+new more-specific prefixes. It correlates observations with history,  
+provenance and available RPKI context to give explainable findings. A  
+cautious baseline policy keeps new or conflicting observations from being  
+trusted until defined evidence criteria are met. A Post-Quantum  
+Evidence Vault signs investigation records with ML-DSA for independent  
+verification. A replay laboratory compares the workflow with a simple  
+reference detector.
+Problem Description
+Origin changes and more-specifics may be malicious, accidental,  
+planned or benign
+Basic alerts lack history and evidence provenance
+Unverified observations can undermine a local baseline
+Incident records need evidence, rule versions and timestamps
+Signatures must verify independently without proving an  
+observation true
+Problem to solve: how can a BGP monitor produce explainable anomaly findings, protect its baseline from unverified  
+observations and preserve independently verifiable incident evidence?
+HORA Q · A3-PS005-TC416 · October 2026 · 2 / 11
+
+=== PAGE 3 ===
+Background
+BGP lets autonomous systems exchange reachability for IP prefixes. A  
+changed origin AS or a new more-specific prefix can indicate an anomaly,  
+but neither alone proves malicious intent. RPKI origin validation adds  
+context on whether an origin AS is authorized under available ROA data [2,  
+3]; it does not establish full-route safety or intent. HORA Q treats  
+observations as evidence with provenance, timestamps and limits, keeps a  
+versioned baseline, and leaves conflicting or insufficient evidence visible.
+Parent: 203.0.113.0/24
+More-specific: 203.0.113.128/25
+Documentation example, not a real incident.
+Origin-AS change
+Observed origin differs from the  
+reference state
+More-specific prefix
+Longer prefix covering part of  
+its parent
+Candidate observation
+New evidence not yet promoted  
+to the baseline
+Evidence provenance
+Source, timestamp and rule  
+versions behind it
+HORA Q · A3-PS005-TC416 · October 2026 · 3 / 11
+
+=== PAGE 4 ===
+Literature and RFC Review
+Standards
+RFC 4271 defines BGP-4 [1]. RFC 6811 (updated by RFCs 8481  
+and 8893 [9, 10]) and RFC 9582 cover prefix-origin validation and  
+ROAs [2, 3].
+Existing Tools
+BGPalerter supports unexpected-origin and more-specific alerts  
+[4]. ARTEMIS is an established hijack-detection system [5].  
+HORA Q claims no novelty for basic detection.
+Research Risk
+Research reports that crafted public observations can mislead  
+certain ML-based hijack detectors [6]. HORA Q studies baseline  
+contamination in controlled scenarios; it does not claim to solve  
+all poisoning attacks.
+HORA Q Contribution
+An integrated, testable workflow: cautious baseline promotion,  
+provenance-aware explanations, explicit uncertainty, ML-DSA-
+signed records [7] and independent verification, evaluated  
+against a reference detector.
+HORA Q · A3-PS005-TC416 · October 2026 · 4 / 11
+
+=== PAGE 5 ===
+Proposed Solution: Seven-Stage Workflow
+1
+Ingest &  
+normalize
+2
+Maintain  
+history
+3
+Evaluate  
+candidates
+4
+Detect  
+anomalies
+5
+Correlate &  
+explain
+6
+Sign & verify
+7
+Review &  
+evaluate
+Baseline Promotion Policy
+Evaluate source provenance, freshness, historical consistency,  
+corroboration and validation context. Record each decision and  
+rationale; keep observations as candidates when evidence is  
+insufficient or conflicting.
+Post-Quantum Evidence Vault
+Stores canonical records, evidence hashes, algorithm, key ID  
+and verification metadata. ML-DSA protects record integrity  
+relative to the key; it does not prove the observation is true or an  
+attack occurred.
+Safety boundary:  HORA Q does not automatically change network routes.
+HORA Q · A3-PS005-TC416 · October 2026 · 5 / 11
+
+=== PAGE 6 ===
+Reference Detector vs. Enhanced HORA Q
+Dimension Naïve experimental reference detector Proposed HORA Q
+Detection Origin-change and subprefix rules Same rules plus evidence correlation
+Baseline Incorporates observations immediately Explicit candidate and promotion criteria
+Explanation Alert and changed route fields Rule, history, provenance, evidence gaps
+Evidence integrity Basic finding record ML-DSA-signed record, independent  
+verifier
+Evaluation Detection results Detection, baseline, evidence, crypto  
+metrics
+Detection
+precision, recall, F1, false-positive rate
+Baseline protection
+contamination, legitimate-change withholding,  
+promotion delay
+Evidence quality
+field completeness; conflicting or missing  
+evidence handled
+Crypto overhead
+sign/verify latency, signature size, tamper tests
+Evaluation status: planned measurements; no improvement is claimed until experiments are complete. The reference detector is an experimental comparison policy, not a claim about all monitors.
+HORA Q · A3-PS005-TC416 · October 2026 · 6 / 11
+
+=== PAGE 7 ===
+Solution Architecture
+Data sources
+BGP replay files
+RIPE RIS Live  
+(live BGP  
+stream)
+RIPEstat RPKI  
+validation API
+↓ replay ↓ live feed ↓ ROA context
+Routing  
+intelligence Ingestion & normalization → Observation  
+store →
+Baseline +  
+candidate  
+policy
+→
+Origin /  
+subprefix  
+detector
+→ Correlation &  
+explanation
+↓ findings enter the evidence-signing path
+Post-Quantum  
+Evidence  
+Assurance
+Finding handoff → Canonical record  
++ hashes → ML-DSA signer → Signed evidence  
+vault → Independent  
+verifier
+UI & evaluation FastAPI → React / TypeScript  
+dashboard
+Scenario replay  
+runner → Reference  
+comparison → Metrics report
+Figure 1. HORA Q component architecture. Routing intelligence generates explainable findings; the evidence layer signs and independently verifies  
+investigation records. Teal = data store; Replay mode stays operational if the live stream or RPKI service is unreachable. The verifier consumes a saved  
+record and public key; the dashboard and benchmark path stays outside signing.
+HORA Q · A3-PS005-TC416 · October 2026 · 7 / 11
+
+=== PAGE 8 ===
+Data Flow Diagram
+Figure 2. HORA Q data flow: observations become reviewed findings and signed evidence; scenario results are retained for reproducible evaluation. Blue =  
+process, teal = data store, white = external entity.
+HORA Q · A3-PS005-TC416 · October 2026 · 8 / 11
+
+=== PAGE 9 ===
+Deployment Timeline
+12–14 Oct
+Setup
+16 Oct
+Level 2
+16–19 Oct
+Sprint 1
+20–24 Oct
+Sprint 2
+25–27 Oct
+Sprint 3
+28–30 Oct
+Sprint 4
+By 31 Oct
+Steps 8–10
+Stage Milestone Key deliverable
+Setup Submission readiness Proposal PDF, repository, intro video
+Level 2 Team announcement Official announcement; mentoring starts
+Sprint 1 Core detection Replay format; origin/subprefix tests
+Sprint 2 Baseline protection Candidate policy, correlation,  
+explanations
+Sprint 3 Evidence assurance ML-DSA signing, verifier, tamper tests
+Sprint 4 Integration and evaluation Dashboard, scenario suite, comparisons
+Steps 8–10 Final deliverables Source, documentation, working demo
+Methodology: Plan → Implement → Test → Integrate → Benchmark → Document. Dates are planning targets; check official AIORI-3 announcements [8].
+HORA Q · A3-PS005-TC416 · October 2026 · 9 / 11
+
+=== PAGE 10 ===
+Bibliography
+[1] Y. Rekhter, T. Li, S. Hares, “A Border Gateway Protocol 4 (BGP-4),”  
+RFC 4271, IETF, 2006.  
+https://www.rfc-editor.org/rfc/rfc4271
+[2] P. Mohapatra et al., “BGP Prefix Origin Validation,” RFC 6811,  
+IETF, 2013.  
+https://www.rfc-editor.org/rfc/rfc6811
+[3] J. Snijders et al., “A Profile for Route Origin Authorizations (ROAs),”  
+RFC 9582, IETF, 2024.  
+https://www.rfc-editor.org/rfc/rfc9582
+[4] NTT, “BGPalerter: Configuration and Monitor Documentation.”  
+https://github.com/nttgin/BGPalerter/blob/main/docs/configuration.md
+[5] ARTEMIS, “A Real-Time BGP Hijack Detection and  
+Mitigation System.”  
+https://bgpartemis.org/
+[6] “Is Crunching Public Data the Right Approach to Detect BGP  
+Hijacks?” arXiv:2507.20434, 2025.  
+https://arxiv.org/abs/2507.20434
+[7] NIST, “Module-Lattice-Based Digital Signature Standard (ML-
+DSA),” FIPS 204, 2024.  
+https://csrc.nist.gov/pubs/fips/204/final
+[8] AIORI, “AIORI-3 Hackathon Guidelines.”  
+https://portal.aiori.in/aiori-3/hackathon-guideline/
+[9] “Clarifications to BGP Origin Validation Based on RPKI,” RFC 8481,  
+IETF, 2018.  
+https://www.rfc-editor.org/rfc/rfc8481
+[10] “RPKI Origin Validation for BGP Export,” RFC 8893, IETF, 2020.  
+https://www.rfc-editor.org/rfc/rfc8893
+HORA Q · A3-PS005-TC416 · October 2026 · 10 / 11
+
+=== PAGE 11 ===
+Thank You
+HORA Q
+Explainable evidence. Verifiable routing investigations.
+AIORI-3 · PS-005 · A3-PS005-TC416 · Al-Ameen College
+github.com/vssankardev-lang/A3-PS005-TC416
+HORA Q · A3-PS005-TC416 · October 2026 · 11 / 11
+

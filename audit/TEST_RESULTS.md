@@ -4,7 +4,7 @@
 **Hackathon**: AIORI-3 | Track 2 Cyber Security (Problem PS-005, Team A3-PS005-TC416)  
 **Execution Timestamp**: 2026-10-27 13:00:00 UTC<br/>
 **Environment**: Windows 11 / Linux (Ubuntu 24.04), Python 3.13.7, pytest 8.4.2, Node.js v20.x, Vite 5.4.21<br/>
-**Verification Scope**: 93 Automated Tests, Head-to-Head Reference Benchmark, Archival MRT Replay, Independent CLI Verifier, and Frontend Production Build.
+**Verification Scope**: 95 Automated Tests, Head-to-Head Reference Benchmark, Archival MRT Replay, Independent CLI Verifier, and Frontend Production Build.
 
 ---
 
@@ -15,7 +15,7 @@
 python -m pytest backend/tests -v
 ```
 
-### Complete Test Results Output (93 Tests)
+### Complete Test Results Output (95 Tests)
 ```text
 ============================= test session starts =============================
 platform win32 -- Python 3.13.7, pytest-8.4.2, pluggy-1.6.0
@@ -23,17 +23,17 @@ cachedir: .pytest_cache
 rootdir: .
 plugins: anyio-4.10.0, asyncio-1.3.0
 asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
-collecting ... collected 93 items
+collecting ... collected 95 items
 
 backend/tests/test_api.py::test_root_health PASSED                       [  1%]
 backend/tests/test_api.py::test_overview_endpoint PASSED                 [  2%]
 backend/tests/test_api.py::test_observations_endpoint PASSED             [  3%]
-backend/tests/test_api.py::test_post_observation_valid PASSED            [  3%]
-backend/tests/test_api.py::test_post_observation_invalid_prefix PASSED   [  4%]
-backend/tests/test_api.py::test_post_observation_invalid_asn PASSED      [  5%]
-backend/tests/test_api.py::test_run_synthetic_scenarios PASSED           [  6%]
-backend/tests/test_api.py::test_evidence_verify_hash_endpoint PASSED     [  7%]
-backend/tests/test_api.py::test_crypto_public_key_endpoint PASSED        [  8%]
+backend/tests/test_api.py::test_post_observation_valid PASSED            [  4%]
+backend/tests/test_api.py::test_post_observation_invalid_prefix PASSED   [  5%]
+backend/tests/test_api.py::test_post_observation_invalid_asn PASSED      [  6%]
+backend/tests/test_api.py::test_run_synthetic_scenarios PASSED           [  7%]
+backend/tests/test_api.py::test_evidence_verify_hash_endpoint PASSED     [  8%]
+backend/tests/test_api.py::test_crypto_public_key_endpoint PASSED        [  9%]
 backend/tests/test_api.py::test_collector_status_endpoint PASSED         [ 10%]
 backend/tests/test_api.py::test_demo_mode_restricts_arbitrary_observation_submission PASSED [ 11%]
 backend/tests/test_api.py::test_demo_mode_safe_reset_protects_database PASSED [ 12%]
@@ -43,11 +43,13 @@ backend/tests/test_api.py::test_api_authorized_baseline_seeding_and_history PASS
 backend/tests/test_api.py::test_api_authorized_seeding_requires_auth_in_demo_mode PASSED [ 16%]
 backend/tests/test_api.py::test_api_post_withdrawal_endpoint PASSED      [ 17%]
 backend/tests/test_api.py::test_api_withdrawal_recovery_scenario PASSED  [ 18%]
-backend/tests/test_benchmark.py::test_head_to_head_benchmark_metrics PASSED [ 20%]
-backend/tests/test_benchmark.py::test_cryptographic_benchmark PASSED     [ 21%]
-backend/tests/test_collector.py::test_parse_standard_as_path PASSED      [ 22%]
-backend/tests/test_collector.py::test_parse_single_element_as_set PASSED [ 23%]
-backend/tests/test_collector.py::test_parse_multi_element_as_set_skipped PASSED [ 24%]
+backend/tests/test_api.py::test_api_evaluation_benchmark_endpoint PASSED [ 20%]
+backend/tests/test_api.py::test_api_evaluation_historical_replay_endpoint PASSED [ 21%]
+backend/tests/test_benchmark.py::test_head_to_head_benchmark_metrics PASSED [ 22%]
+backend/tests/test_benchmark.py::test_cryptographic_benchmark PASSED     [ 23%]
+backend/tests/test_collector.py::test_parse_standard_as_path PASSED      [ 24%]
+backend/tests/test_collector.py::test_parse_single_element_as_set PASSED [ 25%]
+backend/tests/test_collector.py::test_parse_multi_element_as_set_skipped PASSED [ 26%]
 backend/tests/test_collector.py::test_parse_empty_as_set PASSED          [ 25%]
 backend/tests/test_collector.py::test_parse_withdrawal_only_message PASSED [ 26%]
 backend/tests/test_collector.py::test_parse_duplicate_prefixes_deduplication PASSED [ 27%]
@@ -117,8 +119,8 @@ backend/tests/test_normalization.py::test_normalize_timestamp_invalid PASSED [ 9
 backend/tests/test_rpki.py::test_rpki_valid_response PASSED              [ 98%]
 backend/tests/test_rpki.py::test_rpki_invalid_response PASSED            [100%]
 
-============================= 92 passed in 10.60s =============================
-`````
+============================= 95 passed in 10.70s =============================
+```
 
 ---
 

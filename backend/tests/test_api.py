@@ -376,6 +376,30 @@ def test_api_withdrawal_recovery_scenario(client, monkeypatch):
     assert sc_data["alerts_resolved"] >= 1
 
 
+def test_api_evaluation_benchmark_endpoint(client):
+    """Verify /api/v1/evaluation/benchmark returns 14-case head-to-head comparison metrics."""
+    resp = client.get("/api/v1/evaluation/benchmark")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "naive_reference_detector" in data
+    assert "enhanced_horaq_detector" in data
+    assert "cryptographic_overhead_benchmark" in data
+    assert data["naive_reference_detector"]["baseline_contamination_rate_pct"] == 75.0
+    assert data["enhanced_horaq_detector"]["baseline_contamination_rate_pct"] == 0.0
+
+
+def test_api_evaluation_historical_replay_endpoint(client):
+    """Verify /api/v1/evaluation/historical-replay returns archival MRT replay reports."""
+    resp = client.get("/api/v1/evaluation/historical-replay")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "incidents" in data
+    assert "summary" in data
+    assert data["summary"]["all_real_replays_detected"] is True
+    assert data["summary"]["withdrawal_and_recovery_verified"] is True
+
+
+
 
 
 

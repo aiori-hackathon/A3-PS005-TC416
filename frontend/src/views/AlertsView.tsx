@@ -12,6 +12,10 @@ import {
   History,
   ShieldCheck,
   RotateCcw,
+  Copy,
+  Terminal,
+  Shield,
+  ExternalLink,
 } from "lucide-react";
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
@@ -351,110 +355,226 @@ export const AlertsView: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Expanded Forensic Drawer */}
+                {/* Expanded Forensic Investigation Workspace */}
                 {isExpanded && (
-                  <div className="px-5 py-4 bg-bg-app border-t border-divider space-y-3.5 text-xs">
-                    <div className="space-y-1">
-                      <div className="text-[11px] text-text-dim font-bold uppercase tracking-wider">
-                        Detection Rationale
+                  <div className="px-5 py-4 bg-bg-app border-t border-divider space-y-4 text-xs">
+                    {/* Header: IDs & Provenance */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-divider">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono text-xs font-bold text-text-main">
+                          Incident ID: <span className="text-brand-blue">{inc.primaryAlert.id}</span>
+                        </span>
+                        <span className="text-text-dim">•</span>
+                        <span className="text-text-dim font-mono">
+                          Rule: {inc.primaryAlert.kind}
+                        </span>
+                        <span className="text-text-dim">•</span>
+                        <span className="text-text-dim font-mono">
+                          Vantage Point: {inc.primaryAlert.collector || "rrc00"}
+                        </span>
                       </div>
-                      <p className="text-xs text-text-sub bg-bg-card p-3 rounded-md border border-divider font-mono leading-relaxed">
-                        {inc.explanation || inc.title}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-bg-interactive text-text-sub border border-divider">
+                          {inc.primaryAlert.scenario ? `TESTBED: ${inc.primaryAlert.scenario.toUpperCase()}` : "TELEMETRY"}
+                        </span>
+                      </div>
                     </div>
 
-                    {/* Peer Corroboration & Recovery Lifecycle */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-bg-card p-3 rounded-md border border-divider">
-                      <div>
-                        <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1">
-                          Active Observing Peers
+                    {/* Baseline Delta: Side-by-Side Comparison */}
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] text-text-dim font-bold uppercase tracking-wider flex items-center justify-between">
+                        <span>Baseline Delta & Routing Impact</span>
+                        <span className="text-text-sub font-normal">Deterministic comparison against trusted route baseline</span>
+                      </div>
+                      <div className="overflow-x-auto rounded-md border border-divider bg-bg-card">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead>
+                            <tr className="bg-bg-interactive/60 border-b border-divider text-[10px] text-text-dim uppercase tracking-wider">
+                              <th className="py-2 px-3 font-semibold">Routing Parameter</th>
+                              <th className="py-2 px-3 font-semibold">Authorized Baseline</th>
+                              <th className="py-2 px-3 font-semibold">Observed Rogue State</th>
+                              <th className="py-2 px-3 font-semibold">Operational Analysis</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-divider">
+                            <tr>
+                              <td className="py-2 px-3 font-medium text-text-sub">Origin AS</td>
+                              <td className="py-2 px-3 font-bold text-status-green">
+                                {inc.baseline_asn || "Not Registered"}
+                              </td>
+                              <td className="py-2 px-3 font-bold text-status-critical">
+                                {inc.observed_asn}
+                              </td>
+                              <td className="py-2 px-3 text-text-sub font-sans text-[11px]">
+                                {inc.baseline_asn && inc.baseline_asn !== inc.observed_asn
+                                  ? `Unauthorized autonomous system announcing reachability without delegation.`
+                                  : `Route announced by unauthorized entity.`}
+                              </td>
+                            </tr>
+                            <tr>
+                              <td className="py-2 px-3 font-medium text-text-sub">Prefix Scope</td>
+                              <td className="py-2 px-3 font-bold text-text-main">
+                                {inc.parent_prefix || inc.prefix}
+                              </td>
+                              <td className="py-2 px-3 font-bold text-amber-500">
+                                {inc.prefix}
+                              </td>
+                              <td className="py-2 px-3 text-text-sub font-sans text-[11px]">
+                                {inc.parent_prefix && inc.parent_prefix !== inc.prefix
+                                  ? `More-specific announcement triggers Longest Prefix Match (LPM) traffic interception.`
+                                  : `Direct prefix conflict against tracked routing policy.`}
+                              </td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Operational Hypotheses Dossier (Proposal Page 2 & 5) */}
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] text-text-dim font-bold uppercase tracking-wider">
+                        Alternative Operational Hypotheses
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+                        <div className="p-2.5 rounded bg-bg-card border border-red-500/30 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-status-critical text-[11px]">Malicious Hijack</span>
+                            <span className="text-[10px] font-bold text-red-500 px-1.5 py-0.2 rounded bg-red-500/10">HIGH</span>
+                          </div>
+                          <p className="text-[11px] text-text-sub leading-snug">
+                            Unauthorized origin asserting path without authorization. Primary security risk.
+                          </p>
                         </div>
-                        <div className="font-mono text-xs text-text-main font-semibold">
-                          {(inc.primaryAlert.active_peers && inc.primaryAlert.active_peers.length > 0)
-                            ? inc.primaryAlert.active_peers.join(", ")
-                            : inc.observed_asn}
+                        <div className="p-2.5 rounded bg-bg-card border border-divider space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-text-main text-[11px]">Route Leak</span>
+                            <span className="text-[10px] font-bold text-amber-500 px-1.5 py-0.2 rounded bg-amber-500/10">MED</span>
+                          </div>
+                          <p className="text-[11px] text-text-sub leading-snug">
+                            Accidental propagation of internal or multihomed customer route beyond intended scope.
+                          </p>
+                        </div>
+                        <div className="p-2.5 rounded bg-bg-card border border-divider space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-text-main text-[11px]">Traffic Engineering</span>
+                            <span className="text-[10px] font-bold text-blue-500 px-1.5 py-0.2 rounded bg-blue-500/10">EVAL</span>
+                          </div>
+                          <p className="text-[11px] text-text-sub leading-snug">
+                            Deaggregation by legitimate operator for link load-balancing. Baseline preserved until corroborated.
+                          </p>
+                        </div>
+                        <div className="p-2.5 rounded bg-bg-card border border-divider space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-text-main text-[11px]">DDoS Scrubbing</span>
+                            <span className="text-[10px] font-bold text-text-dim px-1.5 py-0.2 rounded bg-bg-interactive">INFO</span>
+                          </div>
+                          <p className="text-[11px] text-text-sub leading-snug">
+                            Emergency redirection through cloud mitigation network (e.g. Magic Transit).
+                          </p>
                         </div>
                       </div>
-                      <div>
-                        <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1">
-                          Withdrawn Peers
-                        </div>
-                        <div className="font-mono text-xs text-text-sub">
-                          {(inc.primaryAlert.withdrawn_peers && inc.primaryAlert.withdrawn_peers.length > 0)
-                            ? inc.primaryAlert.withdrawn_peers.join(", ")
-                            : "None"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1">
-                          Recovery Verification
-                        </div>
-                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
+                    </div>
+
+                    {/* Observing Peer Corroboration & Per-Peer Withdrawal Checklist */}
+                    <div className="space-y-1.5">
+                      <div className="text-[11px] text-text-dim font-bold uppercase tracking-wider flex items-center justify-between">
+                        <span>Peer Corroboration & Withdrawal Checklist</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           inc.primaryAlert.recovery_status === "CONFIRMED"
                             ? "bg-badge-green-bg text-status-green border border-green-300 dark:border-green-900"
                             : inc.primaryAlert.recovery_status === "PARTIAL"
                             ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
                             : "bg-bg-interactive text-text-dim border border-divider"
                         }`}>
-                          {inc.primaryAlert.recovery_status || "UNCONFIRMED"}
+                          RECOVERY STATUS: {inc.primaryAlert.recovery_status || "ACTIVE"}
                         </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-bg-card p-3 rounded-md border border-divider">
+                        <div>
+                          <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1.5">
+                            Active Observing Peers ({inc.primaryAlert.active_peers?.length || 1})
+                          </div>
+                          <div className="space-y-1.5">
+                            {((inc.primaryAlert.active_peers && inc.primaryAlert.active_peers.length > 0)
+                              ? inc.primaryAlert.active_peers
+                              : [inc.observed_asn]
+                            ).map((peer: string) => (
+                              <div key={peer} className="flex items-center justify-between font-mono text-xs p-1.5 rounded bg-bg-interactive/40 border border-divider">
+                                <span className="font-bold text-status-critical">{peer}</span>
+                                {inc.status === "ACTIVE" && (
+                                  <button
+                                    onClick={async () => {
+                                      try {
+                                        await submitWithdrawalAction({
+                                          prefix: inc.prefix,
+                                          peer_as: peer,
+                                          scenario: "operator-peer-withdrawal",
+                                        });
+                                        setActionNotice(`Withdrawal ingested for peer ${peer}.`);
+                                        setTimeout(() => setActionNotice(null), 3000);
+                                      } catch (err: any) {
+                                        setActionNotice(`Withdrawal failed: ${err.message}`);
+                                      }
+                                    }}
+                                    className="px-2 py-0.5 rounded bg-brand-blue/10 hover:bg-brand-blue/20 text-brand-blue text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <RotateCcw className="w-3 h-3" />
+                                    <span>Withdraw Peer</span>
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1.5">
+                            Withdrawn Peers ({inc.primaryAlert.withdrawn_peers?.length || 0})
+                          </div>
+                          <div className="space-y-1.5">
+                            {inc.primaryAlert.withdrawn_peers && inc.primaryAlert.withdrawn_peers.length > 0 ? (
+                              inc.primaryAlert.withdrawn_peers.map((peer: string) => (
+                                <div key={peer} className="flex items-center justify-between font-mono text-xs p-1.5 rounded bg-badge-green-bg/30 border border-green-300 dark:border-green-900 text-status-green">
+                                  <span className="font-bold">{peer}</span>
+                                  <span className="text-[10px] uppercase font-bold text-status-green flex items-center gap-1">
+                                    <Check className="w-3 h-3" /> Withdrawn
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="text-xs text-text-dim italic p-1.5">No peers have sent BGP withdrawals yet.</div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Timeline of Individual Preserved Observations */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] text-text-dim font-bold uppercase tracking-wider">
-                        <span className="flex items-center gap-1.5 text-text-sub">
-                          <History className="w-3.5 h-3.5 text-brand-blue" />
-                          Individual Telemetry Observations ({inc.observations.length})
+                    {/* Cryptographic Assurance & CLI Verifier */}
+                    <div className="p-3 rounded-md bg-bg-card border border-divider space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-text-main">
+                          <Terminal className="w-3.5 h-3.5 text-brand-blue" />
+                          <span>Independent Evidence Verification (NIST FIPS 204 ML-DSA-65)</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-text-dim">
+                          Audit File: audit/sample_evidence_signed.json
                         </span>
-                        <span className="text-[11px] text-text-dim">All raw RFC 8785 digests intact</span>
                       </div>
-
-                      <div className="divide-y divide-divider bg-bg-card rounded-md border border-divider max-h-48 overflow-y-auto">
-                        {inc.observations.map((obs, idx) => {
-                          const obsTime = obs.created_at
-                            ? new Date(obs.created_at).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              })
-                            : "Just now";
-
-                          return (
-                            <div
-                              key={obs.id}
-                              className="px-3.5 py-2 flex items-center justify-between text-xs font-mono hover:bg-bg-hover-row transition-colors"
-                            >
-                              <div className="flex items-center gap-2.5">
-                                <span className="text-text-dim">#{inc.observations.length - idx}</span>
-                                <span className="text-text-sub">{obsTime}</span>
-                                <span className="text-text-dim">•</span>
-                                <span className="text-text-dim">Collector: {obs.collector || "default"}</span>
-                              </div>
-
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`px-2 py-0.2 rounded text-[10px] font-semibold ${
-                                    obs.status === "ACTIVE"
-                                      ? "bg-status-critical-bg text-status-critical"
-                                      : obs.status === "ACKNOWLEDGED"
-                                      ? "bg-bg-interactive text-text-sub"
-                                      : "bg-badge-green-bg text-status-green"
-                                  }`}
-                                >
-                                  {obs.status}
-                                </span>
-                                <button
-                                  onClick={() => setSelectedAlert(obs)}
-                                  className="text-brand-blue hover:underline text-xs"
-                                >
-                                  Hash Record
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
+                      <div className="flex items-center justify-between gap-2 p-2 rounded bg-bg-app border border-divider font-mono text-[11px] text-text-sub">
+                        <code className="text-brand-blue select-all">python verify_evidence.py audit/sample_evidence_signed.json</code>
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText("python verify_evidence.py audit/sample_evidence_signed.json");
+                            setActionNotice("Verification CLI command copied to clipboard!");
+                            setTimeout(() => setActionNotice(null), 3000);
+                          }}
+                          className="px-2 py-1 rounded bg-bg-interactive hover:bg-bg-card text-text-main text-[10px] font-medium flex items-center gap-1 cursor-pointer shrink-0"
+                          title="Copy command"
+                        >
+                          <Copy className="w-3 h-3" />
+                          <span>Copy CLI</span>
+                        </button>
                       </div>
                     </div>
 
@@ -467,6 +587,13 @@ export const AlertsView: React.FC = () => {
                         >
                           <SearchCheck className="w-3.5 h-3.5 text-brand-blue" />
                           <span>Check RPKI / ROA</span>
+                        </button>
+                        <button
+                          onClick={() => setSelectedAlert(inc.primaryAlert)}
+                          className="px-3 py-1.5 rounded-md bg-bg-card border border-border-card hover:bg-bg-interactive text-xs font-medium text-text-main flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                          <Lock className="w-3.5 h-3.5 text-brand-blue" />
+                          <span>Inspect Cryptographic Vault</span>
                         </button>
                         <button
                           onClick={() => handleResolve(inc.primaryAlert)}
@@ -482,7 +609,6 @@ export const AlertsView: React.FC = () => {
                           <Check className="w-3.5 h-3.5 text-text-sub" />
                           <span>Acknowledge</span>
                         </button>
-
                       </div>
                     </div>
                   </div>

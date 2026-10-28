@@ -7,6 +7,8 @@ Adheres strictly to Document 08:
 - Clear status codes and explicit error handling
 """
 
+import json
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, Header, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -550,6 +552,66 @@ async def get_rpki_validation(
 ) -> Dict[str, Any]:
     """Query live RPKI origin-validation status from RIPEstat."""
     res = await check_rpki_origin_validation(prefix=prefix, asn=asn)
+    return res
+
+
+# -----------------------------------------------------------------------------
+# Evaluation & Benchmark Endpoints (Proposal Page 2, 6, 7)
+# -----------------------------------------------------------------------------
+
+@router.get("/evaluation/benchmark")
+async def get_evaluation_benchmark_endpoint() -> Dict[str, Any]:
+    """Retrieve 14-case Head-to-Head Reference Detector Benchmark results (Proposal Page 6)."""
+    audit_file = Path(__file__).resolve().parent.parent.parent / "audit" / "reference_detector_comparison.json"
+    if audit_file.exists():
+        try:
+            with open(audit_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    from horaq.benchmark import run_head_to_head_benchmark
+    return run_head_to_head_benchmark()
+
+
+@router.post("/evaluation/benchmark/run")
+async def run_evaluation_benchmark_endpoint() -> Dict[str, Any]:
+    """Execute live head-to-head reference detector benchmark and refresh results."""
+    from horaq.benchmark import run_head_to_head_benchmark
+    res = run_head_to_head_benchmark()
+    audit_file = Path(__file__).resolve().parent.parent.parent / "audit" / "reference_detector_comparison.json"
+    try:
+        with open(audit_file, "w", encoding="utf-8") as f:
+            json.dump(res, f, indent=2)
+    except Exception:
+        pass
+    return res
+
+
+@router.get("/evaluation/historical-replay")
+async def get_evaluation_historical_replay_endpoint() -> Dict[str, Any]:
+    """Retrieve Archival Historical BGP MRT Replay validation results (Proposal Page 2 & 7)."""
+    audit_file = Path(__file__).resolve().parent.parent.parent / "audit" / "historical_attack_validation.json"
+    if audit_file.exists():
+        try:
+            with open(audit_file, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    from horaq.replay import run_all_historical_replays
+    return run_all_historical_replays()
+
+
+@router.post("/evaluation/historical-replay/run")
+async def run_evaluation_historical_replay_endpoint() -> Dict[str, Any]:
+    """Execute live archival BGP MRT replay validation and refresh results."""
+    from horaq.replay import run_all_historical_replays
+    res = run_all_historical_replays()
+    audit_file = Path(__file__).resolve().parent.parent.parent / "audit" / "historical_attack_validation.json"
+    try:
+        with open(audit_file, "w", encoding="utf-8") as f:
+            json.dump(res, f, indent=2)
+    except Exception:
+        pass
     return res
 
 

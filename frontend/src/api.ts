@@ -158,4 +158,22 @@ export const api = {
       method: "POST",
       body: JSON.stringify(data),
     }),
+
+  getBenchmarkComparison: () => request<any>("/evaluation/benchmark"),
+
+  runBenchmark: () => request<any>("/evaluation/benchmark/run", { method: "POST" }),
+
+  getHistoricalReplay: () => request<any>("/evaluation/historical-replay"),
+
+  runHistoricalReplay: () => request<any>("/evaluation/historical-replay/run", { method: "POST" }),
+
+  getRouteHistory: (prefix: string) =>
+    request<{ prefix: string; history: any[]; total: number }>(`/routes/${encodeURIComponent(prefix)}/history`),
+
+  getBaselinesHistory: (limit = 100, offset = 0, prefix?: string) => {
+    const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (prefix) q.append("prefix", prefix);
+    return request<{ items: any[]; total: number; limit: number; offset: number }>(`/baselines/history?${q.toString()}`);
+  },
 };
+
