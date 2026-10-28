@@ -107,3 +107,34 @@ async def root_health():
 
 # Include API v1 routes
 app.include_router(v1_router)
+
+# Optional: Mount compiled frontend SPA for unified all-in-one hosting
+from pathlib import Path
+from fastapi import HTTPException
+from fastapi.staticfiles import StaticFiles
+from starlette.responses import FileResponse
+
+for dist_candidate in [
+    Path(__file__).resolve().parent.parent.parent / "frontend" / "dist",
+    Path("/app/frontend/dist"),
+    Path("/app/dist"),
+]:
+    if dist_candidate.exists() and (dist_candidate / "index.html").exists():
+        assets_dir = dist_candidate / "assets"
+        if assets_dir.exists():
+            app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="frontend-assets")
+
+        @app.get("/{full_path:path}")
+        async def serve_spa_frontend(full_path: str):
+            if (
+                full_path.startswith("api/")
+                or full_path == "health"
+                or full_path.startswith("docs")
+                or full_path.startswith("openapi.json")
+            ):
+                raise HTTPException(status_code=404, detail="Not Found")
+            target = dist_candidate / full_path
+            if target.is_file():
+                return FileResponse(target)
+            return FileResponse(dist_candidate / "index.html")
+        break

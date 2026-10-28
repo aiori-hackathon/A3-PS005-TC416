@@ -269,6 +269,31 @@ def list_observations(
         return observations, count
 
 
+def _parse_baseline_peers(baseline_dict: Dict[str, Any]) -> Dict[str, Any]:
+    val = baseline_dict.get("distinct_peers")
+    if isinstance(val, str):
+        try:
+            baseline_dict["distinct_peers"] = json.loads(val)
+        except Exception:
+            baseline_dict["distinct_peers"] = []
+    elif val is None:
+        baseline_dict["distinct_peers"] = []
+    return baseline_dict
+
+
+def _parse_alert_peers(alert_dict: Dict[str, Any]) -> Dict[str, Any]:
+    for key in ("active_peers", "withdrawn_peers"):
+        val = alert_dict.get(key)
+        if isinstance(val, str):
+            try:
+                alert_dict[key] = json.loads(val)
+            except Exception:
+                alert_dict[key] = []
+        elif val is None:
+            alert_dict[key] = []
+    return alert_dict
+
+
 def get_all_baselines(db_path: str) -> List[Dict[str, Any]]:
     """Retrieve all current baselines for detector lookup."""
     with db_session(db_path) as conn:
@@ -279,7 +304,7 @@ def get_all_baselines(db_path: str) -> List[Dict[str, Any]]:
             "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
             "FROM baselines ORDER BY prefix ASC;"
         )
-        return [dict(row) for row in cursor.fetchall()]
+        return [_parse_baseline_peers(dict(row)) for row in cursor.fetchall()]
 
 
 def get_baseline_by_prefix(db_path: str, prefix: str) -> Optional[Dict[str, Any]]:
@@ -293,7 +318,7 @@ def get_baseline_by_prefix(db_path: str, prefix: str) -> Optional[Dict[str, Any]
             "FROM baselines WHERE prefix = ?;",
             (prefix,),
         ).fetchone()
-        return dict(row) if row else None
+        return _parse_baseline_peers(dict(row)) if row else None
 
 
 def list_routes(
@@ -329,7 +354,7 @@ def list_routes(
                 "FROM baselines ORDER BY last_seen DESC LIMIT ? OFFSET ?;",
                 (limit, offset),
             )
-        routes = [dict(row) for row in cursor.fetchall()]
+        routes = [_parse_baseline_peers(dict(row)) for row in cursor.fetchall()]
         return routes, count
 
 
@@ -367,7 +392,7 @@ def list_alerts(
             f"FROM alerts {where_sql} ORDER BY created_at DESC LIMIT ? OFFSET ?;",
             params + [limit, offset],
         )
-        alerts = [dict(row) for row in cursor.fetchall()]
+        alerts = [_parse_alert_peers(dict(row)) for row in cursor.fetchall()]
         return alerts, count
 
 
@@ -384,7 +409,7 @@ def get_alert_by_id(db_path: str, alert_id: str) -> Optional[Dict[str, Any]]:
             "FROM alerts WHERE id = ?;",
             (alert_id,),
         ).fetchone()
-        return dict(row) if row else None
+        return _parse_alert_peers(dict(row)) if row else None
 
 
 def update_alert_status(db_path: str, alert_id: str, new_status: str) -> bool:

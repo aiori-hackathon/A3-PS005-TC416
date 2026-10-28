@@ -16,6 +16,8 @@ import {
 import { useHoraqStore } from "../stores/useHoraqStore";
 import { formatCount } from "../utils/format";
 import { api } from "../api";
+import { RouteBaseline } from "../types";
+import { BaselineProvenanceTimeline } from "../components/BaselineProvenanceTimeline";
 
 export const RoutesView: React.FC = () => {
   const {
@@ -29,9 +31,8 @@ export const RoutesView: React.FC = () => {
 
   const [localSearch, setLocalSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "promoted" | "candidate">("all");
-  const [selectedRouteHistory, setSelectedRouteHistory] = useState<any[] | null>(null);
   const [historyTargetPrefix, setHistoryTargetPrefix] = useState<string | null>(null);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedRouteBaseline, setSelectedRouteBaseline] = useState<RouteBaseline | null>(null);
 
   const activeFilter = localSearch || searchQuery;
 
@@ -55,17 +56,9 @@ export const RoutesView: React.FC = () => {
     setActiveTab("rpki");
   };
 
-  const handleViewHistory = async (prefix: string) => {
-    setHistoryTargetPrefix(prefix);
-    setLoadingHistory(true);
-    try {
-      const res = await api.getRouteHistory(prefix);
-      setSelectedRouteHistory(res.history || []);
-    } catch {
-      setSelectedRouteHistory([]);
-    } finally {
-      setLoadingHistory(false);
-    }
+  const handleOpenTimeline = (route: RouteBaseline) => {
+    setHistoryTargetPrefix(route.prefix);
+    setSelectedRouteBaseline(route);
   };
 
   return (
@@ -268,12 +261,12 @@ export const RoutesView: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-right space-x-2">
                         <button
-                          onClick={() => handleViewHistory(route.prefix)}
+                          onClick={() => handleOpenTimeline(route)}
                           className="px-2.5 py-1 rounded-md bg-bg-btn border border-border-card hover:bg-bg-interactive text-xs font-medium text-text-main transition-colors inline-flex items-center gap-1 cursor-pointer"
                           title="Inspect version transition history"
                         >
                           <History className="w-3.5 h-3.5 text-brand-blue" />
-                          <span>History</span>
+                          <span>Timeline</span>
                         </button>
                         <button
                           onClick={() => handleValidate(route.prefix, route.origin_asn)}
@@ -293,89 +286,16 @@ export const RoutesView: React.FC = () => {
         </div>
       </div>
 
-      {/* Version History Modal / Drawer */}
+      {/* Version History Modal / Provenance Timeline */}
       {historyTargetPrefix && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-bg-card border border-border-card rounded-lg max-w-2xl w-full max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-divider flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <History className="w-5 h-5 text-brand-blue" />
-                <div>
-                  <h3 className="text-sm font-bold text-text-main">
-                    Baseline Version History & Audit Trail
-                  </h3>
-                  <p className="text-xs font-mono text-brand-blue">
-                    Prefix: {historyTargetPrefix}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setHistoryTargetPrefix(null);
-                  setSelectedRouteHistory(null);
-                }}
-                className="p-1 rounded text-text-dim hover:text-text-main hover:bg-bg-interactive cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-4 overflow-y-auto space-y-3 flex-1 text-xs">
-              {loadingHistory ? (
-                <div className="py-12 text-center text-text-dim">Loading version audit log...</div>
-              ) : !selectedRouteHistory || selectedRouteHistory.length === 0 ? (
-                <div className="py-8 text-center text-text-dim">
-                  <p>No transition events recorded for this prefix.</p>
-                  <p className="text-[11px] mt-1 text-text-sub">Initial authorized baseline seed established at system bootstrap.</p>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {selectedRouteHistory.map((item, idx) => (
-                    <div
-                      key={item.id || idx}
-                      className="p-3 rounded-md bg-bg-app border border-divider space-y-1.5 font-mono"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-text-main">
-                          Version #{item.version || (idx + 1)} · Origin: <span className="text-accent-cyan">{item.origin_asn}</span>
-                        </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          item.status === "PROMOTED"
-                            ? "bg-badge-green-bg text-status-green"
-                            : "bg-amber-500/10 text-amber-500"
-                        }`}>
-                          {item.status || "PROMOTED"}
-                        </span>
-                      </div>
-                      <div className="text-[11px] text-text-sub font-sans">
-                        <strong>Reason:</strong> {item.reason || "Baseline established"}
-                      </div>
-                      <div className="flex items-center justify-between text-[10px] text-text-dim pt-1 border-t border-divider">
-                        <span>Actor: {item.actor || "OPERATOR"} · Collector: {item.collector || "authorized-seed"}</span>
-                        <span>{item.created_at ? new Date(item.created_at).toLocaleString() : "Authorized Seed"}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-3 bg-bg-interactive/40 border-t border-divider flex justify-end">
-              <button
-                onClick={() => {
-                  setHistoryTargetPrefix(null);
-                  setSelectedRouteHistory(null);
-                }}
-                className="px-4 py-1.5 rounded bg-bg-btn border border-border-card text-xs font-medium text-text-main hover:bg-bg-interactive cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
+        <BaselineProvenanceTimeline
+          prefix={historyTargetPrefix}
+          baseline={selectedRouteBaseline}
+          onClose={() => {
+            setHistoryTargetPrefix(null);
+            setSelectedRouteBaseline(null);
+          }}
+        />
       )}
     </div>
   );

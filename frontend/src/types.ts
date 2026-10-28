@@ -150,3 +150,18 @@ export interface ScenarioRunResult {
   peer_as?: string;
   result?: any;
 }
+
+export interface BaselineHistoryItem {
+  id: number;
+  prefix: string;
+  origin_asn: string;
+  prior_status: string | null;
+  new_status: string;
+  transition_type: string;
+  reason: string;
+  peer_count: number;
+  observation_count: number;
+  triggering_observation_id: number | null;
+  actor: string;
+  created_at: string;
+}

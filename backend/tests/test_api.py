@@ -376,27 +376,114 @@ def test_api_withdrawal_recovery_scenario(client, monkeypatch):
     assert sc_data["alerts_resolved"] >= 1
 
 
-def test_api_evaluation_benchmark_endpoint(client):
-    """Verify /api/v1/evaluation/benchmark returns 14-case head-to-head comparison metrics."""
-    resp = client.get("/api/v1/evaluation/benchmark")
+def test_api_route_history_endpoint(client):
+    """Verify /api/v1/routes/{prefix}/history returns authentic baseline provenance records."""
+    client.post("/api/v1/scenarios/baseline")
+    prefix = "192.0.2.0/24"
+    resp = client.get(f"/api/v1/routes/{prefix}/history")
     assert resp.status_code == 200
     data = resp.json()
-    assert "naive_reference_detector" in data
-    assert "enhanced_horaq_detector" in data
-    assert "cryptographic_overhead_benchmark" in data
-    assert data["naive_reference_detector"]["baseline_contamination_rate_pct"] == 75.0
-    assert data["enhanced_horaq_detector"]["baseline_contamination_rate_pct"] == 0.0
+    assert data["prefix"] == prefix
+    assert "history" in data
+    assert len(data["history"]) >= 1
+    item = data["history"][0]
+    assert item["prefix"] == prefix
+    assert item["new_status"] == "PROMOTED"
+    assert item["transition_type"] in ("AUTHORIZED_SEED", "PROMOTION")
+    assert "peer_count" in item
+    assert "observation_count" in item
+    assert "actor" in item
+    assert "created_at" in item
 
 
-def test_api_evaluation_historical_replay_endpoint(client):
-    """Verify /api/v1/evaluation/historical-replay returns archival MRT replay reports."""
-    resp = client.get("/api/v1/evaluation/historical-replay")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert "incidents" in data
-    assert "summary" in data
-    assert data["summary"]["all_real_replays_detected"] is True
-    assert data["summary"]["withdrawal_and_recovery_verified"] is True
+def test_api_alert_detail_and_evidence_live_verification(client, monkeypatch):
+    """Verify /api/v1/alerts/{id} and live mathematical hash verification."""
+    from horaq.config import settings
+    monkeypatch.setattr(settings, "demo_mode", False)
+
+    # 1. Establish baseline
+    client.post("/api/v1/scenarios/baseline")
+    # 2. Trigger hijack alert
+    client.post(
+        "/api/v1/observations",
+        json={"prefix": "192.0.2.0/24", "origin_asn": 64510, "collector": "rrc00"},
+    )
+
+    alerts_resp = client.get("/api/v1/alerts?status=ACTIVE")
+    assert alerts_resp.status_code == 200
+    alerts = alerts_resp.json()["items"]
+    assert len(alerts) >= 1
+    alert_id = alerts[0]["id"]
+
+    # 3. Retrieve alert detail
+    detail_resp = client.get(f"/api/v1/alerts/{alert_id}")
+    assert detail_resp.status_code == 200
+    detail = detail_resp.json()
+    assert detail["alert"]["id"] == alert_id
+    assert detail["evidence"] is not None
+    evidence = detail["evidence"]
+    assert "record_hash" in evidence
+    assert "canonical_json" in evidence
+
+    # 4. Live verify hash
+    verify_resp = client.post(
+        "/api/v1/evidence/verify-hash",
+        json={"record": evidence["record"], "expected_hash": evidence["record_hash"]},
+    )
+    assert verify_resp.status_code == 200
+    verify_data = verify_resp.json()
+    assert verify_data["valid"] is True
+    assert verify_data["integrity_verified"] is True
+    assert verify_data["computed_hash"] == evidence["record_hash"]
+
+
+def test_api_peer_withdrawal_recovery_matrix_transitions(client, monkeypatch):
+    """Verify per-peer withdrawal transitions: ACTIVE -> PARTIAL -> CONFIRMED."""
+    from horaq.config import settings
+    monkeypatch.setattr(settings, "demo_mode", False)
+
+    # 1. Establish baseline
+    client.post("/api/v1/scenarios/baseline")
+
+    # 2. Inject anomalous observations from two different peers
+    target_prefix = "192.0.2.0/24"
+    client.post(
+        "/api/v1/observations",
+        json={"prefix": target_prefix, "origin_asn": 64505, "collector": "rrc00", "metadata": {"peer_as": "AS64511"}},
+    )
+    client.post(
+        "/api/v1/observations",
+        json={"prefix": target_prefix, "origin_asn": 64505, "collector": "rrc00", "metadata": {"peer_as": "AS64512"}},
+    )
+
+    alerts_resp = client.get("/api/v1/alerts?status=ACTIVE")
+    assert alerts_resp.status_code == 200
+    alerts = [a for a in alerts_resp.json()["items"] if a["prefix"] == target_prefix]
+    assert len(alerts) >= 1
+    alert = alerts[0]
+    assert alert["recovery_status"] in ("UNCONFIRMED", "ACTIVE")
+
+    # 3. First peer withdraws -> PARTIAL recovery
+    w1_resp = client.post(
+        "/api/v1/withdrawals",
+        json={"prefix": target_prefix, "peer_as": "AS64511"},
+    )
+    assert w1_resp.status_code == 200
+    alerts_after_w1 = client.get(f"/api/v1/alerts/{alert['id']}").json()["alert"]
+    # If active peers remain, recovery status is PARTIAL or still ACTIVE
+    assert alerts_after_w1["status"] == "ACTIVE"
+
+    # 4. Second peer withdraws -> CONFIRMED recovery and automatic RESOLVED status
+    w2_resp = client.post(
+        "/api/v1/withdrawals",
+        json={"prefix": target_prefix, "peer_as": "AS64512"},
+    )
+    assert w2_resp.status_code == 200
+    resolved = w2_resp.json()["resolved_alerts"]
+    assert any(a["alert_id"] == alert["id"] for a in resolved)
+    alerts_after_w2 = client.get(f"/api/v1/alerts/{alert['id']}").json()["alert"]
+    assert alerts_after_w2["status"] == "RESOLVED"
+    assert alerts_after_w2["recovery_status"] == "CONFIRMED"
 
 
 

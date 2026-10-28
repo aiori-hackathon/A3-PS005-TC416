@@ -21,6 +21,8 @@ import { useHoraqStore } from "../stores/useHoraqStore";
 import { AlertItem } from "../types";
 import { groupAlertObservations, GroupedIncident } from "../utils/incidentGrouping";
 import { formatCount } from "../utils/format";
+import { ForensicIncidentDrawer } from "../components/ForensicIncidentDrawer";
+import { PeerWithdrawalMatrix } from "../components/PeerWithdrawalMatrix";
 
 export const AlertsView: React.FC = () => {
   const {
@@ -32,11 +34,13 @@ export const AlertsView: React.FC = () => {
     searchQuery,
     setActiveTab,
     submitWithdrawalAction,
+    fetchAllData,
   } = useHoraqStore();
 
   const [statusFilter, setStatusFilter] = useState<"active" | "acknowledged" | "resolved" | "all">("active");
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [forensicAlert, setForensicAlert] = useState<AlertItem | null>(null);
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -337,6 +341,15 @@ export const AlertsView: React.FC = () => {
                     )}
 
                     <button
+                      onClick={() => setForensicAlert(inc.primaryAlert)}
+                      className="px-3 py-1.5 rounded-md bg-brand-blue/10 border border-brand-blue/30 hover:bg-brand-blue/20 text-xs font-semibold text-brand-blue transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title="Open Forensic Incident Investigation Drawer"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-brand-blue" />
+                      <span>Investigate</span>
+                    </button>
+
+                    <button
                       onClick={() => setSelectedAlert(inc.primaryAlert)}
                       className="px-3 py-1.5 rounded-md bg-bg-btn border border-border-card hover:bg-bg-interactive text-xs font-medium text-text-main transition-colors flex items-center gap-1.5 cursor-pointer"
                       title="Inspect Cryptographic Evidence"
@@ -475,79 +488,16 @@ export const AlertsView: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Observing Peer Corroboration & Per-Peer Withdrawal Checklist */}
+                    {/* Observing Peer Corroboration & Per-Peer Withdrawal Recovery Matrix */}
                     <div className="space-y-1.5">
                       <div className="text-[11px] text-text-dim font-bold uppercase tracking-wider flex items-center justify-between">
-                        <span>Peer Corroboration & Withdrawal Checklist</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                          inc.primaryAlert.recovery_status === "CONFIRMED"
-                            ? "bg-badge-green-bg text-status-green border border-green-300 dark:border-green-900"
-                            : inc.primaryAlert.recovery_status === "PARTIAL"
-                            ? "bg-amber-500/10 text-amber-500 border border-amber-500/30"
-                            : "bg-bg-interactive text-text-dim border border-divider"
-                        }`}>
-                          RECOVERY STATUS: {inc.primaryAlert.recovery_status || "ACTIVE"}
-                        </span>
+                        <span>Per-Peer Withdrawal Recovery Matrix</span>
+                        <span className="text-text-sub font-normal">Tracked peer vantage states</span>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 bg-bg-card p-3 rounded-md border border-divider">
-                        <div>
-                          <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1.5">
-                            Active Observing Peers ({inc.primaryAlert.active_peers?.length || 1})
-                          </div>
-                          <div className="space-y-1.5">
-                            {((inc.primaryAlert.active_peers && inc.primaryAlert.active_peers.length > 0)
-                              ? inc.primaryAlert.active_peers
-                              : [inc.observed_asn]
-                            ).map((peer: string) => (
-                              <div key={peer} className="flex items-center justify-between font-mono text-xs p-1.5 rounded bg-bg-interactive/40 border border-divider">
-                                <span className="font-bold text-status-critical">{peer}</span>
-                                {inc.status === "ACTIVE" && (
-                                  <button
-                                    onClick={async () => {
-                                      try {
-                                        await submitWithdrawalAction({
-                                          prefix: inc.prefix,
-                                          peer_as: peer,
-                                          scenario: "operator-peer-withdrawal",
-                                        });
-                                        setActionNotice(`Withdrawal ingested for peer ${peer}.`);
-                                        setTimeout(() => setActionNotice(null), 3000);
-                                      } catch (err: any) {
-                                        setActionNotice(`Withdrawal failed: ${err.message}`);
-                                      }
-                                    }}
-                                    className="px-2 py-0.5 rounded bg-brand-blue/10 hover:bg-brand-blue/20 text-brand-blue text-[10px] font-semibold flex items-center gap-1 cursor-pointer"
-                                  >
-                                    <RotateCcw className="w-3 h-3" />
-                                    <span>Withdraw Peer</span>
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider mb-1.5">
-                            Withdrawn Peers ({inc.primaryAlert.withdrawn_peers?.length || 0})
-                          </div>
-                          <div className="space-y-1.5">
-                            {inc.primaryAlert.withdrawn_peers && inc.primaryAlert.withdrawn_peers.length > 0 ? (
-                              inc.primaryAlert.withdrawn_peers.map((peer: string) => (
-                                <div key={peer} className="flex items-center justify-between font-mono text-xs p-1.5 rounded bg-badge-green-bg/30 border border-green-300 dark:border-green-900 text-status-green">
-                                  <span className="font-bold">{peer}</span>
-                                  <span className="text-[10px] uppercase font-bold text-status-green flex items-center gap-1">
-                                    <Check className="w-3 h-3" /> Withdrawn
-                                  </span>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="text-xs text-text-dim italic p-1.5">No peers have sent BGP withdrawals yet.</div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                      <PeerWithdrawalMatrix
+                        alert={inc.primaryAlert}
+                        onWithdrawalProcessed={fetchAllData}
+                      />
                     </div>
 
                     {/* Cryptographic Assurance & CLI Verifier */}
@@ -617,6 +567,19 @@ export const AlertsView: React.FC = () => {
             );
           })}
         </div>
+      )}
+      {/* Forensic Incident Investigation Drawer */}
+      {forensicAlert && (
+        <ForensicIncidentDrawer
+          alert={forensicAlert}
+          onClose={() => setForensicAlert(null)}
+          onStatusUpdate={(id, status) => updateAlertStatus(id, status)}
+          onRefresh={fetchAllData}
+          onOpenRpki={(prefix, asn) => {
+            setRpkiTarget({ prefix, asn });
+            setActiveTab("rpki");
+          }}
+        />
       )}
     </div>
   );
