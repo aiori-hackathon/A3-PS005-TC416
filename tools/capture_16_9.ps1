@@ -45,7 +45,9 @@ $pages = @(
     @{ name = "07_audit_ledger.png"; url = "$BaseUrl/?tab=evidence" },
     @{ name = "08_rpki_inspector.png"; url = "$BaseUrl/?tab=rpki" },
     @{ name = "09_inject_route.png"; url = "$BaseUrl/?tab=inject" },
-    @{ name = "10_settings.png"; url = "$BaseUrl/?tab=settings" }
+    @{ name = "10_settings.png"; url = "$BaseUrl/?tab=settings" },
+    @{ name = "11_forensic_drawer.png"; url = "$BaseUrl/?tab=alerts&modal=investigate" },
+    @{ name = "12_baseline_timeline.png"; url = "$BaseUrl/?tab=routes&modal=timeline" }
 )
 
 foreach ($p in $pages) {

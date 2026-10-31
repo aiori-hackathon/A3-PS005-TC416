@@ -173,6 +173,8 @@ All screenshots are stored in [`audit/screenshots/`](../audit/screenshots) and c
 | [`08_rpki_inspector.png`](../audit/screenshots/08_rpki_inspector.png) | 16:9 | 1920×1080 | Live RPKI Origin Validation card displaying `Origin Authorized (VALID)` for `1.1.1.0/24` with `AS13335`. |
 | [`09_inject_route.png`](../audit/screenshots/09_inject_route.png) | 16:9 | 1920×1080 | Operator route injection console with pre-validation format checks and instant evaluation. |
 | [`10_settings.png`](../audit/screenshots/10_settings.png) | 16:9 | 1920×1080 | Cryptographic engine configuration showing `ML-DSA-65 (NIST FIPS 204)`, key length parameters, and collector health. |
+| [11_forensic_drawer.png](../audit/screenshots/11_forensic_drawer.png) | 16:9 | 1920x1080 | Forensic Investigation Drawer: Confirmed Facts vs Hypotheses, Per-Peer Withdrawal Recovery Matrix, Live FIPS 204 Verification, and CLI command. |
+| [12_baseline_timeline.png](../audit/screenshots/12_baseline_timeline.png) | 16:9 | 1920x1080 | Append-only Baseline Provenance Timeline: state transitions, anti-poisoning corroboration invariants, observation counts, and decision reasons. |
 
 ---
 

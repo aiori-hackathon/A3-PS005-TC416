@@ -42,6 +42,15 @@ export const AlertsView: React.FC = () => {
   const [actionNotice, setActionNotice] = useState<string | null>(null);
   const [forensicAlert, setForensicAlert] = useState<AlertItem | null>(null);
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const modalParam = new URLSearchParams(window.location.search).get("modal");
+      if (modalParam === "investigate" && alerts.length > 0) {
+        setForensicAlert(alerts[0]);
+      }
+    }
+  }, [alerts]);
+
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
       const next = new Set(prev);

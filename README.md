@@ -253,7 +253,7 @@ A3-PS005-TC416/
 │   ├── historical_attack_validation.json
 │   ├── sample_evidence_signed.json    # Authentic ML-DSA-65 evidence sample
 │   ├── sample_evidence_unsigned.json  # Unsigned evidence sample
-│   └── screenshots/                   # 10 canonical 16:9 desktop screenshots
+│   └── screenshots/                   # 12 canonical 16:9 desktop screenshots
 └── tools/                             # Developer utilities
     └── capture_16_9.ps1               # Configurable 16:9 screenshot capture utility
 ```

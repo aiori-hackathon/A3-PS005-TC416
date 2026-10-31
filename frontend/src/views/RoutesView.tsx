@@ -34,6 +34,16 @@ export const RoutesView: React.FC = () => {
   const [historyTargetPrefix, setHistoryTargetPrefix] = useState<string | null>(null);
   const [selectedRouteBaseline, setSelectedRouteBaseline] = useState<RouteBaseline | null>(null);
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const modalParam = new URLSearchParams(window.location.search).get("modal");
+      if (modalParam === "timeline" && routes.length > 0) {
+        setHistoryTargetPrefix(routes[0].prefix);
+        setSelectedRouteBaseline(routes[0]);
+      }
+    }
+  }, [routes]);
+
   const activeFilter = localSearch || searchQuery;
 
   const filteredRoutes = routes.filter((r) => {
