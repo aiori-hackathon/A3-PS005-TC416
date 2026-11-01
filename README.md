@@ -1,259 +1,352 @@
-# HORA-Q — Explainable BGP Origin and Subprefix Anomaly Monitor
+# HORA-Q — Explainable BGP Origin & Subprefix Anomaly Monitor
 
 [![CI](https://github.com/aiori-hackathon/A3-PS005-TC416/actions/workflows/ci.yml/badge.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416/actions/workflows/ci.yml)
-[![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-indigo.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
-[![Track](https://img.shields.io/badge/AIORI--3-Track%202%20Cyber%20Security%20(PS--005)-cyan.svg)](https://github.com/aiori-hackathon/A3-PS005-TC416)
-[![Tests](https://img.shields.io/badge/Tests-93%20Passed%20(100%25)-emerald.svg)](backend/tests)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Deployment](https://img.shields.io/badge/Deployment-Standby%20Guide-blueviolet.svg)](DEPLOYMENT.md)
+[![AIORI-3](https://img.shields.io/badge/AIORI--3-Track%202%20%7C%20PS--005-2563eb)](https://github.com/aiori-hackathon/A3-PS005-TC416)
+[![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-334155)](https://github.com/aiori-hackathon/A3-PS005-TC416)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-Cloudflare%20Pages-f38020)](https://horaq-frontends.pages.dev)
+
+**An explainable BGP control-plane monitoring prototype for detecting suspicious origin changes and more-specific prefix announcements, preserving trusted route baselines, and producing independently verifiable forensic evidence.**
+
+> **Evaluation recommendation:** Clone the repository, run the backend and frontend locally, reproduce the tests, and verify the sample evidence. The source code, documentation, and reproducible checks in this repository are the primary evaluation materials. A live cloud deployment is also accessible at **[https://horaq-frontends.pages.dev](https://horaq-frontends.pages.dev)**.
 
 ---
 
-## 1. Project Purpose & Team Identification
+## 1. Project overview
 
-**HORA-Q** is an explainable Border Gateway Protocol (BGP) origin and subprefix anomaly monitoring architecture engineered for AIORI-3. The system normalizes BGP route announcements, maintains multi-peer corroborated baselines with an append-only version history, detects origin-AS shifts and more-specific subprefix announcements without baseline poisoning, tracks per-peer withdrawal recovery, binds findings into canonical forensic evidence records (RFC 8785 JSON + SHA-256), and provides **NIST FIPS 204 ML-DSA-65 post-quantum digital signatures** with independent command-line verification.
+The Border Gateway Protocol (BGP) allows autonomous systems (ASes) to exchange network reachability information. Incorrect or malicious route announcements can redirect traffic or make prefixes reachable through an unexpected origin.
 
-- **Hackathon**: AIORI-3 · Track 2 Cyber Security · Problem Statement PS-005
-- **Team Code**: `A3-PS005-TC416`
-- **Institution**: Al-Ameen College
-- **Team Members**: Sankardev VS (Team Lead), Adarsh A (Team Member)
-- **Faculty Mentor**: Dr. Jyothy Joseph
-- **Team Introduction Video**: [https://youtu.be/oKoHllmyCMQ](https://youtu.be/oKoHllmyCMQ)
-- **Project Proposals**:
-  - [HORA Q — Explainable BGP Anomaly Monitor (AIORI-3 Proposal).pdf](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20%28AIORI-3%20Proposal%29.pdf)
-  - [Proposed-structure-hackathon.pdf](Proposed-structure-hackathon.pdf)
+HORA-Q focuses on two observable classes of routing anomalies:
 
----
+1. **Origin-AS change:** a prefix is announced by an origin ASN that conflicts with its established baseline.
+2. **More-specific subprefix announcement:** a more-specific route appears within a monitored prefix and may attract traffic through longest-prefix matching.
 
-## 2. Honest Operating & Deployment Status
+A monitoring system must also avoid treating every unfamiliar announcement as malicious. HORA-Q separates observations from trusted baseline promotion, records why decisions were made, tracks peer withdrawals, and exposes evidence for further review.
 
-- **Operating Modes**:
-  - **SYNTHETIC (Default Demonstration Mode)**: Uses controlled RFC 5737 (`192.0.2.0/24`, `198.51.100.0/24`) and RFC 3849 (`2001:db8::/32`) testbed allocations for reliable, non-destructive evaluator demonstration.
-  - **LIVE (Opt-in Stream)**: Connects to RIPE NCC RIS Live WebSocket (`wss://ris-live.ripe.net/v1/ws/`). Live ingestion is **disabled by default** to protect demonstration isolation and avoid external network dependencies during offline evaluations.
-  - **HISTORICAL (Replay Mode)**: Evaluates archival MRT dumps from real-world historical incidents (e.g., Pakistan Telecom / YouTube AS36561 hijack).
-- **Deployment Status**:
-  - Standby production configuration documented in [`DEPLOYMENT.md`](DEPLOYMENT.md) for Cloudflare Pages (Frontend) and Railway (Backend with SQLite WAL persistence volume). Public live URLs are provisioned on demand.
-- **Demo Security Safeguards**:
-  - Public demo mode (`DEMO_MODE=true`) prevents unauthenticated callers from executing destructive database resets or tampering with baseline provenance.
+### Project information
 
----
+| | |
+|---|---|
+| **Project** | HORA-Q — Explainable BGP Origin and Subprefix Anomaly Monitor |
+| **Hackathon** | AIORI-3 |
+| **Track** | Track 2 — Cyber Security |
+| **Problem statement** | PS-005 |
+| **Team ID** | `A3-PS005-TC416` |
+| **Institution** | Al-Ameen College |
+| **Team lead** | Sankardev VS |
+| **Team member** | Adarsh A |
+| **Faculty mentor** | Dr. Jyothy Joseph |
 
-## 3. Verified Capabilities & Technical Limitations
+**Team introduction video:** [Watch on YouTube](https://youtu.be/oKoHllmyCMQ)
 
-### Verified Capabilities
-- **Multi-Peer Corroborated Baselines**: Transient single-peer route announcements enter as `CANDIDATE`; routes are promoted to `PROMOTED` only when corroborated across multiple vantage points (`peer_count >= 2` and `observation_count >= 3`).
-- **Strict Anti-Poisoning Invariant**: Conflicting origin announcements and rogue subprefixes fire alerts and notarized evidence records, but are mathematically blocked from mutating established baseline origins.
-- **Deterministic Longest-Prefix-Match Subprefix Detection**: Accurately flags unauthorized more-specific subnets (e.g., `/25` inside `/24`, `/48` inside `/32`) across IPv4 and IPv6.
-- **Per-Peer Route Withdrawal Recovery**: Tracks route announcements per observing peer ASN. Incidents transition to `RESOLVED` only when all announcing peers submit corresponding BGP withdrawals.
-- **RFC 8785 Canonical Serialization & SHA-256 Digest**: Serializes forensic evidence into byte-deterministic canonical JSON with immutable SHA-256 cryptographic binding.
-- **NIST FIPS 204 ML-DSA-65 Post-Quantum Signatures**: Signs evidence records using post-quantum lattice cryptography (`dilithium-py`) with persistent authority keys.
-- **Independent Command-Line Verification**: External verification script (`verify_evidence.py`) validates integrity and signatures outside the web application.
-
-### Important Limitations
-- **Control-Plane Focus**: HORA-Q monitors BGP control-plane updates. It does not perform data-plane traceroute probing or packet forwarding analysis.
-- **AS-Path Valley Leaks**: Pure policy route leaks conforming to shortest-path valley rules (RFC 7908) without origin shifts or subprefixes are outside the primary origin/subprefix detector scope.
-- **Single-Authority Signing**: Default signing relies on a local persistent authority key (`horaq_authority_key.json`). Production scaling requires an external Hardware Security Module (HSM) or KMS provider.
-- **SQLite Concurrency Boundary**: SQLite WAL handles hundreds of writes/sec; multi-collector carrier-scale deployments (>50,000 msgs/sec) require PostgreSQL or distributed time-series storage.
+**Proposal documents:** [HORA-Q AIORI-3 Proposal](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20%28AIORI-3%20Proposal%29.pdf) · [Proposed Structure](Proposed-structure-hackathon.pdf)
 
 ---
 
-## 4. Architecture Summary
+## 2. Implemented capabilities
 
+### Detection and baseline integrity
+
+- Normalizes IPv4/IPv6 prefixes and ASNs before evaluation.
+- Maintains route baselines and append-only baseline transition history.
+- Uses corroboration thresholds for ordinary candidate promotion: at least **2 peers** and **3 observations**.
+- Keeps conflicting origin announcements and suspicious more-specific routes from silently overwriting an established baseline.
+- Tracks withdrawals by observing peer; an incident is not resolved until the relevant announcing peers have withdrawn.
+
+### Explainability and investigation
+
+- Associates alerts with their triggering observations and route context.
+- Exposes baseline history and peer-level withdrawal/recovery state.
+- Provides RPKI validation context as `VALID`, `INVALID`, `UNKNOWN`, or `UNAVAILABLE` rather than assuming a result when external data cannot be obtained.
+
+### Forensic evidence
+
+- Canonicalizes evidence using RFC 8785 JSON Canonicalization Scheme (JCS).
+- Computes SHA-256 content digests.
+- Supports ML-DSA-65 post-quantum signature generation and verification when the configured cryptographic provider is available.
+- Includes a standalone command-line verifier so evidence can be checked outside the dashboard.
+- Distinguishes signed, unsigned, and compromised evidence.
+
+**Cryptographic boundary:** A valid signature establishes integrity and signer authenticity under the applicable public-key trust assumptions. It does **not** prove that the underlying BGP observation was true.
+
+---
+
+## 3. Architecture
+
+```text
+ BGP update sources
+ ├── Synthetic evaluator scenarios
+ ├── RIPE RIS Live (opt-in; network required)
+ └── Operator / API observations
+             |
+             v
+     Normalization layer
+   Prefix + ASN + timestamp
+             |
+             v
+  Detection and baseline engine
+   ├── Origin-AS conflict checks
+   ├── More-specific prefix checks
+   ├── Corroborated candidate promotion
+   ├── Anti-baseline-poisoning rules
+   └── Per-peer withdrawal recovery
+             |
+       +-----+------+
+       |            |
+       v            v
+ SQLite / WAL   Forensic evidence
+ observations   RFC 8785 canonical JSON
+ baseline log   SHA-256 digest
+                ML-DSA-65 (provider-dependent)
+       |            |
+       +-----+------+
+             |
+             v
+       FastAPI backend
+          /      \
+         v        v
+    React web   Independent CLI
+    console     evidence verifier
 ```
-                       BGP Telemetry Ingestion
-     [ RIPE RIS Live WebSocket ]   [ Synthetic Scenarios ]   [ Operator Injection ]
-                                      |
-                                      v
-                         Normalization Engine (RFC-Compliant)
-               * Host-bit zeroing (ipaddress)  * ASN canonicalization (ASxxxxx)
-                                      |
-                                      v
-                         Detection & Baseline Engine
-               * Multi-peer promotion invariant (peer >= 2, count >= 3)
-               * Origin-AS conflict detection without baseline poisoning
-               * Subprefix LPM containment check (IPv4 / IPv6)
-               * Per-peer withdrawal recovery state machine
-                                      |
-                 +--------------------+--------------------+
-                 |                                         |
-                 v                                         v
-         Persistence Layer                          Forensic Evidence
-   * SQLite WAL Mode (horaq.db)               * RFC 8785 Canonical JSON (JCS)
-   * Append-only observation history          * SHA-256 Content Digest
-   * Versioned baseline audit trail           * NIST FIPS 204 ML-DSA-65 Signature
-                 |                                         |
-                 +--------------------+--------------------+
-                                      |
-                                      v
-                       Web Operations Console & CLI
-             * React 18 + TypeScript + Tailwind CSS (Port 5173)
-             * Independent CLI Verifier: verify_evidence.py (Exit 0, 1, 2)
-```
+
+**Core technologies:** Python, FastAPI, SQLite (WAL), React, TypeScript, Vite, and a Python-based cryptographic evidence/verifier workflow.
 
 ---
 
-## 5. Installation & Run Instructions
+## 4. Run locally
+
+Local execution is the recommended evaluation path. The default evaluator workflow uses controlled synthetic data. Live BGP ingestion is opt-in and requires an external network connection.
 
 ### Prerequisites
-- **Python**: 3.10+ (tested on Python 3.13)
-- **Node.js**: v18+ (tested on Node v20.x / v22.x)
-- **Git**
 
-### Backend Setup
+- Git
+- Python 3.10 or later
+- Node.js 18 or later and npm
+
+### 4.1 Clone the repository
+
+```bash
+git clone https://github.com/aiori-hackathon/A3-PS005-TC416.git
+cd A3-PS005-TC416
+```
+
+### 4.2 Start the backend
+
+From the repository root:
+
 ```bash
 cd backend
-
-# Create and activate virtual environment
 python -m venv .venv
-source .venv/bin/activate       # On Windows: .venv\Scripts\activate
+```
 
-# Install dependencies
+Activate the virtual environment:
+
+```powershell
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+```
+
+```bash
+# macOS / Linux
+source .venv/bin/activate
+```
+
+Install dependencies and start the API:
+
+```bash
 pip install -r requirements.txt
-
-# Run backend automated tests (93 tests)
-python -m pytest backend/tests -v
-
-# Start FastAPI server on port 8000
 python -m uvicorn horaq.main:app --host 127.0.0.1 --port 8000
 ```
-OpenAPI documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
-### Frontend Setup
+- Backend: [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- Interactive API documentation: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+### 4.3 Start the frontend
+
+Open a second terminal from the repository root:
+
 ```bash
 cd frontend
-
-# Install dependencies
 npm install
-
-# Build static production bundle (type check + minify)
-npm run build
-
-# Start Vite dev server on port 5173
 npm run dev
 ```
-Operations Console: [http://localhost:5173](http://localhost:5173)
+
+Open the local Vite URL printed in the terminal (normally [http://localhost:5173](http://localhost:5173)). Keep the backend running while using the frontend.
 
 ---
 
-## 6. Reproducible Test Commands
+## 5. Reproduce the verification
 
-HORA-Q maintains 100% passing tests across all test modules:
+Run these commands from the repository root unless stated otherwise.
+
+### Backend test suite
 
 ```bash
-# 1. Run complete backend unit and integration test suite (93 tests):
+python -m venv .venv
+# Activate the environment, then:
+pip install -r backend/requirements.txt
 python -m pytest backend/tests -v
-
-# 2. Run live 6-stage evaluator lifecycle verification:
-python backend/scripts/verify_live_lifecycle.py
-
-# 3. Verify frontend TypeScript type-checking and production build:
-npm --prefix frontend run build
 ```
 
-**Test Suite Evolution History**:
-- `81 Tests Passed`: Initial baseline audit (2026-10-26 commit `9b2a25b`).
-- `92 Tests Passed`: Added multi-peer withdrawal recovery and historical replay suite (2026-10-26 commit `f58899e`).
-- `93 Tests Passed`: Added observation telemetry API endpoint validation and operational credibility suite (2026-10-27).
-
----
-
-## 7. Synthetic Evaluator Walkthrough
-
-The web console features an interactive 6-stage walkthrough (collapsible on the **Overview** dashboard) guiding evaluators through the complete verification lifecycle with real backend calls:
-
-1. **Stage 1: Establish Clean Baseline**: Seeds `192.0.2.0/24` (AS64496). Confirms zero false alarms on clean seeding and logs an `AUTHORIZED_SEED` entry in the versioned baseline history.
-2. **Stage 2: Trigger Routing Anomaly**: Injects subprefix hijack `192.0.2.128/25` from rogue AS64500. Proves instant containment without baseline poisoning.
-3. **Stage 3: Inspect Explanation**: Inspects deterministic root-cause reasoning, confidence scoring, and active announcing peer tracking.
-4. **Stage 4: Check Live RPKI Status**: Queries live RIPEstat ROA validation API to evaluate cryptographic origin authorization (`VALID`, `INVALID`, `UNKNOWN`, `UNAVAILABLE`).
-5. **Stage 5: Verify Post-Quantum Evidence**: Opens Evidence Vault modal. Demonstrates RFC 8785 canonical bytes, SHA-256 match, and NIST FIPS 204 ML-DSA-65 post-quantum signature verification.
-6. **Stage 6: Ingest Route Withdrawal**: Ingests authentic BGP route withdrawal from observing peer AS64500. Confirms alert transition to `RESOLVED` with recovery notes.
-
----
-
-## 8. Independent Cryptographic Evidence Verification (CLI)
-
-HORA-Q provides a standalone verification tool (`verify_evidence.py`) allowing evaluators to verify evidence records independently of the web application:
+### Evaluator lifecycle check
 
 ```bash
-# 1. Verify authentic ML-DSA-65 signed evidence record (Exit code 0):
+python backend/scripts/verify_live_lifecycle.py
+```
+
+### Frontend type-check and production build
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+The CI badge at the top links to the repository's workflow history. Test counts can change as the test suite evolves; use the actual test output and CI result rather than relying on a static count in this README.
+
+---
+
+## 6. Six-stage synthetic evaluator walkthrough
+
+The application includes a guided evaluator workflow that exercises the backend:
+
+1. **Establish a clean baseline** — seed the controlled prefix `192.0.2.0/24` with origin `AS64496` and inspect the authorized seed entry in baseline history.
+2. **Trigger a subprefix anomaly** — submit `192.0.2.128/25` from `AS64500` and inspect the resulting detection.
+3. **Inspect the explanation** — review alert context, baseline state, and peer information.
+4. **Inspect RPKI context** — request ROA validation context. The result depends on RIPEstat availability and may be `UNKNOWN` or `UNAVAILABLE`.
+5. **Verify forensic evidence** — inspect the canonical evidence payload, digest, and signature status.
+6. **Confirm withdrawal recovery** — submit the relevant peer withdrawal and inspect whether the incident can transition to `RESOLVED`.
+
+For the detailed walkthrough, see [docs/DEMO_GUIDE.md](docs/DEMO_GUIDE.md).
+
+---
+
+## 7. Independently verify sample evidence
+
+The repository includes sample evidence records and a standalone verifier. Run these commands from the repository root:
+
+```bash
+# Expected: authentic signed evidence (exit code 0)
 python verify_evidence.py audit/sample_evidence_signed.json
 
-# 2. Demonstrate tamper detection on signed record (Exit code 1):
+# Expected: tampering is detected (exit code 1)
 python verify_evidence.py audit/sample_evidence_signed.json --tamper
 
-# 3. Verify that an unsigned record cannot receive an authentic verdict (Exit code 2):
+# Expected: unsigned record is not accepted as authentic (exit code 2)
 python verify_evidence.py audit/sample_evidence_unsigned.json
 
-# 4. Demonstrate tamper detection on unsigned record (Exit code 1):
+# Expected: tampering is detected (exit code 1)
 python verify_evidence.py audit/sample_evidence_unsigned.json --tamper
 ```
 
-**Verification Exit Codes**:
-- `Exit Code 0` (`[AUTHENTIC]`): RFC 8785 canonical bytes, SHA-256 digest match, and NIST FIPS 204 ML-DSA-65 signature verified mathematically.
-- `Exit Code 1` (`[COMPROMISED]`): Tamper detected. Payload modification detected via hash mismatch or corrupted signature.
-- `Exit Code 2` (`[UNSIGNED]`): Payload integrity confirmed via SHA-256, but record lacks an authority signature.
+| Exit code | Meaning |
+|---:|---|
+| `0` | Evidence digest and configured signature verification succeeded. |
+| `1` | Evidence was modified, corrupted, or signature verification failed. |
+| `2` | The record is unsigned and cannot establish signer authenticity. |
+
+**Key management:** Do not commit or distribute private signing keys. Signature verification depends on the configured ML-DSA-65 provider and the public key included in or trusted for the evidence record. If the provider is unavailable, the system should report that state rather than claim a signature was generated.
 
 ---
 
-## 9. Key Links & Submission Artifacts
+## 8. Operating modes and external dependencies
 
-- **Team Introduction Video**: [YouTube Presentation](https://youtu.be/oKoHllmyCMQ)
-- **Official Proposals**:
-  - [HORA Q — AIORI-3 Proposal](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20%28AIORI-3%20Proposal%29.pdf)
-  - [Proposed Structure Hackathon](Proposed-structure-hackathon.pdf)
-- **Deployment Topology**: [`DEPLOYMENT.md`](DEPLOYMENT.md)
-- **Proposal vs. Built Verification**: [`PROPOSED_VS_BUILT_VERIFIED.md`](PROPOSED_VS_BUILT_VERIFIED.md)
-- **Technical Documentation Suite**: [`docs/README.md`](docs/README.md)
-  - [1. Architecture & Design](docs/ARCHITECTURE.md)
-  - [2. Detection & Baselines](docs/DETECTION_AND_BASELINES.md)
-  - [3. API & Data Model](docs/API_AND_DATA_MODEL.md)
-  - [4. Evidence & Cryptography](docs/EVIDENCE_AND_CRYPTOGRAPHY.md)
-  - [5. Testing & Evaluation](docs/TESTING_AND_EVALUATION.md)
-  - [6. Evaluator Demo Guide](docs/DEMO_GUIDE.md)
-  - [7. Threat Model & Boundaries](docs/THREAT_MODEL_AND_LIMITATIONS.md)
-  - [8. Operations & Deployment](docs/OPERATIONS.md)
+| Mode / component | Purpose | Important condition |
+|---|---|---|
+| **Synthetic** | Controlled evaluator scenarios using documentation/test address ranges. | Recommended for repeatable local evaluation. |
+| **Live RIS** | Optional ingestion from RIPE NCC RIS Live. | Requires outbound network access; disabled by default. |
+| **Historical replay** | Replay of archival MRT data where supported by the replay workflow and available datasets. | Results depend on the supplied archive and replay configuration. |
+| **RPKI context** | Retrieves ROA validation context through RIPEstat. | External service latency, rate limits, and availability can affect results. |
 
 ---
 
-## 10. Repository Structure
+## 9. Scope and known limitations
 
-```
+HORA-Q is a focused BGP **control-plane** monitoring prototype. It should not be interpreted as a complete production-grade Internet routing security platform.
+
+- **Detection scope:** Primary detection targets origin-AS conflicts and more-specific subprefix announcements. It does not claim comprehensive detection of every route leak or routing-policy violation.
+- **Data-plane visibility:** It does not perform packet-forwarding analysis or traceroute-based reachability measurement.
+- **Subprefix interpretation:** A more-specific announcement can be legitimate traffic engineering as well as suspicious activity. An anomaly alone is not proof of malicious intent.
+- **Baseline changes:** Legitimate prefix transfers and origin changes require an authorized operator decision; the system does not automatically trust a new origin merely because it appears.
+- **Live collection:** Live ingestion depends on the external RIS stream and network availability. Gaps during disconnection are not guaranteed to be backfilled automatically.
+- **RPKI:** RIPEstat is an external dependency. When validation cannot be obtained, the system reports an unknown/unavailable state rather than assuming validity.
+- **Cryptographic provider:** ML-DSA-65 signing depends on the runtime's supported provider configuration. Provider unavailability must be reported rather than silently downgraded or represented as a successful signature.
+- **Storage and scale:** The current SQLite WAL design is a single-node prototype, not a distributed carrier-scale telemetry platform.
+
+See [audit/KNOWN_LIMITATIONS.md](audit/KNOWN_LIMITATIONS.md) and [docs/THREAT_MODEL_AND_LIMITATIONS.md](docs/THREAT_MODEL_AND_LIMITATIONS.md) for the expanded constraints and threat boundaries.
+
+---
+
+## 10. Documentation and evaluation materials
+
+| Resource | Contents |
+|---|---|
+| [Project proposal](HORA%20Q%20%E2%80%94%20Explainable%20BGP%20Anomaly%20Monitor%20%28AIORI-3%20Proposal%29.pdf) | Original project proposal |
+| [Proposed structure](Proposed-structure-hackathon.pdf) | Supporting proposal document |
+| [Proposal-to-implementation traceability](PROPOSED_VS_BUILT_VERIFIED.md) | Proposal dimensions, implementation status, and verification notes |
+| [Documentation index](docs/README.md) | Index of technical documentation |
+| [Architecture](docs/ARCHITECTURE.md) | Components and data flow |
+| [Detection and baselines](docs/DETECTION_AND_BASELINES.md) | Detection rules and baseline lifecycle |
+| [API and data model](docs/API_AND_DATA_MODEL.md) | API surface and persistence model |
+| [Evidence and cryptography](docs/EVIDENCE_AND_CRYPTOGRAPHY.md) | Canonical evidence, digest, and signature design |
+| [Testing and evaluation](docs/TESTING_AND_EVALUATION.md) | Test strategy and evaluation procedures |
+| [Evaluator demo guide](docs/DEMO_GUIDE.md) | Guided application walkthrough |
+| [Threat model and limitations](docs/THREAT_MODEL_AND_LIMITATIONS.md) | Security assumptions and boundaries |
+| [Operations](docs/OPERATIONS.md) | Runtime and operational notes |
+| [Recorded test results](audit/TEST_RESULTS.md) | Test output and verification evidence |
+| [System audit](audit/SYSTEM_AUDIT_REPORT.md) | Audit findings |
+| [Implementation matrix](audit/IMPLEMENTATION_MATRIX.md) | Feature-to-evidence traceability |
+| [Security review](audit/SECURITY_REVIEW.md) | Security review notes |
+| [Known limitations](audit/KNOWN_LIMITATIONS.md) | Detailed constraints and dependencies |
+
+---
+
+## 11. Repository layout
+
+```text
 A3-PS005-TC416/
-├── README.md                          # Authoritative evaluator overview & quickstart
-├── LICENSE                            # MIT License
-├── DEPLOYMENT.md                      # Production deployment specification
-├── PROPOSED_VS_BUILT_VERIFIED.md      # Proposal compliance & verification matrix
-├── verify_evidence.py                 # Standalone independent evidence verification CLI
-├── horaq_authority_key.json           # Authority key for ML-DSA-65 signing
-├── docs/                              # Maintained technical documentation suite
-│   ├── README.md                      # Documentation index
-│   ├── ARCHITECTURE.md                # System pipeline & component boundaries
-│   ├── DETECTION_AND_BASELINES.md     # Baseline lifecycle, detection & withdrawals
-│   ├── API_AND_DATA_MODEL.md          # REST API reference (/api/v1) & SQLite schema
-│   ├── EVIDENCE_AND_CRYPTOGRAPHY.md   # RFC 8785 JCS, SHA-256 & NIST FIPS 204 ML-DSA-65
-│   ├── TESTING_AND_EVALUATION.md      # Pytest test suite, benchmarks & replays
-│   ├── DEMO_GUIDE.md                  # 6-Stage interactive evaluator demo walkthrough
-│   ├── THREAT_MODEL_AND_LIMITATIONS.md# Threat analysis & scientific scope boundaries
-│   └── OPERATIONS.md                  # Operational configuration & CI pipeline
-├── backend/                           # FastAPI backend service
-│   ├── requirements.txt               # Python dependencies
-│   ├── horaq/                         # Core Python package (detection, crypto, api, etc.)
-│   ├── tests/                         # Pytest test suite (93 automated tests)
-│   └── scripts/                       # Verification, replay and benchmark runner scripts
-├── frontend/                          # React + TypeScript + Vite Operations Console
-│   ├── package.json                   # Frontend dependencies
-│   └── src/                           # Components, views, stores, and API clients
-├── audit/                             # Evaluator evidence, test results & screenshots
-│   ├── TEST_RESULTS.md                # Test execution logs (93 passed)
-│   ├── SYSTEM_AUDIT_REPORT.md         # Comprehensive system & cryptographic audit
-│   ├── IMPLEMENTATION_MATRIX.md       # Traceability matrix
-│   ├── KNOWN_LIMITATIONS.md           # Technical boundaries & operational disclosures
-│   ├── SECURITY_REVIEW.md             # Threat modeling & security analysis
-│   ├── reference_detector_comparison.json
-│   ├── historical_attack_validation.json
-│   ├── sample_evidence_signed.json    # Authentic ML-DSA-65 evidence sample
-│   ├── sample_evidence_unsigned.json  # Unsigned evidence sample
-│   └── screenshots/                   # 12 canonical 16:9 desktop screenshots
-└── tools/                             # Developer utilities
-    └── capture_16_9.ps1               # Configurable 16:9 screenshot capture utility
+├── README.md
+├── LICENSE
+├── DEPLOYMENT.md
+├── PROPOSED_VS_BUILT_VERIFIED.md
+├── verify_evidence.py
+├── backend/
+│   ├── horaq/
+│   ├── tests/
+│   ├── scripts/
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   └── package.json
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── DETECTION_AND_BASELINES.md
+│   ├── API_AND_DATA_MODEL.md
+│   ├── EVIDENCE_AND_CRYPTOGRAPHY.md
+│   ├── TESTING_AND_EVALUATION.md
+│   ├── DEMO_GUIDE.md
+│   ├── THREAT_MODEL_AND_LIMITATIONS.md
+│   └── OPERATIONS.md
+└── audit/
+    ├── TEST_RESULTS.md
+    ├── SYSTEM_AUDIT_REPORT.md
+    ├── IMPLEMENTATION_MATRIX.md
+    ├── SECURITY_REVIEW.md
+    ├── KNOWN_LIMITATIONS.md
+    └── screenshots/
 ```
+
+---
+
+## 12. Team
+
+**HORA-Q — Team A3-PS005-TC416**  
+AIORI-3 · Track 2 Cyber Security · PS-005  
+Al-Ameen College
+
+Team introduction: [https://youtu.be/oKoHllmyCMQ](https://youtu.be/oKoHllmyCMQ)
+
+<p align="center">
+  <strong>HORA-Q</strong><br/>
+  Explainable routing anomaly detection with verifiable forensic evidence.
+</p>
