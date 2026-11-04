@@ -191,9 +191,19 @@ def verify_evidence_file(
         print(f"\n[!] Canonicalization or hashing error: {err}", file=sys.stderr)
         return VerificationResult("CANONICALIZATION_ERROR", 1)
 
-    print(f"\n1. Content Integrity (RFC 8785 Canonical JSON & SHA-256):")
+    schema_version = record.get("schema_version", "1.0.0")
+    print(f"\n1. Content Integrity & Provenance Manifest:")
+    print(f"   Schema Version          : {schema_version}")
     print(f"   Canonical Payload Length: {len(canon_bytes)} bytes")
     print(f"   Computed SHA-256 Digest : {computed_hash}")
+
+    if schema_version in ("1.1.0", "2.0.0"):
+        obs_ids = record.get("supporting_observation_ids") or ([record.get("observation_id")] if record.get("observation_id") is not None else [])
+        print(f"   Bound Observation ID(s) : {obs_ids}")
+        print(f"   Rule Version            : {record.get('rule_version', 'N/A')}")
+        print(f"   Peer Session Key        : {record.get('peer_session', 'N/A')}")
+        if record.get("trust_statement"):
+            print(f"   Trust Model Scope       : {record.get('trust_statement')}")
 
     if expected_hash and str(expected_hash).strip():
         expected_hash_str = str(expected_hash).strip()
@@ -211,6 +221,8 @@ def verify_evidence_file(
     # Step 2: Post-Quantum Digital Signature Verification
     algorithm = data.get("algorithm")
     print(f"\n2. Post-Quantum Digital Signature Verification:")
+    print("   Notice                  : Digital signature proves record integrity under configured key;")
+    print("                             does not prove the truth of underlying BGP observations.")
 
     if signature and public_key:
         if not algorithm or not str(algorithm).strip():

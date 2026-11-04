@@ -204,6 +204,14 @@ def process_observation(
         total_prev_obs = len(prior_obs)
         distinct_peer_count = max(distinct_session_count, 1)
 
+        # Ingest observation record first so obs_id binds to evidence provenance (WP-04)
+        cur = conn.execute(
+            "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, peer_session, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            (norm_prefix, norm_asn, clean_collector, norm_time, scenario, metadata_json, peer_as, peer_ip, peer_session_key, now_utc),
+        )
+        obs_id = cur.lastrowid
+
         # A. Check Subprefix Anomaly
         # Look for existing tracked prefixes that are strict parents of this prefix
         parents = find_parent_prefixes(current_net, all_baselines)
@@ -245,7 +253,7 @@ def process_observation(
                 f"unauthorized subprefix interception, or inadvertent route leak."
             )
 
-            # Build evidence record with multi-source correlation
+            # Build evidence record with multi-source correlation and observation binding (WP-04)
             ev_record, ev_hash = create_evidence_payload(
                 alert_id=alert_id,
                 prefix=norm_prefix,
@@ -258,6 +266,18 @@ def process_observation(
                 timestamp=norm_time,
                 collector=clean_collector,
                 scenario=scenario,
+                observation_id=obs_id,
+                supporting_observation_ids=[obs_id],
+                peer_as=clean_peer_as,
+                peer_ip=peer_ip,
+                peer_session=peer_session_key,
+                ris_message_id=str(raw_metadata.get("ris_message_id") or "").strip() or None if raw_metadata else None,
+                corroboration_summary={
+                    "distinct_collectors": distinct_collector_count,
+                    "distinct_peer_sessions": distinct_session_count,
+                    "distinct_peer_asns": distinct_peer_asn_count,
+                    "total_observations": total_prev_obs + 1,
+                },
                 context={
                     "parent_prefix": parent_prefix,
                     "parent_origin_asn": parent_asn,
@@ -484,6 +504,18 @@ def process_observation(
                     timestamp=norm_time,
                     collector=clean_collector,
                     scenario=scenario,
+                    observation_id=obs_id,
+                    supporting_observation_ids=[obs_id],
+                    peer_as=clean_peer_as,
+                    peer_ip=peer_ip,
+                    peer_session=peer_session_key,
+                    ris_message_id=str(raw_metadata.get("ris_message_id") or "").strip() or None if raw_metadata else None,
+                    corroboration_summary={
+                        "distinct_collectors": distinct_collector_count,
+                        "distinct_peer_sessions": distinct_session_count,
+                        "distinct_peer_asns": distinct_peer_asn_count,
+                        "total_observations": total_prev_obs + 1,
+                    },
                     context={
                         "baseline_first_seen": existing_baseline["first_seen"],
                         "baseline_last_seen": existing_baseline["last_seen"],
@@ -546,14 +578,6 @@ def process_observation(
                     "observation_count": existing_baseline.get("observation_count", 1),
                 })
 
-        # C. Insert Observation Record
-        cur = conn.execute(
-            "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, peer_session, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            (norm_prefix, norm_asn, clean_collector, norm_time, scenario, metadata_json, peer_as, peer_ip, peer_session_key, now_utc),
-        )
-        obs_id = cur.lastrowid
-
         # Record queued baseline transitions in immutable history (Proposal D2)
         for ht in history_transitions:
             record_baseline_transition(
@@ -605,13 +629,15 @@ def process_observation(
             )
 
             ev = alert["evidence"]
+            ev_schema = ev["record"].get("schema_version", "1.1.0")
             conn.execute(
                 "INSERT INTO evidence (id, alert_id, schema_version, canonical_json, record_hash, algorithm, "
                 "signature, public_key, signer_status, created_at) "
-                "VALUES (?, ?, '1.0.0', ?, ?, 'NONE', NULL, NULL, 'UNSIGNED', ?);",
+                "VALUES (?, ?, ?, ?, ?, 'NONE', NULL, NULL, 'UNSIGNED', ?);",
                 (
                     ev["id"],
                     alert["id"],
+                    ev_schema,
                     canonicalize_json(ev["record"]).decode("utf-8"),
                     ev["hash"],
                     now_utc,
