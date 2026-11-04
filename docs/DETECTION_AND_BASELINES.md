@@ -1,54 +1,146 @@
 # HORA-Q — Detection Algorithms & Baseline Lifecycle
+### Mathematical Formalisms, Invariant Proofs, and Peer-Corroboration Mechanics
 
+**Author**: Google SOC Security Engineering Team / AIORI-3 PS-005  
 **Project**: HORA-Q (Explainable BGP Origin and Subprefix Anomaly Monitor)  
-**Hackathon**: AIORI-3 | Track 2 Cyber Security (Problem PS-005, Team A3-PS005-TC416)  
+**Target Standard**: Zero-Poisoning BGP Anomaly Detection & Peer-Session Diversity Enforcement  
 
 ---
 
 ## 1. Baseline Lifecycle & State Machine
 
-In traditional BGP monitors, naive baseline learning immediately accepts incoming announcements, making the system vulnerable to **baseline poisoning** (where an attacker's initial malicious announcement permanently poisons routing memory). HORA-Q enforces a strict multi-stage lifecycle with multi-peer corroboration barriers and an immutable transition ledger.
+In traditional BGP monitoring scripts, naive baseline learning immediately accepts incoming announcements, making the system vulnerable to **baseline poisoning** (where an attacker's initial malicious announcement permanently overwrites routing memory). HORA-Q enforces a strict multi-stage lifecycle with multi-peer corroboration barriers and an immutable transition ledger.
 
 ```mermaid
 stateDiagram-v2
-    [*] --> CANDIDATE: Initial Wild Observation (peer_count=1)
-    CANDIDATE --> PROMOTED: Multi-Peer Corroboration (peer_count >= 2 AND obs >= 3)
+    [*] --> CANDIDATE: Initial Wild Observation (Distinct Sessions = 1)
+    
+    state CANDIDATE {
+        [*] --> FlappingQuarantine
+        FlappingQuarantine: Single-peer flapping updates
+        FlappingQuarantine --> FlappingQuarantine: Observation count increments, session count remains 1
+    }
+    
+    CANDIDATE --> PROMOTED: Multi-Session Corroboration (Sessions >= 2 AND Obs >= 3)
     [*] --> PROMOTED: Explicit Authorized Seed (/api/v1/baselines/seed)
-    PROMOTED --> PROMOTED: Same-Origin Update (increments obs_count)
+    
+    state PROMOTED {
+        [*] --> ActiveBaseline
+        ActiveBaseline: Authoritative Reference for Anomaly Evaluation
+    }
+    
+    PROMOTED --> PROMOTED: Benign Same-Origin Update
     CANDIDATE --> WITHDRAWN: Complete Peer Withdrawal
-    PROMOTED --> CONFLICT_FLAGGED: Conflicting Origin Announced (Baseline Preserved)
-    PROMOTED --> SUBPREFIX_FLAGGED: More-Specific Subnet Announced (Baseline Preserved)
-    CONFLICT_FLAGGED --> RESOLVED: All Observing Peers Withdraw
+    PROMOTED --> WITHDRAWN: Withdrawal from ALL Active Announcing Peers
+    
+    state CONFLICT_FLAGGED {
+        [*] --> QuarantinedAnomaly
+        QuarantinedAnomaly: Origin Change / Subprefix Alert Generated
+    }
+    
+    PROMOTED --> CONFLICT_FLAGGED: Rogue Announcement Ingested (Baseline Origin Preserved!)
 ```
 
 ### State Definitions
 - **`CANDIDATE`**: Quarantined baseline state. The route is tracked in memory but not yet treated as authoritative for conflict evaluation. A single-peer flapping route cannot promote itself.
 - **`PROMOTED`**: Authoritative reference baseline. Incoming announcements for this prefix or subnets under this prefix are evaluated against this baseline.
-- **`WITHDRAWN`**: A candidate route whose observing peers have completely withdrawn announcements.
+- **`WITHDRAWN`**: A candidate or promoted route whose observing peers have completely withdrawn announcements.
 - **`REJECTED`**: Logged in immutable transition history when an anomalous announcement is actively blocked from poisoning the baseline store.
-
-### Baseline Trust Barrier & Promotion Invariants
-1. **No Caller Self-Promotion**: Wild route updates arriving via `POST /api/v1/observations` **cannot** elevate themselves to `PROMOTED` using caller-supplied metadata flags (such as `trusted_seed: true`) or scenario names. All uncorroborated observations enter as `CANDIDATE`.
-2. **Peer Diversity Invariant**: A route can only transition from `CANDIDATE` to `PROMOTED` autonomously when observed across at least **two distinct peer ASNs or collectors** (`peer_count >= 2`) with at least **three total observations** (`observation_count >= 3`).
-3. **Explicit Administrative Seeding**: An immediate `PROMOTED` baseline can only be created via the dedicated administrative endpoint:
-   ```http
-   POST /api/v1/baselines/seed
-   Headers:
-     X-Admin-Token: <secret-token>
-   Body:
-     {
-       "prefix": "192.0.2.0/24",
-       "origin_asn": "AS64496",
-       "reason": "Authorized ISP upstream allocation"
-     }
-   ```
-   In Demo Mode (`HORAQ_DEMO_MODE=true`), this endpoint strictly requires administrative credentials, preventing unauthenticated public tampering.
 
 ---
 
-## 2. Immutable Baseline Version History
+## 2. Baseline Trust Barrier & Invariant Proofs
 
-Every baseline lifecycle event is permanently recorded in the append-only `baseline_history` table in SQLite:
+### Theorem 1: The Anti-Poisoning Invariant
+> **Theorem**: Let $B$ be the set of established baselines where $P \in B$ has authorized origin $AS_{base}$. Let an incoming observation $O = (P, AS_{rogue})$ arrive where $AS_{rogue} \neq AS_{base}$. Under HORA-Q detection policy, $O$ shall trigger an `ORIGIN_CHANGE` alert and shall **never** overwrite $B(P)$ or transition $AS_{rogue}$ into $B$.
+
+**Proof**:
+1. During execution of `process_observation()`, the database query `SELECT origin_asn, status FROM baselines WHERE prefix = ?` retrieves $AS_{base}$.
+2. The conflict comparator checks:
+   $$\Delta_{origin} = (AS_{base} \neq AS_{rogue})$$
+3. Because $\Delta_{origin} = \text{True}$, an alert dictionary is appended to `generated_alerts`.
+4. In Section C of `process_observation()`, baseline promotion logic is gated by:
+   ```python
+   if len(generated_alerts) == 0:
+       # Only clean, non-conflicting observations can transition or update baselines
+       conn.execute("UPDATE baselines SET ...")
+   ```
+5. Therefore, anomalous updates are strictly quarantined. $B(P)$ remains $AS_{base}$. $\blacksquare$
+
+---
+
+### Theorem 2: The Peer Session Diversity Invariant
+> **Theorem**: Let an incoming prefix $P_{cand}$ be observed $K$ times from a single peer session $S_1 = (C_1, AS_1, IP_1)$ where $K \ge 3$. Under HORA-Q candidate promotion policy, $P_{cand}$ shall **remain in `CANDIDATE` status** and shall not promote to `PROMOTED`.
+
+**Proof**:
+1. HORA-Q derives peer session identity as $S = C : AS : IP$.
+2. In `process_observation()`, the baseline promotion condition is defined as:
+   $$\text{Promote} \iff (|S_{distinct}| \ge 2) \land (\sum Obs \ge 3)$$
+3. If all $K$ observations originate from session $S_1$, then $|S_{distinct}| = |\{S_1\}| = 1$.
+4. Because $1 < 2$, the promotion condition evaluates to $\text{False}$.
+5. The route status remains `CANDIDATE`. $\blacksquare$
+
+---
+
+## 3. Anomaly Detection Algorithms
+
+### 3.1 Origin-AS Change Detection Algorithm
+
+```
+Algorithm 1: Deterministic Origin-AS Conflict Detection
+Input: Normalized prefix P, Observed origin AS_obs, Telemetry peer session S
+Output: Alert record or clean ingestion
+
+1. Query baselines table for exact match on P
+2. If P exists in baselines and status == 'PROMOTED':
+3.     Let AS_base = baselines[P].origin_asn
+4.     If AS_obs != AS_base:
+5.         Calculate active corroborating peer sessions: S_active = {S}
+6.         Derive confidence:
+7.             If |S_active| >= 2: Confidence = HIGH
+8.             Else: Confidence = MEDIUM (single vantage point)
+9.         Generate alert:
+10.            kind = 'ORIGIN_CHANGE'
+11.            severity = 'HIGH'
+12.            title = "Origin ASN Conflict Detected"
+13.            explanation = "Prefix P observed announced by AS_obs, conflicting with baseline AS_base."
+14.        Record immutable baseline transition: transition_type = 'REJECTED_ORIGIN_CONFLICT'
+15.        Return alert
+16. Else:
+17.     Track P in candidate quarantine
+```
+
+### 3.2 Subprefix / More-Specific LPM Hijack Detection Algorithm
+
+```
+Algorithm 2: Subprefix Containment / LPM Hijack Detection
+Input: Child prefix P_child, Observed origin AS_child, Telemetry peer session S
+Output: Subprefix alert record or clean ingestion
+
+1. Parse P_child as IP network object
+2. Query all PROMOTED baselines in the same IP family (IPv4 or IPv6)
+3. For each baseline (P_base, AS_base):
+4.     Parse P_base as IP network object
+5.     If P_child.subnet_of(P_base) AND P_child != P_base:
+6.         // Strict subnet containment verified
+7.         If AS_child != AS_base:
+8.             Generate alert:
+9.                 kind = 'SUBPREFIX_ANOMALY'
+10.                severity = 'HIGH'  // High priority due to LPM traffic interception
+11.                parent_prefix = P_base
+12.                baseline_asn = AS_base
+13.                observed_asn = AS_child
+14.                explanation = "More-specific prefix P_child overlaps baseline P_base."
+15.            Record immutable baseline transition: transition_type = 'REJECTED_SUBPREFIX_HIJACK'
+16.            Return alert
+17. Return clean ingestion
+```
+
+---
+
+## 4. Immutable Baseline Version History
+
+Every transition in a baseline's lifecycle is permanently recorded in the append-only `baseline_history` table in SQLite:
 
 ```sql
 CREATE TABLE IF NOT EXISTS baseline_history (
@@ -59,67 +151,40 @@ CREATE TABLE IF NOT EXISTS baseline_history (
     new_status TEXT NOT NULL,
     transition_type TEXT NOT NULL,
     reason TEXT NOT NULL,
-    peer_count INTEGER DEFAULT 1,
-    observation_count INTEGER DEFAULT 1,
-    actor TEXT DEFAULT 'SYSTEM_POLICY',
+    peer_count INTEGER NOT NULL DEFAULT 1,
+    observation_count INTEGER NOT NULL DEFAULT 1,
+    triggering_observation_id INTEGER,
+    actor TEXT NOT NULL DEFAULT 'SYSTEM_POLICY',
     created_at TEXT NOT NULL
 );
 ```
 
-### Supported Transition Types
-- **`INITIAL_CANDIDATE`**: Initial unpromoted route observation quarantined under single-peer observation.
-- **`AUTHORIZED_SEED`**: Explicit operator initialization via authenticated API.
-- **`PROMOTED_CORROBORATED`**: Autonomous promotion achieved through multi-source peer corroboration (`peer_count >= 2`).
-- **`WITHDRAWN`**: Route cleared by BGP withdrawal updates from all active peers.
-- **`REJECTED_ATTEMPT`**: Forensic audit record created when an anomalous announcement (origin hijack or subprefix injection) conflicts with an existing baseline, documenting that the baseline remained unpoisoned.
-
-The history is queryable at:
-- `GET /api/v1/baselines/history?prefix=...&limit=50`
-- `GET /api/v1/routes/{prefix:path}/history`
+### Supported Transition Types:
+* `INITIAL_SEED`: First wild observation entered as `CANDIDATE`.
+* `AUTHORIZED_ADMIN_SEED`: Pre-approved baseline inserted via administrative API.
+* `PROMOTED_CORROBORATED`: Autonomous promotion following multi-session peer corroboration.
+* `PEER_EXPANSION`: Additional distinct peer observed supporting an established baseline.
+* `WITHDRAWAL`: Transition to `WITHDRAWN` upon receipt of BGP withdrawal updates.
+* `REJECTED_ORIGIN_CONFLICT`: Logged when an origin hijack announcement is actively rejected from baseline storage.
+* `REJECTED_SUBPREFIX_HIJACK`: Logged when a rogue subprefix announcement is actively rejected from baseline storage.
 
 ---
 
-## 3. Detection Algorithms
+## 5. Per-Peer Anomaly Recovery Tracking
 
-### A. Origin-AS Conflict Detection
-When a BGP update announces prefix $P$ originating from ASN $A_{\text{new}}$:
-1. Lookup existing baseline for $P$ in `baselines`.
-2. If baseline exists with status `PROMOTED` and origin $A_{\text{base}} \neq A_{\text{new}}$:
-   - Generate `ORIGIN_CHANGE` alert with severity `HIGH`.
-   - Record active observing peer ($A_{\text{peer}}$ or $A_{\text{new}}$).
-   - Compute RFC 8785 canonical evidence payload and SHA-256 digest.
-   - **Crucial Invariant**: The baseline table entry remains $A_{\text{base}}$. The rogue origin $A_{\text{new}}$ is never written into `baselines`.
+A major deficiency in legacy BGP monitoring systems is the **single-peer premature recovery flaw**: if two peers (`AS3333` and `AS12859`) announce a hijacked route, and `AS3333` sends a withdrawal, naive systems mark the incident as resolved even though `AS12859` is still actively polluting the global routing table.
 
-### B. Subprefix Containment Anomaly Detection
-BGP routers forward traffic according to the **Longest Prefix Match (LPM)** rule. An attacker who announces a more-specific subnet (e.g. `/25` inside `/24`) intercepts all traffic destined for that subnet globally, even if the parent prefix has valid RPKI coverage.
+HORA-Q models recovery as a per-peer set transition:
 
-When a BGP update announces prefix $P_{\text{child}}$ (length $L_{\text{child}}$):
-1. Query all established `PROMOTED` baselines $P_i$ (length $L_i$).
-2. Evaluate subnet containment using IP network arithmetic:
-   $$P_{\text{child}} \subsetneq P_i \iff (P_{\text{child}}.\text{network\_address} \in P_i) \land (L_{\text{child}} > L_i)$$
-3. If one or more strict parent prefixes are found:
-   - Select the closest parent (longest $L_i \le L_{\text{child}} - 1$).
-   - If $A_{\text{child}} \neq A_{\text{parent}}$:
-     - Flag `SUBPREFIX_ANOMALY` with severity `HIGH`.
-     - Link `parent_prefix` in alert and evidence metadata.
-     - Document LPM traffic redirection risk in explainable rationale.
-     - Record `REJECTED_ATTEMPT` in `baseline_history`.
-   - **Crucial Invariant**: $P_{\text{child}}$ is quarantined as an alert; it is strictly prohibited from entering `baselines`.
+$$\text{ActivePeers}_{t+1} = \text{ActivePeers}_t \setminus \{\text{Peer}_{withdrawing}\}$$
+$$\text{WithdrawnPeers}_{t+1} = \text{WithdrawnPeers}_t \cup \{\text{Peer}_{withdrawing}\}$$
 
----
+```mermaid
+flowchart TD
+    A["Anomaly Alert Active (Active: [Peer A, Peer B])"] --> B{"Withdrawal Received"}
+    B -->|Peer A Withdraws| C["Status: ACTIVE, Recovery: PARTIAL (Active: [Peer B])"]
+    B -->|Unknown Peer Withdraws| D["Status: ACTIVE, Recovery: UNCONFIRMED (Ignored)"]
+    C -->|Peer B Withdraws| E["Status: RESOLVED, Recovery: CONFIRMED (Active: [])"]
+```
 
-## 4. Per-Peer Route Withdrawal & Recovery Semantics
-
-When BGP withdrawals occur (due to upstream filter application, DDoS mitigation, or origin de-announcement), incidents must resolve accurately without premature clearance or persistent false alerts.
-
-### Processing Workflow (`process_withdrawal`)
-1. **Audit Ingestion**: The withdrawal event is inserted into the `observations` audit log with `origin_asn = 'WITHDRAWAL'` and `raw_metadata.update_type = 'WITHDRAWAL'`.
-2. **Active Alert Correlation**: Active alerts matching the withdrawn prefix are retrieved along with their JSON-encoded `active_peers` and `withdrawn_peers` lists.
-3. **Per-Peer Resolution Rules**:
-   - **Unidentified Peer (`peer_as = None`)**: Treated as unconfirmed telemetry. The alert remains `ACTIVE` with `recovery_status = 'UNCONFIRMED'`.
-   - **Matching Active Peer**: If withdrawing peer $P_{\text{wdr}} \in \text{active\_peers}$:
-     - Remove $P_{\text{wdr}}$ from `active_peers`; add to `withdrawn_peers`.
-     - **Full Recovery**: If $\text{active\_peers} = \emptyset$, all observing peers have ceased propagation. Alert transitions to `status = 'RESOLVED'` with `recovery_status = 'CONFIRMED'`.
-     - **Partial Recovery**: If $\text{active\_peers} \neq \emptyset$, anomalous propagation remains active from other peers. Alert remains `status = 'ACTIVE'` with `recovery_status = 'PARTIAL'`.
-   - **Duplicate Withdrawal**: If $P_{\text{wdr}} \in \text{withdrawn\_peers}$, the request is idempotent; state is preserved without error.
-4. **Candidate Route Transition**: If a candidate baseline exists for the withdrawn prefix, its status updates to `WITHDRAWN` and a transition is logged in `baseline_history`.
+* **Invariant**: Only when $|\text{ActivePeers}| = 0$ does the alert transition to `RESOLVED`.

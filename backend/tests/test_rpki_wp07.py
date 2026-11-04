@@ -121,3 +121,4 @@ def test_semantics_note_explicitly_disclaims_full_as_path():
     """RPKI semantics note explicitly clarifies origin validation scope without claiming full path security."""
     assert "complete AS_PATH" in RPKI_SEMANTICS_NOTE
     assert "benign intent" in RPKI_SEMANTICS_NOTE
+

@@ -148,3 +148,4 @@ def test_reconnection_restores_health_without_mutating_route_history(temp_db):
     st_connected = collector.get_status()
     assert st_connected["health_state"] == "CONNECTED"
     assert st_connected["connected"] is True
+

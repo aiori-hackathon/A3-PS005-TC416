@@ -52,3 +52,4 @@ def test_peer_session_diversity_invariants():
     assert inv["peer_session_diversity_verified"] is True
     assert inv["distinct_peer_sessions_required"] == 2
     assert inv["min_observations_required"] == 3
+

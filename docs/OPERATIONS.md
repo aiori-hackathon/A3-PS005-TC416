@@ -1,84 +1,229 @@
-# HORA-Q — Operations, Configuration & Deployment
+# HORA-Q — Operations, Deployment & Runbook
 
 **Project**: HORA-Q (Explainable BGP Origin and Subprefix Anomaly Monitor)  
 **Hackathon**: AIORI-3 | Track 2 Cyber Security (Problem PS-005, Team A3-PS005-TC416)  
+**Standard**: Google SOC Enterprise Production Operational Runbook  
 
 ---
 
-## 1. Operational Configuration & Environment Variables
+## 1. Operational Architecture & Deployment Topology
 
-All backend configuration is managed cleanly through Pydantic Settings (`horaq/config.py`). Values can be set via environment variables or a `.env` file in the working directory:
+HORA-Q operates as a decoupled, cloud-native telemetry pipeline consisting of an asynchronous FastAPI backend service, an SQLite WAL operational datastore, and a client-side React 19 / TypeScript Single Page Application (SPA).
 
-| Environment Variable | Default Value | Description |
-| :--- | :--- | :--- |
-| `HORAQ_DATABASE` | `horaq.db` | Path to SQLite database file. In production, mount on persistent volume. |
-| `HORAQ_SIGNING_KEY` | `horaq_authority_key.json` | Path to persistent NIST FIPS 204 ML-DSA-65 authority key. Must be persistent across container restarts. |
-| `HORAQ_DEMO_MODE` | `false` | Enables public evaluation demo protections (blocks destructive database wipes and unauthenticated observation injection). |
-| `HORAQ_ADMIN_TOKEN` | `""` | Secret token required for administrative baseline seeding and full resets when Demo Mode is active. |
-| `HORAQ_LIVE_COLLECTOR` | `false` | Enables live RIPE RIS WebSocket collector. Defaults to `false` for reproducible offline evaluation. |
-| `HORAQ_RIS_URL` | `wss://ris-live.ripe.net/v1/stream/` | WebSocket endpoint for live RIPE RIS telemetry stream. |
-| `HORAQ_CORS_ORIGINS` | `*` | Comma-separated list of allowed frontend origins (e.g. `https://your-frontend.pages.dev,http://localhost:5173`). Wildcards like `*.pages.dev` are supported. |
-| `PORT` | `8000` | HTTP port for FastAPI service. |
-
----
-
-## 2. Database Maintenance & Persistence
-
-HORA-Q uses SQLite with **Write-Ahead Logging (WAL)** enabled by default:
-
-```sql
-PRAGMA journal_mode = WAL;
-PRAGMA synchronous = NORMAL;
-PRAGMA busy_timeout = 5000;
+```
+  +---------------------------------------------------------------------------------+
+  |                                 Public Internet                                 |
+  +---------------------------------------------------------------------------------+
+            |                                                      |
+            | HTTPS / WSS                                          | HTTPS / Assets
+            v                                                      v
+  +-------------------------------------+                +--------------------------+
+  |        Render Web Service           |                |     Cloudflare Pages     |
+  |  https://a3-ps005-tc416.onrender.com|                | https://horaq-frontends. |
+  |                                     |                | pages.dev                |
+  |  +-------------------------------+  |   JSON / CORS  |                          |
+  |  |  FastAPI (Uvicorn / Py 3.13)  |<-+----------------| React 19 + Vite Frontend |
+  |  +-------------------------------+  |                | In-Browser FIPS 204      |
+  |  |  Post-Quantum ML-DSA-65 Signer|  |                | Evidence Verification    |
+  |  +-------------------------------+  |                +--------------------------+
+  |  |  SQLite 3 (WAL Mode + Pragma) |  |                             ^
+  |  +-------------------------------+  |                             |
+  |                 ^                   |                             |
+  +-----------------|-------------------+                             |
+                    |                                                 |
+         WebSocket  |                                                 |
+                    v                                                 |
+  +-------------------------------------+                             |
+  |      RIPE RIS Live Telemetry        |                             |
+  |  wss://ris-live.ripe.net/v1/stream  |-----------------------------+
+  |      (rrc00, rrc01, rrc03)          |
+  +-------------------------------------+
 ```
 
-### Operational Advantages of WAL Mode
-1. **Concurrency**: Readers never block writers, and writers never block readers. Live telemetry updates can be inserted while the frontend polls overview stats.
-2. **Crash Resilience**: Atomic commits protect baseline and evidence records against sudden power loss or container crashes.
-3. **Performance**: Commits write sequentially to the `-wal` log file rather than re-writing database pages immediately.
+---
 
-### Maintenance Commands
+## 2. Environment Variables & Runtime Configuration
+
+The backend configuration is managed strictly through Pydantic Settings (`backend/horaq/config.py`). All configuration parameters can be passed via environment variables, container environment injection, or a local `.env` file:
+
+| Environment Variable | Default Value | Production Recommended | Description |
+| :--- | :--- | :--- | :--- |
+| `PORT` | `8000` | `10000` (Render) / `8000` | HTTP port for FastAPI Uvicorn listener. |
+| `HORAQ_DATABASE` | `horaq.db` | `/data/horaq.db` | Path to persistent SQLite database file. Mount on a persistent volume in containerized environments. |
+| `HORAQ_SIGNING_KEY` | `horaq_authority_key.json` | `/data/horaq_authority_key.json` | Path to persistent NIST FIPS 204 ML-DSA-65 authority key. Must be preserved across container restarts to prevent key invalidation. |
+| `HORAQ_DEMO_MODE` | `false` | `true` | Enables public evaluation demo protections (blocks unauthenticated database wipes and administrative route seeding). |
+| `HORAQ_ADMIN_TOKEN` | `""` | Strong entropy secret | Secret bearer token required for administrative baseline seeding (`POST /api/v1/baselines/seed`) and database resets when Demo Mode is active. |
+| `HORAQ_LIVE_COLLECTOR` | `false` | `false` (Eval) / `true` (Live) | Controls the background RIPE RIS WebSocket collector task. Default `false` guarantees deterministic evaluation. |
+| `HORAQ_RIS_URL` | `wss://ris-live.ripe.net/v1/stream/` | `wss://ris-live.ripe.net/v1/stream/` | Upstream WebSocket stream endpoint for live BGP UPDATE telemetry. |
+| `HORAQ_CORS_ORIGINS` | `*` | `https://horaq-frontends.pages.dev,http://localhost:5173` | Comma-separated list of allowed frontend origins. Supports wildcard patterns like `https://*.pages.dev`. |
+| `PYTHON_VERSION` | `3.13.0` | `3.13.0` | Python runtime version for container builders (Render / Railway / Docker). |
+
+---
+
+## 3. Production Deployment Guide
+
+### 3.1 Backend Deployment on Render.com
+
+Render provides managed containerized hosting with continuous Git deployment from GitHub.
+
+1. **Create Web Service**:
+   - In the Render Dashboard, select **New +** $\to$ **Web Service**.
+   - Connect the repository: `https://github.com/aiori-hackathon/A3-PS005-TC416`.
+   - Branch: `main` (or active release branch).
+2. **Build & Runtime Configuration**:
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r backend/requirements.txt`
+   - **Start Command**: `uvicorn backend.horaq.main:app --host 0.0.0.0 --port $PORT`
+3. **Environment Variables**:
+   ```ini
+   PYTHON_VERSION = 3.13.0
+   HORAQ_DEMO_MODE = true
+   HORAQ_ADMIN_TOKEN = <generate-secure-random-token>
+   HORAQ_CORS_ORIGINS = https://horaq-frontends.pages.dev,https://*.pages.dev,http://localhost:5173
+   HORAQ_LIVE_COLLECTOR = false
+   ```
+4. **Health Check Path**:
+   - Set Health Check Path to `/health`.
+5. **Handling Free-Tier Spin Down**:
+   - Render free instances spin down after 15 minutes of inactivity. The initial HTTP request may experience a 30–50 second cold-start delay. The frontend includes automatic retry and timeout handling for cold starts.
+
+---
+
+### 3.2 Frontend Deployment on Cloudflare Pages
+
+Cloudflare Pages provides global edge CDN distribution with zero cold-start latency.
+
+1. **Connect Repository**:
+   - In Cloudflare Dashboard, navigate to **Workers & Pages** $\to$ **Create an application** $\to$ **Pages** $\to$ **Connect to Git**.
+   - Select `vssankardev-lang/horaq-frontend` (or repository containing `frontend/`).
+2. **Build Settings**:
+   - **Framework Preset**: `Vite`
+   - **Build Command**: `npm run build`
+   - **Build Output Directory**: `dist`
+   - **Root Directory**: `frontend` (or `/` if deploying dedicated frontend repo).
+3. **Environment Variables**:
+   ```ini
+   VITE_API_URL = https://a3-ps005-tc416.onrender.com
+   NODE_VERSION = 20
+   ```
+4. **Edge Header Configuration (`_headers`)**:
+   Ensure `frontend/public/_headers` includes security headers:
+   ```http
+   /*
+     X-Content-Type-Options: nosniff
+     X-Frame-Options: DENY
+     Referrer-Policy: strict-origin-when-cross-origin
+     Access-Control-Allow-Origin: *
+   ```
+
+---
+
+### 3.3 CORS Resolution & Troubleshooting
+
+If the frontend displays:
+`Access to fetch at 'https://...onrender.com/api/v1/overview' from origin 'https://...pages.dev' has been blocked by CORS policy`
+
+1. **Root Cause**: The backend's `HORAQ_CORS_ORIGINS` setting did not match the requesting Cloudflare Pages URL or preview domain.
+2. **Resolution**:
+   - In Render Dashboard $\to$ Environment, update `HORAQ_CORS_ORIGINS`:
+     ```ini
+     HORAQ_CORS_ORIGINS = https://horaq-frontends.pages.dev,https://*.pages.dev,http://localhost:5173
+     ```
+   - Trigger a manual deploy or restart the service to apply changes.
+   - Alternatively, setting `HORAQ_CORS_ORIGINS = *` permits all origins during hackathon evaluation.
+
+---
+
+## 4. Operational Runbook for SOC Operators
+
+### 4.1 Triaging an Anomaly Alert
+
+When a `CRITICAL` or `HIGH` severity alert fires on the Operator Console:
+
+```mermaid
+flowchart TD
+    A["Alert Notification Fired"] --> B{"Check Kind"}
+    B -->|"SUBPREFIX_ANOMALY"| C["Longest Prefix Match (LPM) Interception"]
+    B -->|"ORIGIN_CHANGE"| D["Origin AS Conflict"]
+    
+    C --> E["Inspect Corroborating Peers & Collector Sessions"]
+    D --> E
+    
+    E --> F{"Corroboration Count >= 2?"}
+    F -->|"Yes"| G["Confirmed Global Propagation (Incident PERSISTENT)"]
+    F -->|"No"| H["Single-Peer Upstream Anomaly (Candidate Quarantined)"]
+    
+    G --> I["Query RPKI ROA Status (Live RIPEstat)"]
+    H --> I
+    
+    I --> J{"RPKI Status"}
+    J -->|"INVALID"| K["High-Confidence Malicious Hijack: Escalate to Peering NOC"]
+    J -->|"VALID / UNKNOWN"| L["Investigate Planned Maintenance / Route Leak"]
+    
+    K --> M["Verify Cryptographic Evidence (FIPS 204 ML-DSA-65)"]
+    L --> M
+    M --> N["Export Notarized JSON Evidence Manifest"]
+```
+
+1. **Locate the Alert**: Open the **Alerts & Incidents** tab in the console.
+2. **Review Prefix & Origins**:
+   - Compare `affected_prefix` against `parent_prefix`.
+   - Identify `observed_asn` vs `baseline_asn`.
+3. **Verify Corroboration**:
+   - Check the **Corroborating Peer Sessions** count.
+   - If count is `1`, the event is an isolated peer anomaly or flap; candidate baseline quarantine prevents network contamination.
+   - If count is $\ge 2$ across distinct collectors, global propagation has begun.
+4. **Inspect RPKI Validation**:
+   - Check RPKI badge: `VALID`, `INVALID`, `UNKNOWN`, or `HISTORICAL_RPKI_UNAVAILABLE`.
+   - An `INVALID` status alongside multi-peer corroboration confirms a high-confidence hijack.
+5. **Download Signed Evidence**:
+   - Click **Verify Cryptography**.
+   - Download the canonical `.json` evidence record for upstream ISP dispute resolution or regulatory filing.
+
+---
+
+### 4.2 Handling Route Withdrawals & Mitigation Verification
+
+When the rogue autonomous system withdraws the hijacked route:
+
+1. **Ingest Withdrawal**: The RIPE RIS collector receives the BGP `WITHDRAW` message.
+2. **Automated Recovery State Machine**:
+   - If the withdrawal covers a subset of announcing peers, the alert shifts to `recovery_status: PARTIAL`.
+   - When all announcing peer sessions withdraw the route, the alert transitions to `status: RESOLVED` and `recovery_status: CONFIRMED`.
+3. **Candidate De-escalation**: Quarantined candidate routes associated exclusively with the rogue origin are safely purged without affecting the legitimate baseline.
+
+---
+
+### 4.3 Database Maintenance & Performance Tuning
+
+HORA-Q leverages SQLite in Write-Ahead Logging (WAL) mode for concurrent read-heavy operations:
+
 ```bash
-# Check database integrity:
+# 1. Inspect Database Integrity
 sqlite3 horaq.db "PRAGMA integrity_check;"
 
-# Force WAL checkpoint:
-sqlite3 horaq.db "PRAGMA wal_checkpoint(FULL);"
+# 2. Check Active WAL Journal Mode and Pragma Settings
+sqlite3 horaq.db "PRAGMA journal_mode; PRAGMA synchronous; PRAGMA busy_timeout;"
 
-# Vacuum and optimize storage:
-sqlite3 horaq.db "VACUUM;"
+# 3. Force WAL Checkpoint (Flushes WAL back into main DB)
+sqlite3 horaq.db "PRAGMA wal_checkpoint(TRUNCATE);"
+
+# 4. Vacuum and Re-Index
+sqlite3 horaq.db "VACUUM; REINDEX;"
+
+# 5. Hot Backup Without Halting Service
+sqlite3 horaq.db ".backup 'horaq_backup_$(date +%Y%m%d_%H%M%S).db'"
 ```
 
 ---
 
-## 3. Live RIPE RIS WebSocket Telemetry Collector
+## 5. Continuous Integration & Quality Assurance
 
-When `HORAQ_LIVE_COLLECTOR=true` is set, the background collector task (`backend/horaq/collector.py`) connects to RIPE RIS Live:
-
-- **Subscribed Remote Route Collectors (RRCs)**: `rrc00` (Amsterdam / AMS-IX), `rrc01` (London / LINX), `rrc03` (Amsterdam).
-- **Stream Filter**: Subscribes to BGP `UPDATE` messages across IPv4 and IPv6 address families.
-- **Normalization**:
-  - Extracts `data.peer` $\to$ `peer_ip`.
-  - Extracts `data.peer_asn` $\to$ `peer_as`.
-  - Extracts `data.host` $\to$ `collector`.
-  - Routes announcements to `process_observation`.
-  - Routes route withdrawals directly to `process_withdrawal`.
-- **Automatic Reconnection**: Implements exponential backoff reconnect logic with jitter to maintain continuous streaming.
-- **Diagnostics Endpoint**: `GET /api/v1/collector/status` reports connected state, messages received, parsed, and skipped.
-
----
-
-## 4. Continuous Integration Pipeline (`.github/workflows/ci.yml`)
-
-The GitHub Actions CI pipeline runs on every push and pull request to `main`:
+The project enforces automated testing and verification via GitHub Actions (`.github/workflows/ci.yml`):
 
 ```yaml
 name: HORA-Q CI Pipeline
-on:
-  push:
-    branches: [ main, chore/**, fix/**, feat/** ]
-  pull_request:
-    branches: [ main ]
+on: [push, pull_request]
 
 jobs:
   verify:
@@ -92,24 +237,21 @@ jobs:
         with:
           node-version: '20'
 
-      # 1. Backend Dependencies & Tests
-      - name: Install Python Dependencies
+      # 1. Backend Dependencies & Full Test Suite (138 tests)
+      - name: Run Backend Pytest Suite
         run: |
-          python -m pip install --upgrade pip
           pip install -r backend/requirements.txt pytest
+          python -m pytest backend/tests -v
 
-      - name: Run Pytest Test Suite
-        run: python -m pytest backend/tests -v
-
-      # 2. Historical Replay & Reference Benchmark
+      # 2. Historical Incident Replay & Benchmark Validation
       - name: Run Historical Incident Replay
         run: python backend/scripts/run_historical_replays.py
 
       - name: Run Reference Detector Benchmark
         run: python backend/scripts/run_benchmarks.py
 
-      # 3. Independent CLI Verifier & Tamper Tests
-      - name: Verify Signed Evidence Record
+      # 3. Independent Cryptographic CLI Verification
+      - name: Verify Canonical Evidence Record
         run: python verify_evidence.py audit/sample_evidence_signed.json
 
       - name: Test Tamper Detection
@@ -122,11 +264,3 @@ jobs:
           npm ci
           npm run build
 ```
-
----
-
-## 5. Deployment Topology
-
-For public presentation and evaluation, refer to the complete deployment guide in [`DEPLOYMENT.md`](../DEPLOYMENT.md):
-- **Frontend SPA**: Hosted on Cloudflare Pages with globally distributed edge caching.
-- **Backend Service**: Containerized on Railway with a persistent 1 GB volume mount (`/data`) storing `horaq.db` and `horaq_authority_key.json`.

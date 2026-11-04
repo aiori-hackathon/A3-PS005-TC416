@@ -193,3 +193,4 @@ def test_confidence_text_does_not_overclaim_global_propagation(test_db):
     # Check that exact counts are present
     assert "distinct peer session" in reason.lower()
     assert "collector vantage point" in reason.lower()
+

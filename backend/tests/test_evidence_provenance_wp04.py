@@ -179,3 +179,4 @@ def test_new_v110_signed_record_verifies_with_standalone_cli():
     finally:
         if os.path.exists(doc_path):
             os.remove(doc_path)
+
