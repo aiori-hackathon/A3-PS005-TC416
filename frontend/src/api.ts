@@ -2,6 +2,7 @@ import {
   AlertItem,
   CryptoStatus,
   EvidenceItem,
+  IncidentItem,
   ObservationItem,
   OverviewStats,
   RouteBaseline,
@@ -68,6 +69,18 @@ export const api = {
 
   getAlertDetail: (alertId: string) =>
     request<{ alert: AlertItem; evidence: EvidenceItem | null }>(`/alerts/${alertId}`),
+
+  getIncidents: (limit = 50, offset = 0, status?: string) => {
+    const q = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    if (status) q.append("status", status);
+    return request<{ items: IncidentItem[]; total: number; limit: number; offset: number }>(
+      `/incidents?${q.toString()}`
+    );
+  },
+
+  getIncidentDetail: (incidentId: string) => request<IncidentItem>(`/incidents/${incidentId}`),
+
+  getCollectorStatus: () => request<Record<string, any>>("/collector/status"),
 
   updateAlertStatus: (alertId: string, status: string) =>
     request<{ id: string; status: string; updated: boolean }>(`/alerts/${alertId}/status`, {

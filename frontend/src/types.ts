@@ -21,6 +21,8 @@ export interface OverviewStats {
   latest_collector?: string | null;
   crypto_status: CryptoStatus;
   database: string;
+  total_incidents?: number;
+  active_incidents?: number;
   data_mode?: string;
   mode_label?: string;
   operating_mode?: "LIVE" | "SYNTHETIC" | "HISTORICAL" | string;
@@ -30,13 +32,47 @@ export interface OverviewStats {
     enabled: boolean;
     running: boolean;
     connected: boolean;
+    health_state?: "CONNECTED" | "CONNECTED_NO_RECENT_UPDATES" | "DISCONNECTED" | "STALE_OR_UNKNOWN" | string;
     url?: string;
     messages_received?: number;
     messages_parsed?: number;
     messages_skipped?: number;
+    withdrawals_received?: number;
+    peer_state_events?: number;
     last_message_at?: string | null;
+    last_transport_message_at?: string | null;
+    last_valid_ris_message_at?: string | null;
+    last_parsed_update_at?: string | null;
+    last_peer_state_event_at?: string | null;
     last_error?: string | null;
+    heartbeat_timeout_sec?: number;
   };
+}
+
+export interface IncidentItem {
+  id: string;
+  correlation_key: string;
+  kind: "ORIGIN_CHANGE" | "SUBPREFIX_ANOMALY" | string;
+  prefix: string;
+  observed_asn: string;
+  baseline_asn: string | null;
+  parent_prefix: string | null;
+  rule_name: string;
+  rule_version: string;
+  first_seen: string;
+  last_seen: string;
+  event_count: number;
+  recurrence_count: number;
+  lifecycle_classification: "TRANSIENT" | "PERSISTENT" | "RECURRENT" | "INSUFFICIENT_VISIBILITY" | string;
+  status: "ACTIVE" | "RESOLVED" | string;
+  recovery_status: "UNCONFIRMED" | "PARTIAL" | "CONFIRMED" | string;
+  associated_peer_sessions: string[];
+  source_collectors: string[];
+  latest_alert_id: string | null;
+  latest_evidence_id: string | null;
+  created_at: string;
+  updated_at: string;
+  alerts?: AlertItem[];
 }
 
 export interface ObservationItem {
@@ -48,6 +84,7 @@ export interface ObservationItem {
   scenario?: string | null;
   peer_as?: string | null;
   peer_ip?: string | null;
+  peer_session?: string | null;
   created_at: string;
   baseline_asn?: string | null;
   baseline_status?: string | null;
@@ -69,6 +106,10 @@ export interface RouteBaseline {
   status?: "PROMOTED" | "CANDIDATE" | "WITHDRAWN";
   peer_count?: number;
   distinct_peers?: string[];
+  distinct_peer_asns?: string[];
+  peer_asn_count?: number;
+  distinct_collectors?: string[];
+  collector_count?: number;
 }
 
 export interface AlertItem {
@@ -91,6 +132,11 @@ export interface AlertItem {
   active_peers?: string[];
   withdrawn_peers?: string[];
   recovery_status?: "UNCONFIRMED" | "PARTIAL" | "CONFIRMED";
+  incident_id?: string | null;
+  lifecycle_classification?: "TRANSIENT" | "PERSISTENT" | "RECURRENT" | string;
+  peer_session_count?: number;
+  peer_asn_count?: number;
+  collector_count?: number;
 }
 
 export interface EvidenceRecord {
@@ -106,6 +152,18 @@ export interface EvidenceRecord {
   collector: string;
   scenario: string | null;
   explanation: string;
+  observation_id?: number | null;
+  supporting_observation_ids?: number[];
+  rule_version?: string;
+  peer_session?: string | null;
+  corroboration_summary?: {
+    distinct_peer_sessions: number;
+    distinct_peer_asns: number;
+    distinct_collectors: number;
+    session_details: string[];
+  };
+  uncertainty_gaps?: string[];
+  trust_statement?: string;
   context: Record<string, any>;
 }
 
@@ -126,11 +184,14 @@ export interface EvidenceItem {
 export interface RPKIResult {
   prefix: string;
   origin_asn: string;
-  status: "VALID" | "INVALID" | "UNKNOWN" | "UNAVAILABLE";
+  status: "VALID" | "INVALID" | "UNKNOWN" | "UNAVAILABLE" | "HISTORICAL_RPKI_UNAVAILABLE" | string;
   raw_status?: string;
-  lookup_time: string;
+  context_mode?: "CURRENT_LOOKUP_CONTEXT" | "HISTORICAL_REPLAY" | "HISTORICAL_TIME_MATCHED_SNAPSHOT" | string;
+  lookup_time: string | null;
+  snapshot_timestamp?: string | null;
   provider: string;
   details: string;
+  semantics_note?: string;
   validating_roas: Array<{
     origin: string;
     prefix: string;

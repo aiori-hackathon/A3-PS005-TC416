@@ -186,6 +186,11 @@ export const ForensicIncidentDrawer: React.FC<ForensicIncidentDrawerProps> = ({
               >
                 {alert.status}
               </span>
+              {alert.lifecycle_classification && (
+                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                  {alert.lifecycle_classification}
+                </span>
+              )}
               <span className="text-xs font-mono text-text-dim">ID: {alert.id}</span>
             </div>
             <h1 className="text-base sm:text-lg font-bold text-text-main tracking-tight">
@@ -282,6 +287,27 @@ export const ForensicIncidentDrawer: React.FC<ForensicIncidentDrawerProps> = ({
                 </div>
                 <div className="text-[10px] text-text-dim font-mono">
                   ISO: {alert.created_at || "Unavailable"}
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded bg-bg-card border border-divider space-y-1 sm:col-span-2">
+                <div className="text-[10px] text-text-dim uppercase flex items-center justify-between">
+                  <span>Corroboration Breakdown (Truthful Peer & Vantage Count)</span>
+                  <span className="text-[9px] text-amber-500 font-sans">Public Collector View (Local, Not Global Internet View)</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-1 font-mono">
+                  <div className="p-1.5 rounded bg-bg-app text-center">
+                    <div className="text-[10px] text-text-dim">Peer Sessions</div>
+                    <div className="text-sm font-bold text-brand-blue">{alert.peer_session_count ?? 1}</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-bg-app text-center">
+                    <div className="text-[10px] text-text-dim">Peer ASNs</div>
+                    <div className="text-sm font-bold text-text-main">{alert.peer_asn_count ?? 1}</div>
+                  </div>
+                  <div className="p-1.5 rounded bg-bg-app text-center">
+                    <div className="text-[10px] text-text-dim">Collectors</div>
+                    <div className="text-sm font-bold text-accent-cyan">{alert.collector_count ?? 1}</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -428,6 +454,27 @@ export const ForensicIncidentDrawer: React.FC<ForensicIncidentDrawerProps> = ({
                     <div className="p-2 rounded bg-bg-app border border-divider sm:col-span-2">
                       <span className="text-text-dim text-[10px] uppercase block">Post-Quantum Signature ({evidence.algorithm})</span>
                       <span className="text-text-sub break-all block text-[10px]">{evidence.signature}</span>
+                    </div>
+                  )}
+                  {evidence.record && (
+                    <div className="p-2.5 rounded bg-bg-app border border-divider sm:col-span-2 space-y-1 font-mono text-[11px]">
+                      <div className="text-text-dim uppercase text-[10px] font-bold">Provenance & Audit Trail (Schema {evidence.schema_version || "1.1.0"})</div>
+                      <div className="text-text-sub">
+                        Observation ID: <strong className="text-brand-blue">{evidence.record.observation_id ?? "Bound in record"}</strong>
+                        {evidence.record.supporting_observation_ids && evidence.record.supporting_observation_ids.length > 0 && (
+                          <span> • Supporting IDs: {evidence.record.supporting_observation_ids.join(", ")}</span>
+                        )}
+                      </div>
+                      {evidence.record.peer_session && (
+                        <div className="text-text-sub truncate">
+                          Peer Session: <span className="text-text-main font-mono">{evidence.record.peer_session}</span>
+                        </div>
+                      )}
+                      {evidence.record.trust_statement && (
+                        <div className="text-text-dim italic text-[10px] pt-1 font-sans">
+                          {evidence.record.trust_statement}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

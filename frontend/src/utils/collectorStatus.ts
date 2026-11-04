@@ -65,6 +65,18 @@ export function getCollectorStatusDisplay(
 
   // 3. Enabled, process active, socket established
   if (running && connected) {
+    if (collectorStatus.health_state === "CONNECTED_NO_RECENT_UPDATES") {
+      return {
+        state: "CONNECTED",
+        label: "Connected (Quiet)",
+        badgeStyle: "text-blue-400 border-blue-500/20 bg-blue-500/10",
+        dotStyle: "bg-blue-400",
+        description:
+          "WebSocket transport connected and healthy; quiet stream with no recent BGP updates. Silence is expected when routes are stable and is never treated as a route withdrawal.",
+        lastError: null,
+      };
+    }
+
     // Check for stale stream if connected but no messages in > 180 seconds
     const isStale = (() => {
       if (!last_message_at) return false;

@@ -280,6 +280,11 @@ export const AlertsView: React.FC = () => {
                         <span className="font-mono text-xs font-bold text-text-main px-2 py-0.5 rounded bg-bg-interactive border border-divider">
                           {inc.prefix}
                         </span>
+                        {inc.primaryAlert.lifecycle_classification && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                            {inc.primaryAlert.lifecycle_classification}
+                          </span>
+                        )}
                         {inc.occurrenceCount > 1 && (
                           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-bg-interactive text-text-sub border border-divider">
                             <Layers className="w-3 h-3 text-brand-blue" />
@@ -400,6 +405,16 @@ export const AlertsView: React.FC = () => {
                           {inc.primaryAlert.scenario ? `TESTBED: ${inc.primaryAlert.scenario.toUpperCase()}` : "TELEMETRY"}
                         </span>
                       </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 py-1.5 px-3 rounded bg-bg-card border border-divider text-[11px] font-mono text-text-sub">
+                      <span className="text-[10px] uppercase font-bold text-text-dim">Corroboration Dimensions:</span>
+                      <span className="text-brand-blue font-bold">Sessions: {inc.primaryAlert.peer_session_count ?? 1}</span>
+                      <span>•</span>
+                      <span className="text-text-main font-bold">Peer ASNs: {inc.primaryAlert.peer_asn_count ?? 1}</span>
+                      <span>•</span>
+                      <span className="text-accent-cyan font-bold">Collectors: {inc.primaryAlert.collector_count ?? 1}</span>
+                      <span className="text-text-dim text-[10px] font-sans ml-auto">(Single collector vantage; not global Internet consensus)</span>
                     </div>
 
                     {/* Baseline Delta: Side-by-Side Comparison */}

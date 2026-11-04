@@ -136,9 +136,22 @@ export const RPKIModal: React.FC<RPKIModalProps> = ({
                     </span>
                   );
                 })()}
-                <span className="text-[11px] text-text-dim font-mono">
-                  {result.provider}
-                </span>
+                <div className="text-right">
+                  <span className="text-[11px] text-brand-blue font-bold font-mono block">
+                    {result.context_mode === "CURRENT_LOOKUP_CONTEXT"
+                      ? "Current Lookup Context"
+                      : result.context_mode || "RPKI Context"}
+                  </span>
+                  <span className="text-[10px] text-text-dim font-mono">
+                    Provider: {result.provider}
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-lg bg-bg-app border border-border-card text-text-sub text-[11px] leading-relaxed">
+                <strong className="text-text-main block text-[10px] uppercase">RPKI Origin Validation Scope</strong>
+                {result.semantics_note ||
+                  "RPKI Origin Validation evaluates whether the origin ASN is authorized for the prefix/maxLength context in a cryptographic ROA; it does NOT validate the complete AS_PATH or prove benign intent."}
               </div>
 
               <div className="grid grid-cols-2 gap-3">
