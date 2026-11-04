@@ -8,15 +8,42 @@ Withdrawal & recovery tracking
 Anti-poisoning invariant verification
 """
 
+import hashlib
 import json
 import os
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from horaq.database import db_session, init_db
 from horaq.detection import process_observation, process_withdrawal
+
+
+def compute_file_sha256(path: Path) -> str:
+    """Compute cryptographic SHA-256 digest of input fixture file for audit provenance."""
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        while chunk := f.read(65536):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def validate_source_timestamp(ts: Any) -> Optional[int]:
+    """Validate that source timestamp is a positive integer/float Unix epoch within valid range.
+
+    WP-03 INVARIANT: Missing or malformed timestamps must NEVER fall back to runtime clock
+    (int(time.time())). Missing timestamps return None to trigger explicit INCOMPLETE_DATA.
+    """
+    if ts is None:
+        return None
+    try:
+        val = int(ts)
+        if 0 < val < 4102444800:  # Epoch range 1970 - 2100
+            return val
+        return None
+    except (ValueError, TypeError):
+        return None
 
 
 def format_ts(ts: int) -> str:
@@ -32,7 +59,8 @@ class ArchivalMrtReplayEngine:
             "summary": {},
         }
 
-    def replay_incident(self, fixture_path: Path) -> Dict[str, Any]:
+    def replay_incident(self, fixture_path: Path, strict: bool = False) -> Dict[str, Any]:
+        fixture_sha256 = compute_file_sha256(fixture_path)
         with open(fixture_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
@@ -40,6 +68,7 @@ class ArchivalMrtReplayEngine:
         source_url = data["source_url"]
         inc_class = data["incident_class"]
         gt = data["ground_truth"]
+        schema_version = data.get("schema_version", "1.0.0")
         records = data.get("records", [])
 
         # 1. Establish pre-incident reference state dynamically from authentic snapshot
@@ -49,6 +78,8 @@ class ArchivalMrtReplayEngine:
                 "incident_id": inc_id,
                 "verification_status": "INCOMPLETE_DATA",
                 "source_archive_url": source_url,
+                "dataset_sha256": fixture_sha256,
+                "schema_version": schema_version,
                 "incident_classification": inc_class,
                 "records_replayed_count": 0,
                 "detection_achieved": False,
@@ -61,14 +92,32 @@ class ArchivalMrtReplayEngine:
 
         snapshot_records = snapshot.get("records", [])
         snapshot_archive = snapshot.get("source_archive")
-        snapshot_ts = snapshot.get("snapshot_timestamp")
+        raw_snap_ts = snapshot.get("snapshot_timestamp")
+        snapshot_ts = validate_source_timestamp(raw_snap_ts)
+        if snapshot_ts is None:
+            return {
+                "incident_id": inc_id,
+                "verification_status": "INCOMPLETE_DATA",
+                "source_archive_url": source_url,
+                "dataset_sha256": fixture_sha256,
+                "schema_version": schema_version,
+                "incident_classification": inc_class,
+                "records_replayed_count": 0,
+                "detection_achieved": False,
+                "rejection_reason": f"Pre-incident snapshot timestamp missing or invalid: {raw_snap_ts!r}",
+                "intellectual_honesty_note": (
+                    "Pre-incident baseline snapshot requires a valid historical source timestamp. "
+                    "Runtime clocks must not be substituted for missing historical timestamps."
+                ),
+            }
 
         for s_rec in snapshot_records:
             s_collector = s_rec.get("collector", "rrc00")
             s_peer_as = s_rec.get("peer_as")
             s_peer_ip = s_rec.get("peer_ip")
             s_origin = s_rec.get("origin_asn")
-            s_time = format_ts(s_rec.get("timestamp", snapshot_ts))
+            rec_snap_ts = validate_source_timestamp(s_rec.get("timestamp")) or snapshot_ts
+            s_time = format_ts(rec_snap_ts)
             for s_pfx in s_rec.get("prefixes", []):
                 process_observation(
                     db_path=self.db_path,
@@ -83,19 +132,65 @@ class ArchivalMrtReplayEngine:
                     actor="PRE_INCIDENT_MRT_SNAPSHOT",
                 )
 
-        # 2. Chronologically replay BGP records (announcements AND withdrawals)
+        # 2. Validate timestamps and chronological ordering of records (WP-03)
+        validated_records: List[Tuple[int, int, Dict[str, Any]]] = []
+        for idx, rec in enumerate(records):
+            raw_ts = rec.get("timestamp")
+            rec_ts = validate_source_timestamp(raw_ts)
+            if rec_ts is None:
+                return {
+                    "incident_id": inc_id,
+                    "verification_status": "INCOMPLETE_DATA",
+                    "source_archive_url": source_url,
+                    "dataset_sha256": fixture_sha256,
+                    "schema_version": schema_version,
+                    "incident_classification": inc_class,
+                    "records_replayed_count": 0,
+                    "detection_achieved": False,
+                    "rejection_reason": f"Record index {idx} contains missing or malformed timestamp: {raw_ts!r}",
+                    "intellectual_honesty_note": (
+                        "Archival records with missing or invalid timestamps cannot be deterministically ordered. "
+                        "HORA-Q strictly rejects substituting runtime clocks (int(time.time())) for missing archival timestamps."
+                    ),
+                }
+            validated_records.append((idx, rec_ts, rec))
+
+        # Check chronological order
+        is_chronological = True
+        for i in range(len(validated_records) - 1):
+            if validated_records[i][1] > validated_records[i + 1][1]:
+                is_chronological = False
+                break
+
+        reordering_applied = False
+        if not is_chronological:
+            if strict:
+                return {
+                    "incident_id": inc_id,
+                    "verification_status": "INVALID_INPUT",
+                    "source_archive_url": source_url,
+                    "dataset_sha256": fixture_sha256,
+                    "schema_version": schema_version,
+                    "incident_classification": inc_class,
+                    "records_replayed_count": 0,
+                    "detection_achieved": False,
+                    "rejection_reason": "Records in archival fixture are not in chronological order (strict mode enabled).",
+                }
+            # Stable deterministic sort: primary key timestamp, secondary tie-breaker source record index
+            validated_records.sort(key=lambda item: (item[1], item[0]))
+            reordering_applied = True
+
+        # 3. Chronologically replay BGP records (announcements AND withdrawals)
         alerts_recorded = []
         peers_seen = set()
         first_alert_delay = None
-        t_start = None
+        t_start = validated_records[0][1] if validated_records else None
+        t_end = validated_records[-1][1] if validated_records else None
         withdrawals_processed = 0
         resolved_alerts_count = 0
 
-        for idx, rec in enumerate(records):
+        for original_idx, rec_ts, rec in validated_records:
             rec_type = rec.get("type", "ANNOUNCEMENT")
-            rec_ts = rec.get("timestamp", int(time.time()))
-            if t_start is None:
-                t_start = rec_ts
 
             collector = rec.get("collector", "rrc00")
             peer_as = rec.get("peer_as")
@@ -115,6 +210,11 @@ class ArchivalMrtReplayEngine:
                         scenario=inc_id,
                         peer_as=peer_as,
                         peer_ip=peer_ip,
+                        raw_metadata={
+                            "fixture_record_index": original_idx,
+                            "source_timestamp": rec_ts,
+                            "collector": collector,
+                        },
                     )
                     new_alerts = res.get("alerts", [])
                     if new_alerts and first_alert_delay is None:
@@ -133,6 +233,11 @@ class ArchivalMrtReplayEngine:
                         peer_ip=peer_ip,
                         timestamp_raw=format_ts(rec_ts),
                         scenario=inc_id,
+                        raw_metadata={
+                            "fixture_record_index": original_idx,
+                            "source_timestamp": rec_ts,
+                            "collector": collector,
+                        },
                     )
                     resolved_alerts_count += w_res.get("resolved_alerts_count", 0)
 
@@ -239,10 +344,19 @@ class ArchivalMrtReplayEngine:
             "incident_id": inc_id,
             "verification_status": verification_status,
             "source_archive_url": source_url,
+            "dataset_sha256": fixture_sha256,
+            "schema_version": schema_version,
+            "replay_mode": "deterministic_archival_strict" if strict else "deterministic_archival",
+            "is_chronological": is_chronological,
+            "reordering_applied": reordering_applied,
+            "source_time_interval": {
+                "start_utc": format_ts(t_start),
+                "end_utc": format_ts(t_end),
+            } if (t_start and t_end) else None,
             "pre_incident_snapshot_archive": snapshot_archive,
             "incident_classification": inc_class,
             "pre_incident_snapshot_records_count": len(snapshot_records),
-            "records_replayed_count": len(records),
+            "records_replayed_count": len(validated_records),
             "distinct_observing_peers": len(peers_seen),
             "detection_achieved": detection_achieved,
             "alerts_count": len(alerts_recorded),
@@ -261,20 +375,54 @@ class ArchivalMrtReplayEngine:
             } if alerts_recorded else None,
         }
 
-    def replay_benign_controls(self, fixture_path: Path) -> Dict[str, Any]:
+    def replay_benign_controls(self, fixture_path: Path, strict: bool = False) -> Dict[str, Any]:
+        fixture_sha256 = compute_file_sha256(fixture_path)
         with open(fixture_path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         announcements = data.get("announcements", [])
         withdrawals = data.get("withdrawals", [])
-        announcements_count = 0
-        withdrawals_count = 0
-        alerts_recorded = []
+        schema_version = data.get("schema_version", "1.0.0")
 
-        for rec in announcements:
-            rec_ts = rec.get("timestamp", int(time.time()))
+        # Validate timestamps deterministically (WP-03)
+        validated_announcements = []
+        for idx, rec in enumerate(announcements):
+            raw_ts = rec.get("timestamp")
+            rec_ts = validate_source_timestamp(raw_ts)
+            if rec_ts is None:
+                return {
+                    "control_id": "CONTROL-RIPE-RIS-BENIGN-FEED",
+                    "verification_status": "INCOMPLETE_DATA",
+                    "source_archive_url": data.get("source_url"),
+                    "dataset_sha256": fixture_sha256,
+                    "rejection_reason": f"Announcement at index {idx} contains missing/invalid timestamp: {raw_ts!r}",
+                }
+            validated_announcements.append((idx, rec_ts, rec))
+
+        validated_withdrawals = []
+        for idx, rec in enumerate(withdrawals):
+            raw_ts = rec.get("timestamp")
+            rec_ts = validate_source_timestamp(raw_ts)
+            if rec_ts is None:
+                return {
+                    "control_id": "CONTROL-RIPE-RIS-BENIGN-FEED",
+                    "verification_status": "INCOMPLETE_DATA",
+                    "source_archive_url": data.get("source_url"),
+                    "dataset_sha256": fixture_sha256,
+                    "rejection_reason": f"Withdrawal at index {idx} contains missing/invalid timestamp: {raw_ts!r}",
+                }
+            validated_withdrawals.append((idx, rec_ts, rec))
+
+        alerts_recorded = []
+        announcements_count = len(validated_announcements)
+        withdrawals_count = len(validated_withdrawals)
+
+        all_ts = [item[1] for item in validated_announcements + validated_withdrawals]
+        min_ts = min(all_ts) if all_ts else None
+        max_ts = max(all_ts) if all_ts else None
+
+        for original_idx, rec_ts, rec in validated_announcements:
             collector = rec.get("collector", "rrc00")
-            announcements_count += 1
             origin_asn = rec.get("origin_asn")
             peer_as = rec.get("peer_as")
             peer_ip = rec.get("peer_ip")
@@ -288,12 +436,11 @@ class ArchivalMrtReplayEngine:
                     peer_ip=peer_ip,
                     timestamp_raw=format_ts(rec_ts),
                     scenario="benign-mrt-control",
+                    raw_metadata={"fixture_record_index": original_idx, "source_timestamp": rec_ts},
                 )
                 alerts_recorded.extend(res.get("alerts", []))
 
-        for rec in withdrawals:
-            withdrawals_count += 1
-            rec_ts = rec.get("timestamp", int(time.time()))
+        for original_idx, rec_ts, rec in validated_withdrawals:
             collector = rec.get("collector", "rrc00")
             peer_as = rec.get("peer_as")
             peer_ip = rec.get("peer_ip")
@@ -307,6 +454,7 @@ class ArchivalMrtReplayEngine:
                     peer_ip=peer_ip,
                     timestamp_raw=format_ts(rec_ts),
                     scenario="benign-mrt-control",
+                    raw_metadata={"fixture_record_index": original_idx, "source_timestamp": rec_ts},
                 )
 
         # Verify withdrawals were persisted to database for this scenario
@@ -319,6 +467,12 @@ class ArchivalMrtReplayEngine:
             "control_id": "CONTROL-RIPE-RIS-BENIGN-FEED",
             "verification_status": "VERIFIED_REAL_REPLAY",
             "source_archive_url": data.get("source_url"),
+            "dataset_sha256": fixture_sha256,
+            "schema_version": schema_version,
+            "source_time_interval": {
+                "start_utc": format_ts(min_ts),
+                "end_utc": format_ts(max_ts),
+            } if (min_ts and max_ts) else None,
             "announcements_parsed": announcements_count,
             "withdrawals_parsed": withdrawals_count,
             "withdrawals_persisted_to_db": w_obs_count,
