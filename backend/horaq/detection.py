@@ -51,6 +51,50 @@ def find_parent_prefixes(
     return parents
 
 
+def derive_peer_session(
+    collector: str,
+    peer_ip: Optional[str] = None,
+    peer_as: Optional[str] = None,
+    raw_metadata: Optional[Dict[str, Any]] = None,
+    scenario: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str], str]:
+    """Derive stable peer-session key, normalized peer ASN, and normalized collector.
+
+    Identity dimensions (adheres to WP-02 specification):
+    1. Peer session: (collector, peer_ip) or explicit test session ID. None if peer_ip is absent.
+    2. Peer ASN: autonomous system of the peer (stored and counted separately).
+    3. Collector vantage point: host identity of the collector (stored and counted separately).
+    4. Observation: raw update record.
+
+    Returns:
+        (peer_session_key, clean_peer_as, clean_collector)
+    """
+    clean_collector = str(collector or "manual").strip()
+
+    clean_peer_as = None
+    if peer_as is not None and str(peer_as).strip():
+        raw_as = str(peer_as).strip().upper().replace("AS", "")
+        if raw_as.isdigit():
+            clean_peer_as = f"AS{raw_as}"
+
+    peer_session_key = None
+    clean_ip = str(peer_ip or "").strip()
+    if clean_ip:
+        try:
+            norm_ip = str(ipaddress.ip_address(clean_ip))
+            peer_session_key = f"{clean_collector}:{norm_ip}"
+        except ValueError:
+            peer_session_key = f"{clean_collector}:{clean_ip}"
+    elif raw_metadata and (raw_metadata.get("peer_session") or raw_metadata.get("session_id")):
+        sid = str(raw_metadata.get("peer_session") or raw_metadata.get("session_id")).strip()
+        peer_session_key = f"{clean_collector}:session:{sid}"
+    elif clean_peer_as and str(scenario or "").lower() != "ripe-ris-live":
+        # Explicitly identified synthetic/manual test peer session (documented per WP-02)
+        peer_session_key = f"{clean_collector}:as:{clean_peer_as}"
+
+    return peer_session_key, clean_peer_as, clean_collector
+
+
 def process_observation(
     db_path: str,
     prefix_raw: str,
@@ -84,7 +128,13 @@ def process_observation(
         peer_as = peer_as or str(raw_metadata.get("peer_as") or "") or None
         peer_ip = peer_ip or str(raw_metadata.get("peer_ip") or "") or None
 
-    peer_key = f"{collector}:{peer_as or 'peer'}"
+    peer_session_key, clean_peer_as, clean_collector = derive_peer_session(
+        collector=collector,
+        peer_ip=peer_ip,
+        peer_as=peer_as,
+        raw_metadata=raw_metadata,
+        scenario=scenario,
+    )
 
     current_net = ipaddress.ip_network(norm_prefix, strict=False)
     metadata_json = json.dumps(raw_metadata or {}, sort_keys=True)
@@ -100,25 +150,59 @@ def process_observation(
                 "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
                 "COALESCE(status, 'PROMOTED') as status, "
                 "COALESCE(distinct_peers, '[]') as distinct_peers, "
-                "COALESCE(peer_count, 1) as peer_count FROM baselines;"
+                "COALESCE(peer_count, 1) as peer_count, "
+                "COALESCE(distinct_peer_asns, '[]') as distinct_peer_asns, "
+                "COALESCE(peer_asn_count, 0) as peer_asn_count, "
+                "COALESCE(distinct_collectors, '[]') as distinct_collectors, "
+                "COALESCE(collector_count, 0) as collector_count "
+                "FROM baselines;"
             ).fetchall()
         ]
 
         baseline_map = {b["prefix"]: b for b in all_baselines}
         existing_baseline = baseline_map.get(norm_prefix)
 
-        # Multi-source Peer & Collector Corroboration Query
-        corroboration = conn.execute(
-            "SELECT COUNT(DISTINCT collector) as collector_count, "
-            "COUNT(DISTINCT COALESCE(peer_as, collector)) as peer_count, "
-            "COUNT(*) as total_obs "
+        # Multi-source Peer & Collector Corroboration Query (WP-02: True Set-based Distinct Counting)
+        prior_obs = conn.execute(
+            "SELECT collector, peer_as, peer_ip, peer_session, "
+            "COALESCE(raw_metadata, '{}') as raw_metadata "
             "FROM observations WHERE prefix = ? AND origin_asn = ?;",
             (norm_prefix, norm_asn),
-        ).fetchone()
-        distinct_peers_prior = corroboration["peer_count"] if corroboration else 0
-        collector_count = (corroboration["collector_count"] if corroboration else 0) + 1
-        distinct_peer_count = max(distinct_peers_prior + 1, 1)
-        total_prev_obs = corroboration["total_obs"] if corroboration else 0
+        ).fetchall()
+
+        seen_collectors = set()
+        seen_peer_asns = set()
+        seen_sessions = set()
+
+        for r in prior_obs:
+            c = str(r["collector"] or "").strip()
+            if c:
+                seen_collectors.add(c)
+            p_as = str(r["peer_as"] or "").strip().upper().replace("AS", "")
+            if p_as.isdigit():
+                seen_peer_asns.add(f"AS{p_as}")
+            s_key = r["peer_session"]
+            if not s_key:
+                try:
+                    rm = json.loads(r["raw_metadata"]) if isinstance(r["raw_metadata"], str) else {}
+                except Exception:
+                    rm = {}
+                s_key, _, _ = derive_peer_session(c, r["peer_ip"], r["peer_as"], rm, scenario)
+            if s_key:
+                seen_sessions.add(s_key)
+
+        if clean_collector:
+            seen_collectors.add(clean_collector)
+        if clean_peer_as:
+            seen_peer_asns.add(clean_peer_as)
+        if peer_session_key:
+            seen_sessions.add(peer_session_key)
+
+        distinct_collector_count = len(seen_collectors)
+        distinct_peer_asn_count = len(seen_peer_asns)
+        distinct_session_count = len(seen_sessions)
+        total_prev_obs = len(prior_obs)
+        distinct_peer_count = max(distinct_session_count, 1)
 
         # A. Check Subprefix Anomaly
         # Look for existing tracked prefixes that are strict parents of this prefix
@@ -135,16 +219,23 @@ def process_observation(
             severity = "HIGH" if parent_asn != norm_asn else "MEDIUM"
             title = f"More-Specific Prefix Anomaly: {norm_prefix} (Parent: {parent_prefix})"
             
-            # Confidence & Uncertainty Assessment
+            # Confidence & Uncertainty Assessment (WP-02: Precise language without overclaiming)
             if parent_asn == norm_asn:
                 confidence = "MEDIUM"
                 uncertainty_reason = "Same-origin more-specific route. Likely operational traffic engineering or load balancing deaggregation."
-            elif distinct_peer_count >= 2 or collector_count >= 2:
+            elif distinct_session_count >= 2 or distinct_collector_count >= 2:
                 confidence = "HIGH"
-                uncertainty_reason = f"Corroborated across {distinct_peer_count} distinct BGP peers/sources. Widespread global propagation observed."
+                uncertainty_reason = (
+                    f"Corroborated across {distinct_session_count} distinct peer session(s) "
+                    f"and {distinct_collector_count} collector vantage point(s) (peer ASNs: {distinct_peer_asn_count})."
+                )
             else:
                 confidence = "MEDIUM"
-                uncertainty_reason = f"Single-peer observation from AS{peer_as or 'unknown'}. Awaiting broader peer corroboration."
+                uncertainty_reason = (
+                    f"Single-source observation (session: {peer_session_key or 'unidentified'}, "
+                    f"peer ASN: {clean_peer_as or 'unknown'}, collector: {clean_collector}). "
+                    f"Awaiting broader peer session corroboration."
+                )
 
             explanation = (
                 f"Observed announcement of more-specific prefix '{norm_prefix}' originating from {norm_asn}. "
@@ -165,7 +256,7 @@ def process_observation(
                 severity=severity,
                 explanation=explanation,
                 timestamp=norm_time,
-                collector=collector,
+                collector=clean_collector,
                 scenario=scenario,
                 context={
                     "parent_prefix": parent_prefix,
@@ -175,7 +266,9 @@ def process_observation(
                     "parent_prefix_len": ipaddress.ip_network(parent_prefix).prefixlen,
                     "all_enclosing_parents": [p["prefix"] for p in parents],
                     "evidence_correlation": {
-                        "source_agreement_collectors": collector_count,
+                        "source_agreement_collectors": distinct_collector_count,
+                        "distinct_peer_sessions": distinct_session_count,
+                        "distinct_peer_asns": distinct_peer_asn_count,
                         "prior_observations_count": total_prev_obs,
                         "confidence_assessment": confidence,
                         "uncertainty_reason": uncertainty_reason,
@@ -198,11 +291,14 @@ def process_observation(
                 "status": "ACTIVE",
                 "confidence": confidence,
                 "uncertainty_reason": uncertainty_reason,
-                "collector": collector,
+                "collector": clean_collector,
                 "scenario": scenario,
-                "active_peers": [peer_as] if peer_as else [],
+                "active_peers": [clean_peer_as] if clean_peer_as else [],
                 "withdrawn_peers": [],
                 "recovery_status": "UNCONFIRMED",
+                "peer_session_count": distinct_session_count,
+                "peer_asn_count": distinct_peer_asn_count,
+                "collector_count": distinct_collector_count,
                 "evidence": {
                     "id": evidence_id,
                     "record": ev_record,
@@ -240,12 +336,21 @@ def process_observation(
             # Untrusted observations are always quarantined as CANDIDATE.
             is_explicit_seed = bool(authorized_seed)
             init_status = "PROMOTED" if is_explicit_seed else "CANDIDATE"
-            peer_list = [peer_key]
+            session_list = [peer_session_key] if peer_session_key else []
+            asn_list = [clean_peer_as] if clean_peer_as else []
+            collector_list = [clean_collector] if clean_collector else []
 
             conn.execute(
-                "INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, status, distinct_peers, peer_count, updated_at) "
-                "VALUES (?, ?, ?, ?, 1, ?, ?, 1, ?);",
-                (norm_prefix, norm_asn, norm_time, norm_time, init_status, json.dumps(peer_list), now_utc),
+                "INSERT INTO baselines (prefix, origin_asn, first_seen, last_seen, observation_count, "
+                "status, distinct_peers, peer_count, distinct_peer_asns, peer_asn_count, distinct_collectors, collector_count, updated_at) "
+                "VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?);",
+                (
+                    norm_prefix, norm_asn, norm_time, norm_time, init_status,
+                    json.dumps(session_list), len(session_list),
+                    json.dumps(asn_list), len(asn_list),
+                    json.dumps(collector_list), len(collector_list),
+                    now_utc,
+                ),
             )
 
             history_transitions.append({
@@ -259,7 +364,7 @@ def process_observation(
                     if is_explicit_seed
                     else "Discovered from observation; quarantined as candidate pending multi-peer corroboration."
                 ),
-                "peer_count": 1,
+                "peer_count": len(session_list),
                 "observation_count": 1,
             })
         else:
@@ -270,16 +375,32 @@ def process_observation(
                 # Same origin: update last seen & count; promote candidate only if peer diversity threshold reached
                 new_count = existing_baseline["observation_count"] + 1
                 try:
-                    peer_list = json.loads(existing_baseline.get("distinct_peers") or "[]")
+                    session_list = json.loads(existing_baseline.get("distinct_peers") or "[]")
                 except Exception:
-                    peer_list = []
-                if peer_key not in peer_list:
-                    peer_list.append(peer_key)
-                current_peer_count = len(peer_list)
+                    session_list = []
+                if peer_session_key and peer_session_key not in session_list:
+                    session_list.append(peer_session_key)
+                current_peer_count = len(session_list)
 
-                # Robust Peer-Diversity Promotion Invariant:
-                # Requires at least 2 distinct peer/collector sources AND >= 3 observations.
-                # Crucial check: Repeated announcements from a single flapping peer (peer_count == 1) remain CANDIDATE!
+                try:
+                    asn_list = json.loads(existing_baseline.get("distinct_peer_asns") or "[]")
+                except Exception:
+                    asn_list = []
+                if clean_peer_as and clean_peer_as not in asn_list:
+                    asn_list.append(clean_peer_as)
+                current_asn_count = len(asn_list)
+
+                try:
+                    col_list = json.loads(existing_baseline.get("distinct_collectors") or "[]")
+                except Exception:
+                    col_list = []
+                if clean_collector and clean_collector not in col_list:
+                    col_list.append(clean_collector)
+                current_col_count = len(col_list)
+
+                # Robust Peer-Diversity Promotion Invariant (WP-02):
+                # Requires at least 2 distinct peer sessions AND >= 3 observations.
+                # Repeated announcements from a single flapping session remain CANDIDATE!
                 PROMOTION_PEER_THRESHOLD = 2
                 PROMOTION_OBS_THRESHOLD = 3
                 if current_status == "PROMOTED":
@@ -293,7 +414,7 @@ def process_observation(
                         "new_status": "PROMOTED",
                         "transition_type": "PROMOTED_CORROBORATED",
                         "reason": (
-                            f"Corroborated across {current_peer_count} distinct peers and {new_count} observations; "
+                            f"Corroborated across {current_peer_count} distinct peer session(s) and {new_count} observations; "
                             f"promoted candidate to trusted baseline."
                         ),
                         "peer_count": current_peer_count,
@@ -303,9 +424,18 @@ def process_observation(
                     new_status = "CANDIDATE"
 
                 conn.execute(
-                    "UPDATE baselines SET last_seen = ?, observation_count = ?, status = ?, distinct_peers = ?, peer_count = ?, updated_at = ? "
-                    "WHERE prefix = ?;",
-                    (norm_time, new_count, new_status, json.dumps(peer_list), current_peer_count, now_utc, norm_prefix),
+                    "UPDATE baselines SET last_seen = ?, observation_count = ?, status = ?, "
+                    "distinct_peers = ?, peer_count = ?, "
+                    "distinct_peer_asns = ?, peer_asn_count = ?, "
+                    "distinct_collectors = ?, collector_count = ?, "
+                    "updated_at = ? WHERE prefix = ?;",
+                    (
+                        norm_time, new_count, new_status,
+                        json.dumps(session_list), current_peer_count,
+                        json.dumps(asn_list), current_asn_count,
+                        json.dumps(col_list), current_col_count,
+                        now_utc, norm_prefix,
+                    ),
                 )
             else:
                 # Changed origin: DO NOT silently overwrite baseline. Generate alert!
@@ -319,12 +449,19 @@ def process_observation(
                 if is_migration:
                     confidence = "MEDIUM"
                     uncertainty_reason = "Flagged with migration tag; scheduled operator maintenance."
-                elif distinct_peer_count >= 2 or collector_count >= 2 or existing_baseline["observation_count"] >= 5:
+                elif distinct_session_count >= 2 or distinct_collector_count >= 2 or existing_baseline["observation_count"] >= 5:
                     confidence = "HIGH"
-                    uncertainty_reason = f"Corroborated conflict across {distinct_peer_count} distinct BGP peers against established baseline."
+                    uncertainty_reason = (
+                        f"Corroborated conflict across {distinct_session_count} distinct peer session(s) "
+                        f"and {distinct_collector_count} collector(s) against established baseline."
+                    )
                 else:
                     confidence = "MEDIUM"
-                    uncertainty_reason = f"Single-peer observation from AS{peer_as or 'unknown'}. Corroborating across additional peers in progress."
+                    uncertainty_reason = (
+                        f"Single-source observation (session: {peer_session_key or 'unidentified'}, "
+                        f"peer ASN: {clean_peer_as or 'unknown'}, collector: {clean_collector}). "
+                        f"Awaiting broader peer session corroboration."
+                    )
 
                 title = f"Origin ASN Conflict Detected for {norm_prefix}"
                 explanation = (
@@ -345,7 +482,7 @@ def process_observation(
                     severity=severity,
                     explanation=explanation,
                     timestamp=norm_time,
-                    collector=collector,
+                    collector=clean_collector,
                     scenario=scenario,
                     context={
                         "baseline_first_seen": existing_baseline["first_seen"],
@@ -353,7 +490,9 @@ def process_observation(
                         "baseline_observation_count": existing_baseline["observation_count"],
                         "baseline_status": current_status,
                         "evidence_correlation": {
-                            "source_agreement_collectors": collector_count,
+                            "source_agreement_collectors": distinct_collector_count,
+                            "distinct_peer_sessions": distinct_session_count,
+                            "distinct_peer_asns": distinct_peer_asn_count,
                             "prior_observations_count": total_prev_obs,
                             "confidence_assessment": confidence,
                             "uncertainty_reason": uncertainty_reason,
@@ -376,11 +515,14 @@ def process_observation(
                     "status": "ACTIVE",
                     "confidence": confidence,
                     "uncertainty_reason": uncertainty_reason,
-                    "collector": collector,
+                    "collector": clean_collector,
                     "scenario": scenario,
-                    "active_peers": [peer_as] if peer_as else [],
+                    "active_peers": [clean_peer_as] if clean_peer_as else [],
                     "withdrawn_peers": [],
                     "recovery_status": "UNCONFIRMED",
+                    "peer_session_count": distinct_session_count,
+                    "peer_asn_count": distinct_peer_asn_count,
+                    "collector_count": distinct_collector_count,
                     "evidence": {
                         "id": evidence_id,
                         "record": ev_record,
@@ -406,9 +548,9 @@ def process_observation(
 
         # C. Insert Observation Record
         cur = conn.execute(
-            "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, created_at) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
-            (norm_prefix, norm_asn, collector, norm_time, scenario, metadata_json, peer_as, peer_ip, now_utc),
+            "INSERT INTO observations (prefix, origin_asn, collector, observed_at, scenario, raw_metadata, peer_as, peer_ip, peer_session, created_at) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+            (norm_prefix, norm_asn, clean_collector, norm_time, scenario, metadata_json, peer_as, peer_ip, peer_session_key, now_utc),
         )
         obs_id = cur.lastrowid
 
@@ -433,8 +575,9 @@ def process_observation(
         for alert in generated_alerts:
             conn.execute(
                 "INSERT INTO alerts (id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
-                "parent_prefix, title, explanation, evidence_id, status, confidence, uncertainty_reason, collector, scenario, active_peers, withdrawn_peers, recovery_status) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                "parent_prefix, title, explanation, evidence_id, status, confidence, uncertainty_reason, collector, scenario, active_peers, withdrawn_peers, recovery_status, "
+                "peer_session_count, peer_asn_count, collector_count) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                 (
                     alert["id"],
                     alert["created_at"],
@@ -448,13 +591,16 @@ def process_observation(
                     alert["explanation"],
                     alert["evidence_id"],
                     alert["status"],
-                    alert.get("confidence", "HIGH"),
-                    alert.get("uncertainty_reason"),
+                    alert["confidence"],
+                    alert["uncertainty_reason"],
                     alert["collector"],
                     alert["scenario"],
                     json.dumps(alert.get("active_peers", [])),
                     json.dumps(alert.get("withdrawn_peers", [])),
                     alert.get("recovery_status", "UNCONFIRMED"),
+                    alert.get("peer_session_count", distinct_session_count),
+                    alert.get("peer_asn_count", distinct_peer_asn_count),
+                    alert.get("collector_count", distinct_collector_count),
                 ),
             )
 

@@ -64,6 +64,7 @@ def init_db(db_path: str) -> None:
                 raw_metadata TEXT,
                 peer_as TEXT,
                 peer_ip TEXT,
+                peer_session TEXT,
                 created_at TEXT NOT NULL
             );
 
@@ -76,6 +77,10 @@ def init_db(db_path: str) -> None:
                 status TEXT NOT NULL DEFAULT 'PROMOTED',
                 distinct_peers TEXT NOT NULL DEFAULT '[]',
                 peer_count INTEGER NOT NULL DEFAULT 1,
+                distinct_peer_asns TEXT NOT NULL DEFAULT '[]',
+                peer_asn_count INTEGER NOT NULL DEFAULT 0,
+                distinct_collectors TEXT NOT NULL DEFAULT '[]',
+                collector_count INTEGER NOT NULL DEFAULT 0,
                 updated_at TEXT NOT NULL
             );
 
@@ -98,7 +103,10 @@ def init_db(db_path: str) -> None:
                 scenario TEXT,
                 active_peers TEXT NOT NULL DEFAULT '[]',
                 withdrawn_peers TEXT NOT NULL DEFAULT '[]',
-                recovery_status TEXT NOT NULL DEFAULT 'UNCONFIRMED'
+                recovery_status TEXT NOT NULL DEFAULT 'UNCONFIRMED',
+                peer_session_count INTEGER DEFAULT 1,
+                peer_asn_count INTEGER DEFAULT 1,
+                collector_count INTEGER DEFAULT 1
             );
 
             CREATE TABLE IF NOT EXISTS evidence (
@@ -130,13 +138,15 @@ def init_db(db_path: str) -> None:
             );
 
             CREATE INDEX IF NOT EXISTS idx_obs_prefix_time ON observations (prefix, observed_at);
+            CREATE INDEX IF NOT EXISTS idx_obs_peer_session ON observations (peer_session);
+            CREATE INDEX IF NOT EXISTS idx_obs_collector ON observations (collector);
             CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts (created_at DESC);
             CREATE INDEX IF NOT EXISTS idx_alerts_kind ON alerts (kind);
             CREATE INDEX IF NOT EXISTS idx_evidence_alert ON evidence (alert_id);
             CREATE INDEX IF NOT EXISTS idx_baseline_history_prefix ON baseline_history (prefix, created_at DESC);
             """)
 
-            # Safe column additions for pre-existing databases
+            # Safe column additions for pre-existing databases (additive & idempotent)
             try:
                 conn.execute("ALTER TABLE baselines ADD COLUMN status TEXT NOT NULL DEFAULT 'PROMOTED';")
             except sqlite3.OperationalError:
@@ -150,11 +160,31 @@ def init_db(db_path: str) -> None:
             except sqlite3.OperationalError:
                 pass
             try:
+                conn.execute("ALTER TABLE baselines ADD COLUMN distinct_peer_asns TEXT NOT NULL DEFAULT '[]';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE baselines ADD COLUMN peer_asn_count INTEGER NOT NULL DEFAULT 0;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE baselines ADD COLUMN distinct_collectors TEXT NOT NULL DEFAULT '[]';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE baselines ADD COLUMN collector_count INTEGER NOT NULL DEFAULT 0;")
+            except sqlite3.OperationalError:
+                pass
+            try:
                 conn.execute("ALTER TABLE observations ADD COLUMN peer_as TEXT;")
             except sqlite3.OperationalError:
                 pass
             try:
                 conn.execute("ALTER TABLE observations ADD COLUMN peer_ip TEXT;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE observations ADD COLUMN peer_session TEXT;")
             except sqlite3.OperationalError:
                 pass
             try:
@@ -175,6 +205,20 @@ def init_db(db_path: str) -> None:
                 pass
             try:
                 conn.execute("ALTER TABLE alerts ADD COLUMN recovery_status TEXT NOT NULL DEFAULT 'UNCONFIRMED';")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN peer_session_count INTEGER DEFAULT 1;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN peer_asn_count INTEGER DEFAULT 1;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN collector_count INTEGER DEFAULT 1;")
+            except sqlite3.OperationalError:
+                pass
             except sqlite3.OperationalError:
                 pass
 
@@ -253,7 +297,7 @@ def list_observations(
             f"""
             SELECT 
                 o.id, o.prefix, o.origin_asn, o.collector, o.observed_at, o.scenario,
-                o.peer_as, o.peer_ip, o.created_at,
+                o.peer_as, o.peer_ip, o.peer_session, o.created_at,
                 b.origin_asn as baseline_asn, b.status as baseline_status,
                 a.id as alert_id, a.kind as alert_kind, a.status as alert_status, a.severity as alert_severity, a.evidence_id
             FROM observations o
@@ -270,14 +314,15 @@ def list_observations(
 
 
 def _parse_baseline_peers(baseline_dict: Dict[str, Any]) -> Dict[str, Any]:
-    val = baseline_dict.get("distinct_peers")
-    if isinstance(val, str):
-        try:
-            baseline_dict["distinct_peers"] = json.loads(val)
-        except Exception:
-            baseline_dict["distinct_peers"] = []
-    elif val is None:
-        baseline_dict["distinct_peers"] = []
+    for key in ("distinct_peers", "distinct_peer_asns", "distinct_collectors"):
+        val = baseline_dict.get(key)
+        if isinstance(val, str):
+            try:
+                baseline_dict[key] = json.loads(val)
+            except Exception:
+                baseline_dict[key] = []
+        elif val is None:
+            baseline_dict[key] = []
     return baseline_dict
 
 
@@ -301,7 +346,12 @@ def get_all_baselines(db_path: str) -> List[Dict[str, Any]]:
             "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
             "COALESCE(status, 'PROMOTED') as status, "
             "COALESCE(peer_count, 1) as peer_count, "
-            "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
+            "COALESCE(distinct_peers, '[]') as distinct_peers, "
+            "COALESCE(distinct_peer_asns, '[]') as distinct_peer_asns, "
+            "COALESCE(peer_asn_count, 0) as peer_asn_count, "
+            "COALESCE(distinct_collectors, '[]') as distinct_collectors, "
+            "COALESCE(collector_count, 0) as collector_count, "
+            "updated_at "
             "FROM baselines ORDER BY prefix ASC;"
         )
         return [_parse_baseline_peers(dict(row)) for row in cursor.fetchall()]
@@ -314,7 +364,12 @@ def get_baseline_by_prefix(db_path: str, prefix: str) -> Optional[Dict[str, Any]
             "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
             "COALESCE(status, 'PROMOTED') as status, "
             "COALESCE(peer_count, 1) as peer_count, "
-            "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
+            "COALESCE(distinct_peers, '[]') as distinct_peers, "
+            "COALESCE(distinct_peer_asns, '[]') as distinct_peer_asns, "
+            "COALESCE(peer_asn_count, 0) as peer_asn_count, "
+            "COALESCE(distinct_collectors, '[]') as distinct_collectors, "
+            "COALESCE(collector_count, 0) as collector_count, "
+            "updated_at "
             "FROM baselines WHERE prefix = ?;",
             (prefix,),
         ).fetchone()
@@ -339,7 +394,12 @@ def list_routes(
                 "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
                 "COALESCE(status, 'PROMOTED') as status, "
                 "COALESCE(peer_count, 1) as peer_count, "
-                "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
+                "COALESCE(distinct_peers, '[]') as distinct_peers, "
+                "COALESCE(distinct_peer_asns, '[]') as distinct_peer_asns, "
+                "COALESCE(peer_asn_count, 0) as peer_asn_count, "
+                "COALESCE(distinct_collectors, '[]') as distinct_collectors, "
+                "COALESCE(collector_count, 0) as collector_count, "
+                "updated_at "
                 "FROM baselines WHERE prefix LIKE ? OR origin_asn LIKE ? "
                 "ORDER BY last_seen DESC LIMIT ? OFFSET ?;",
                 (pattern, pattern, limit, offset),
@@ -350,7 +410,12 @@ def list_routes(
                 "SELECT prefix, origin_asn, first_seen, last_seen, observation_count, "
                 "COALESCE(status, 'PROMOTED') as status, "
                 "COALESCE(peer_count, 1) as peer_count, "
-                "COALESCE(distinct_peers, '[]') as distinct_peers, updated_at "
+                "COALESCE(distinct_peers, '[]') as distinct_peers, "
+                "COALESCE(distinct_peer_asns, '[]') as distinct_peer_asns, "
+                "COALESCE(peer_asn_count, 0) as peer_asn_count, "
+                "COALESCE(distinct_collectors, '[]') as distinct_collectors, "
+                "COALESCE(collector_count, 0) as collector_count, "
+                "updated_at "
                 "FROM baselines ORDER BY last_seen DESC LIMIT ? OFFSET ?;",
                 (limit, offset),
             )
