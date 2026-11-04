@@ -30,9 +30,11 @@ from horaq.database import (
     get_evidence_by_id,
     get_overview_counts,
     get_baseline_by_prefix,
+    get_incident_by_id,
     list_alerts,
     list_baseline_history,
     list_evidence,
+    list_incidents,
     list_observations,
     list_routes,
     reset_database,
@@ -297,6 +299,39 @@ async def get_alerts(
         "limit": limit,
         "offset": offset,
     }
+
+
+@router.get("/incidents")
+async def get_incidents(
+    limit: int = Query(50, ge=1, le=500),
+    offset: int = Query(0, ge=0),
+    status: Optional[str] = Query(None),
+) -> Dict[str, Any]:
+    """Retrieve grouped anomaly incidents with lifecycle classifications (WP-05)."""
+    items, total = list_incidents(
+        settings.database_path,
+        limit=limit,
+        offset=offset,
+        status=status,
+    )
+    return {
+        "items": items,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+    }
+
+
+@router.get("/incidents/{incident_id}")
+async def get_incident_detail(incident_id: str) -> Dict[str, Any]:
+    """Get complete incident details and linked alerts timeline (WP-05)."""
+    incident = get_incident_by_id(settings.database_path, incident_id)
+    if not incident:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Incident '{incident_id}' not found.",
+        )
+    return incident
 
 
 @router.get("/alerts/{alert_id}")

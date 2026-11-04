@@ -10,6 +10,7 @@ Adheres to Document 09:
 import json
 import os
 import sqlite3
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Dict, Generator, List, Optional, Tuple
@@ -137,6 +138,31 @@ def init_db(db_path: str) -> None:
                 created_at TEXT NOT NULL
             );
 
+            CREATE TABLE IF NOT EXISTS incidents (
+                id TEXT PRIMARY KEY,
+                correlation_key TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                prefix TEXT NOT NULL,
+                observed_asn TEXT NOT NULL,
+                baseline_asn TEXT,
+                parent_prefix TEXT,
+                rule_name TEXT NOT NULL,
+                rule_version TEXT NOT NULL DEFAULT '2.0.0',
+                first_seen TEXT NOT NULL,
+                last_seen TEXT NOT NULL,
+                event_count INTEGER NOT NULL DEFAULT 1,
+                recurrence_count INTEGER NOT NULL DEFAULT 0,
+                lifecycle_classification TEXT NOT NULL DEFAULT 'TRANSIENT',
+                status TEXT NOT NULL DEFAULT 'ACTIVE',
+                recovery_status TEXT NOT NULL DEFAULT 'UNCONFIRMED',
+                associated_peer_sessions TEXT NOT NULL DEFAULT '[]',
+                source_collectors TEXT NOT NULL DEFAULT '[]',
+                latest_alert_id TEXT,
+                latest_evidence_id TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
             CREATE INDEX IF NOT EXISTS idx_obs_prefix_time ON observations (prefix, observed_at);
             CREATE INDEX IF NOT EXISTS idx_obs_peer_session ON observations (peer_session);
             CREATE INDEX IF NOT EXISTS idx_obs_collector ON observations (collector);
@@ -144,9 +170,19 @@ def init_db(db_path: str) -> None:
             CREATE INDEX IF NOT EXISTS idx_alerts_kind ON alerts (kind);
             CREATE INDEX IF NOT EXISTS idx_evidence_alert ON evidence (alert_id);
             CREATE INDEX IF NOT EXISTS idx_baseline_history_prefix ON baseline_history (prefix, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_incidents_key ON incidents (correlation_key);
+            CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents (status);
             """)
 
             # Safe column additions for pre-existing databases (additive & idempotent)
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN incident_id TEXT;")
+            except sqlite3.OperationalError:
+                pass
+            try:
+                conn.execute("ALTER TABLE alerts ADD COLUMN lifecycle_classification TEXT NOT NULL DEFAULT 'TRANSIENT';")
+            except sqlite3.OperationalError:
+                pass
             try:
                 conn.execute("ALTER TABLE baselines ADD COLUMN status TEXT NOT NULL DEFAULT 'PROMOTED';")
             except sqlite3.OperationalError:
@@ -219,14 +255,13 @@ def init_db(db_path: str) -> None:
                 conn.execute("ALTER TABLE alerts ADD COLUMN collector_count INTEGER DEFAULT 1;")
             except sqlite3.OperationalError:
                 pass
-            except sqlite3.OperationalError:
-                pass
 
 
 def reset_database(db_path: str) -> None:
     """Clear all tables in the database (used for fresh test runs and reset scenario)."""
     with db_session(db_path) as conn:
         with conn:
+            conn.execute("DELETE FROM incidents;")
             conn.execute("DELETE FROM evidence;")
             conn.execute("DELETE FROM alerts;")
             conn.execute("DELETE FROM observations;")
@@ -252,6 +287,8 @@ def get_overview_counts(db_path: str) -> Dict[str, Any]:
         signed_evidence = conn.execute(
             "SELECT COUNT(*) FROM evidence WHERE signer_status = 'SIGNED';"
         ).fetchone()[0]
+        total_incidents = conn.execute("SELECT COUNT(*) FROM incidents;").fetchone()[0]
+        active_incidents = conn.execute("SELECT COUNT(*) FROM incidents WHERE status = 'ACTIVE';").fetchone()[0]
         
         latest_row = conn.execute(
             "SELECT observed_at, collector FROM observations ORDER BY id DESC LIMIT 1;"
@@ -267,6 +304,8 @@ def get_overview_counts(db_path: str) -> Dict[str, Any]:
         "resolved_alerts": resolved_alerts,
         "acknowledged_alerts": acknowledged_alerts,
         "unresolved_alerts": active_alerts + acknowledged_alerts,
+        "total_incidents": total_incidents,
+        "active_incidents": active_incidents,
         "total_evidence": evidence_count,
         "signed_evidence": signed_evidence,
         "latest_observation_time": latest_time,
@@ -450,6 +489,7 @@ def list_alerts(
         cursor = conn.execute(
             f"SELECT id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
             f"parent_prefix, title, explanation, evidence_id, status, collector, scenario, "
+            f"incident_id, COALESCE(lifecycle_classification, 'TRANSIENT') as lifecycle_classification, "
             f"COALESCE(confidence, 'HIGH') as confidence, uncertainty_reason, "
             f"COALESCE(active_peers, '[]') as active_peers, "
             f"COALESCE(withdrawn_peers, '[]') as withdrawn_peers, "
@@ -467,6 +507,7 @@ def get_alert_by_id(db_path: str, alert_id: str) -> Optional[Dict[str, Any]]:
         row = conn.execute(
             "SELECT id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
             "parent_prefix, title, explanation, evidence_id, status, collector, scenario, "
+            "incident_id, COALESCE(lifecycle_classification, 'TRANSIENT') as lifecycle_classification, "
             "COALESCE(confidence, 'HIGH') as confidence, uncertainty_reason, "
             "COALESCE(active_peers, '[]') as active_peers, "
             "COALESCE(withdrawn_peers, '[]') as withdrawn_peers, "
@@ -689,5 +730,259 @@ def list_baseline_history(
                 (limit, offset),
             ).fetchall()
         return [dict(r) for r in rows], total
+
+
+def derive_incident_correlation_key(
+    kind: str,
+    prefix: str,
+    observed_asn: Any,
+    baseline_asn: Optional[Any] = None,
+    parent_prefix: Optional[str] = None,
+    rule_version: str = "2.0.0",
+) -> str:
+    """Stable incident correlation key defined strictly by conflict facts (WP-05)."""
+    norm_pfx = prefix.strip() if prefix else ""
+    obs_asn = str(observed_asn).strip().upper() if observed_asn is not None else ""
+    base_asn = str(baseline_asn).strip().upper() if baseline_asn is not None else ""
+    p_pfx = parent_prefix.strip() if parent_prefix else ""
+    return f"{kind}:{norm_pfx}:{obs_asn}:{base_asn}:{p_pfx}:{rule_version}"
+
+
+def _parse_iso_or_epoch(val: Any) -> datetime:
+    """Helper to parse datetime from ISO string or Unix timestamp number/string."""
+    if isinstance(val, (int, float)):
+        return datetime.fromtimestamp(val, tz=timezone.utc)
+    if isinstance(val, str):
+        val = val.strip()
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                flt = float(val)
+                return datetime.fromtimestamp(flt, tz=timezone.utc)
+            except ValueError:
+                pass
+    return datetime.now(timezone.utc)
+
+
+def record_or_update_incident(
+    conn: sqlite3.Connection,
+    alert: Dict[str, Any],
+    correlation_window_sec: int = 3600,
+) -> Tuple[str, str]:
+    """Group duplicate or continuous alert events into a logical incident without overwriting evidence (WP-05).
+
+    Returns: (incident_id, lifecycle_classification)
+    """
+    kind = alert.get("kind", "UNKNOWN")
+    prefix = alert.get("prefix", "")
+    observed_asn = alert.get("observed_asn")
+    baseline_asn = alert.get("baseline_asn")
+    parent_prefix = alert.get("parent_prefix")
+    rule_version = "2.0.0"
+
+    corr_key = derive_incident_correlation_key(
+        kind=kind,
+        prefix=prefix,
+        observed_asn=observed_asn,
+        baseline_asn=baseline_asn,
+        parent_prefix=parent_prefix,
+        rule_version=rule_version,
+    )
+
+    alert_time_raw = alert.get("observed_at") or alert.get("created_at")
+    alert_dt = _parse_iso_or_epoch(alert_time_raw)
+    alert_time_str = alert_dt.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+    now_utc = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+    peer_session = alert.get("peer_session")
+    collector = alert.get("collector")
+
+    # Find the latest incident for this correlation key
+    cur = conn.execute(
+        "SELECT id, first_seen, last_seen, event_count, recurrence_count, "
+        "lifecycle_classification, status, recovery_status, "
+        "associated_peer_sessions, source_collectors "
+        "FROM incidents WHERE correlation_key = ? "
+        "ORDER BY created_at DESC LIMIT 1;",
+        (corr_key,),
+    )
+    existing = cur.fetchone()
+
+    if existing and existing["status"] == "ACTIVE":
+        last_seen_dt = _parse_iso_or_epoch(existing["last_seen"])
+        delta_sec = abs((alert_dt - last_seen_dt).total_seconds())
+
+        if delta_sec <= correlation_window_sec:
+            # Continue the existing incident within correlation window
+            inc_id = existing["id"]
+            first_seen_dt = _parse_iso_or_epoch(existing["first_seen"])
+            total_duration_sec = (alert_dt - first_seen_dt).total_seconds()
+            new_event_count = existing["event_count"] + 1
+
+            if existing["recurrence_count"] > 0:
+                lifecycle = "RECURRENT"
+            elif total_duration_sec >= 300 or new_event_count >= 5:
+                lifecycle = "PERSISTENT"
+            else:
+                lifecycle = "TRANSIENT"
+
+            try:
+                peers = set(json.loads(existing["associated_peer_sessions"] or "[]"))
+            except Exception:
+                peers = set()
+            if peer_session:
+                peers.add(peer_session)
+
+            try:
+                collectors = set(json.loads(existing["source_collectors"] or "[]"))
+            except Exception:
+                collectors = set()
+            if collector:
+                collectors.add(collector)
+
+            conn.execute(
+                "UPDATE incidents SET "
+                "last_seen = ?, "
+                "event_count = ?, "
+                "lifecycle_classification = ?, "
+                "associated_peer_sessions = ?, "
+                "source_collectors = ?, "
+                "latest_alert_id = ?, "
+                "latest_evidence_id = ?, "
+                "updated_at = ? "
+                "WHERE id = ?;",
+                (
+                    alert_time_str,
+                    new_event_count,
+                    lifecycle,
+                    json.dumps(sorted(list(peers))),
+                    json.dumps(sorted(list(collectors))),
+                    alert.get("id"),
+                    alert.get("evidence_id"),
+                    now_utc,
+                    inc_id,
+                ),
+            )
+            return inc_id, lifecycle
+
+    # New incident instance (first time, after resolution, or outside correlation window)
+    new_inc_id = str(uuid.uuid4())
+    prev_recurrence = existing["recurrence_count"] if existing else 0
+    recurrence_count = prev_recurrence + 1 if existing else 0
+    lifecycle = "RECURRENT" if recurrence_count > 0 else "TRANSIENT"
+
+    initial_peers = [peer_session] if peer_session else []
+    initial_collectors = [collector] if collector else []
+
+    conn.execute(
+        "INSERT INTO incidents ("
+        "id, correlation_key, kind, prefix, observed_asn, baseline_asn, parent_prefix, "
+        "rule_name, rule_version, first_seen, last_seen, event_count, recurrence_count, "
+        "lifecycle_classification, status, recovery_status, associated_peer_sessions, "
+        "source_collectors, latest_alert_id, latest_evidence_id, created_at, updated_at"
+        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+        (
+            new_inc_id,
+            corr_key,
+            kind,
+            prefix,
+            str(observed_asn) if observed_asn is not None else "",
+            str(baseline_asn) if baseline_asn is not None else None,
+            parent_prefix,
+            alert.get("title", kind),
+            rule_version,
+            alert_time_str,
+            alert_time_str,
+            1,
+            recurrence_count,
+            lifecycle,
+            "ACTIVE",
+            "UNCONFIRMED",
+            json.dumps(initial_peers),
+            json.dumps(initial_collectors),
+            alert.get("id"),
+            alert.get("evidence_id"),
+            now_utc,
+            now_utc,
+        ),
+    )
+    return new_inc_id, lifecycle
+
+
+def list_incidents(
+    db_path: str,
+    limit: int = 50,
+    offset: int = 0,
+    status: Optional[str] = None,
+) -> Tuple[List[Dict[str, Any]], int]:
+    """List grouped incidents with pagination and filtering."""
+    with db_session(db_path) as conn:
+        clauses = []
+        params: List[Any] = []
+        if status:
+            clauses.append("status = ?")
+            params.append(status.upper())
+        where_sql = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+
+        count = conn.execute(f"SELECT COUNT(*) FROM incidents {where_sql};", params).fetchone()[0]
+
+        cursor = conn.execute(
+            f"SELECT id, correlation_key, kind, prefix, observed_asn, baseline_asn, "
+            f"parent_prefix, rule_name, rule_version, first_seen, last_seen, "
+            f"event_count, recurrence_count, lifecycle_classification, status, "
+            f"recovery_status, associated_peer_sessions, source_collectors, "
+            f"latest_alert_id, latest_evidence_id, created_at, updated_at "
+            f"FROM incidents {where_sql} ORDER BY last_seen DESC LIMIT ? OFFSET ?;",
+            params + [limit, offset],
+        )
+        incidents = []
+        for row in cursor.fetchall():
+            inc = dict(row)
+            try:
+                inc["associated_peer_sessions"] = json.loads(inc.get("associated_peer_sessions") or "[]")
+            except Exception:
+                inc["associated_peer_sessions"] = []
+            try:
+                inc["source_collectors"] = json.loads(inc.get("source_collectors") or "[]")
+            except Exception:
+                inc["source_collectors"] = []
+            incidents.append(inc)
+        return incidents, count
+
+
+def get_incident_by_id(db_path: str, incident_id: str) -> Optional[Dict[str, Any]]:
+    """Get single incident by ID including all linked alerts."""
+    with db_session(db_path) as conn:
+        row = conn.execute(
+            "SELECT id, correlation_key, kind, prefix, observed_asn, baseline_asn, "
+            "parent_prefix, rule_name, rule_version, first_seen, last_seen, "
+            "event_count, recurrence_count, lifecycle_classification, status, "
+            "recovery_status, associated_peer_sessions, source_collectors, "
+            "latest_alert_id, latest_evidence_id, created_at, updated_at "
+            "FROM incidents WHERE id = ?;",
+            (incident_id,),
+        ).fetchone()
+        if not row:
+            return None
+        inc = dict(row)
+        try:
+            inc["associated_peer_sessions"] = json.loads(inc.get("associated_peer_sessions") or "[]")
+        except Exception:
+            inc["associated_peer_sessions"] = []
+        try:
+            inc["source_collectors"] = json.loads(inc.get("source_collectors") or "[]")
+        except Exception:
+            inc["source_collectors"] = []
+
+        alert_rows = conn.execute(
+            "SELECT id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
+            "title, status, recovery_status, evidence_id, confidence, uncertainty_reason "
+            "FROM alerts WHERE incident_id = ? ORDER BY created_at ASC;",
+            (incident_id,),
+        ).fetchall()
+        inc["alerts"] = [dict(a) for a in alert_rows]
+        return inc
+
 
 

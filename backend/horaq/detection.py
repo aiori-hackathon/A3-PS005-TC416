@@ -13,7 +13,12 @@ import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Tuple
 
-from horaq.database import db_session, get_all_baselines, record_baseline_transition
+from horaq.database import (
+    db_session,
+    get_all_baselines,
+    record_baseline_transition,
+    record_or_update_incident,
+)
 from horaq.evidence import canonicalize_json, create_evidence_payload
 from horaq.normalization import normalize_asn, normalize_prefix, normalize_timestamp
 
@@ -597,11 +602,16 @@ def process_observation(
 
         # D. Insert Alerts and Evidence Records
         for alert in generated_alerts:
+            # Group into logical incident (WP-05)
+            incident_id, lifecycle_class = record_or_update_incident(conn, alert)
+            alert["incident_id"] = incident_id
+            alert["lifecycle_classification"] = lifecycle_class
+
             conn.execute(
                 "INSERT INTO alerts (id, created_at, severity, kind, prefix, observed_asn, baseline_asn, "
                 "parent_prefix, title, explanation, evidence_id, status, confidence, uncertainty_reason, collector, scenario, active_peers, withdrawn_peers, recovery_status, "
-                "peer_session_count, peer_asn_count, collector_count) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                "peer_session_count, peer_asn_count, collector_count, incident_id, lifecycle_classification) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
                 (
                     alert["id"],
                     alert["created_at"],
@@ -625,6 +635,8 @@ def process_observation(
                     alert.get("peer_session_count", distinct_session_count),
                     alert.get("peer_asn_count", distinct_peer_asn_count),
                     alert.get("collector_count", distinct_collector_count),
+                    incident_id,
+                    lifecycle_class,
                 ),
             )
 
@@ -708,7 +720,7 @@ def process_withdrawal(
 
         # 2. Check active alerts on this prefix (Per-Peer Recovery Tracking)
         active_alerts = conn.execute(
-            "SELECT id, title, kind, prefix, observed_asn, baseline_asn, "
+            "SELECT id, incident_id, title, kind, prefix, observed_asn, baseline_asn, "
             "COALESCE(active_peers, '[]') as active_peers, "
             "COALESCE(withdrawn_peers, '[]') as withdrawn_peers, "
             "status, recovery_status "
@@ -761,6 +773,11 @@ def process_withdrawal(
                         "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
                         (json.dumps(act_peers), json.dumps(wdr_peers), recovery_note, alt_id),
                     )
+                    if alt["incident_id"]:
+                        conn.execute(
+                            "UPDATE incidents SET status = 'RESOLVED', recovery_status = 'CONFIRMED', updated_at = ? WHERE id = ?;",
+                            (now_utc, alt["incident_id"]),
+                        )
                     resolved_alerts.append({
                         "alert_id": alt_id,
                         "prefix": norm_prefix,
@@ -781,6 +798,11 @@ def process_withdrawal(
                         "active_peers = ?, withdrawn_peers = ?, explanation = explanation || ? WHERE id = ?;",
                         (json.dumps(act_peers), json.dumps(wdr_peers), partial_note, alt_id),
                     )
+                    if alt["incident_id"]:
+                        conn.execute(
+                            "UPDATE incidents SET recovery_status = 'PARTIAL', updated_at = ? WHERE id = ?;",
+                            (now_utc, alt["incident_id"]),
+                        )
                     unresolved_alerts.append({
                         "alert_id": alt_id,
                         "prefix": norm_prefix,
