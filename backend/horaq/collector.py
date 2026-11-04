@@ -53,6 +53,30 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
     - msg['data']['withdrawals']: list of string prefixes
     """
     msg_type = msg.get("type")
+    data = msg.get("data", {})
+
+    # Recognize RIS peer-state notifications explicitly without confusing with route withdrawals (WP-06)
+    if msg_type in ("ris_peer_state", "ris_peer_down", "ris_peer_up") or (
+        msg_type == "ris_message" and isinstance(data, dict) and data.get("type") in ("STATE_CHANGE", "PEER_DOWN", "PEER_UP")
+    ):
+        peer_ip = str(data.get("peer") or "").strip() or None if isinstance(data, dict) else None
+        peer_as = str(data.get("peer_asn") or "").strip() or None if isinstance(data, dict) else None
+        host = str(data.get("host") or "ripe-ris-live").strip() if isinstance(data, dict) else "ripe-ris-live"
+        return {
+            "valid": False,
+            "is_peer_state_event": True,
+            "peer_state": (data.get("state") or data.get("type") or msg_type) if isinstance(data, dict) else msg_type,
+            "peer_as": peer_as,
+            "peer_ip": peer_ip,
+            "collector": host,
+            "announcements": [],
+            "withdrawals": [],
+            "withdrawal_records": [],
+            "as_set_handled": 0,
+            "as_set_skipped": 0,
+            "skipped_reason": f"Transport peer-state notification ({msg_type}); not a route withdrawal",
+        }
+
     if msg_type != "ris_message":
         return {
             "valid": False,
@@ -258,27 +282,92 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _parse_collector_time(val: Any) -> datetime:
+    if isinstance(val, (int, float)):
+        return datetime.fromtimestamp(val, tz=timezone.utc)
+    if isinstance(val, str):
+        val = val.strip()
+        try:
+            return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                return datetime.fromtimestamp(float(val), tz=timezone.utc)
+            except ValueError:
+                pass
+    return datetime.now(timezone.utc)
+
+
+def compute_collector_health_state(
+    status: Dict[str, Any],
+    current_time: Optional[datetime] = None,
+    heartbeat_timeout_sec: int = 60,
+    stale_timeout_sec: int = 300,
+) -> str:
+    """Compute truthful operational monitoring state without confusing silence with route withdrawal.
+
+    Distinct states (WP-06):
+    - CONNECTED: Transport is connected and recent updates have been received.
+    - CONNECTED_NO_RECENT_UPDATES: Transport is alive, but no new BGP updates have arrived within heartbeat window.
+    - DISCONNECTED: Transport is not connected.
+    - STALE_OR_UNKNOWN: Health cannot be confirmed or collector disabled.
+    """
+    if not status.get("enabled"):
+        return "DISCONNECTED"
+    if not status.get("running") or not status.get("connected"):
+        return "DISCONNECTED"
+
+    now = current_time or datetime.now(timezone.utc)
+    last_update_str = status.get("last_parsed_update_at")
+    last_msg_str = status.get("last_transport_message_at") or status.get("last_message_at")
+
+    if not last_msg_str:
+        return "CONNECTED_NO_RECENT_UPDATES"
+
+    last_msg_dt = _parse_collector_time(last_msg_str)
+    if (now - last_msg_dt).total_seconds() > stale_timeout_sec:
+        return "STALE_OR_UNKNOWN"
+
+    if not last_update_str:
+        return "CONNECTED_NO_RECENT_UPDATES"
+
+    last_update_dt = _parse_collector_time(last_update_str)
+    delta_update = (now - last_update_dt).total_seconds()
+    if delta_update > heartbeat_timeout_sec:
+        return "CONNECTED_NO_RECENT_UPDATES"
+
+    return "CONNECTED"
+
+
 def get_collector_telemetry() -> Dict[str, Any]:
     """Return operational status and telemetry of the active live collector."""
     global _active_collector
     if _active_collector is not None:
         return _active_collector.get_status()
-    return {
+    st = {
         "enabled": settings.live_collector_enabled,
         "running": False,
         "connected": False,
+        "health_state": "DISCONNECTED",
         "url": settings.ris_url,
         "messages_received": 0,
         "messages_parsed": 0,
         "messages_skipped": 0,
         "withdrawals_received": 0,
+        "peer_state_events": 0,
         "as_set_handled": 0,
         "as_set_skipped": 0,
         "reconnect_count": 0,
         "last_message_at": None,
+        "last_transport_message_at": None,
+        "last_valid_ris_message_at": None,
+        "last_parsed_update_at": None,
+        "last_peer_state_event_at": None,
         "last_skipped_reason": None,
         "last_error": None,
+        "heartbeat_timeout_sec": 60,
     }
+    st["health_state"] = compute_collector_health_state(st)
+    return st
 
 
 class RISLiveCollector:
@@ -294,17 +383,23 @@ class RISLiveCollector:
         self.messages_parsed = 0
         self.messages_skipped = 0
         self.withdrawals_received = 0
+        self.peer_state_events = 0
         self.as_set_handled = 0
         self.as_set_skipped = 0
         self.reconnect_count = 0
         self.last_message_at: Optional[str] = None
+        self.last_transport_message_at: Optional[str] = None
+        self.last_valid_ris_message_at: Optional[str] = None
+        self.last_parsed_update_at: Optional[str] = None
+        self.last_peer_state_event_at: Optional[str] = None
         self.last_skipped_reason: Optional[str] = None
         self.last_error: Optional[str] = None
+        self.heartbeat_timeout_sec = 60
         _active_collector = self
 
     def get_status(self) -> Dict[str, Any]:
         """Return operational telemetry for the collector."""
-        return {
+        st = {
             "enabled": self.is_enabled,
             "running": self.is_running,
             "connected": self.is_connected,
@@ -313,13 +408,21 @@ class RISLiveCollector:
             "messages_parsed": self.messages_parsed,
             "messages_skipped": self.messages_skipped,
             "withdrawals_received": self.withdrawals_received,
+            "peer_state_events": self.peer_state_events,
             "as_set_handled": self.as_set_handled,
             "as_set_skipped": self.as_set_skipped,
             "reconnect_count": self.reconnect_count,
             "last_message_at": self.last_message_at,
+            "last_transport_message_at": self.last_transport_message_at,
+            "last_valid_ris_message_at": self.last_valid_ris_message_at,
+            "last_parsed_update_at": self.last_parsed_update_at,
+            "last_peer_state_event_at": self.last_peer_state_event_at,
             "last_skipped_reason": self.last_skipped_reason,
             "last_error": self.last_error,
+            "heartbeat_timeout_sec": self.heartbeat_timeout_sec,
         }
+        st["health_state"] = compute_collector_health_state(st, heartbeat_timeout_sec=self.heartbeat_timeout_sec)
+        return st
 
     async def start(self) -> None:
         """Start the collector loop if enabled and not already running."""
@@ -358,9 +461,9 @@ class RISLiveCollector:
                     while self.is_running:
                         msg_raw = await ws.recv()
                         self.messages_received += 1
-                        self.last_message_at = datetime.now(timezone.utc).strftime(
-                            "%Y-%m-%dT%H:%M:%S.%fZ"
-                        )
+                        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+                        self.last_message_at = now_str
+                        self.last_transport_message_at = now_str
                         self._handle_message(msg_raw)
 
             except asyncio.CancelledError:
@@ -388,6 +491,16 @@ class RISLiveCollector:
 
         result = parse_ris_message(msg)
 
+        if result.get("is_peer_state_event"):
+            self.peer_state_events += 1
+            now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+            self.last_peer_state_event_at = now_str
+            self.last_skipped_reason = result.get("skipped_reason")
+            return
+
+        now_str = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        self.last_valid_ris_message_at = now_str
+
         # 1. Process BGP withdrawals safely through the withdrawal pipeline
         withdrawal_records = result.get("withdrawal_records") or [
             {
@@ -401,6 +514,7 @@ class RISLiveCollector:
         ]
         if withdrawal_records:
             self.withdrawals_received += len(withdrawal_records)
+            self.last_parsed_update_at = now_str
             for w_rec in withdrawal_records:
                 try:
                     process_withdrawal(
@@ -456,6 +570,7 @@ class RISLiveCollector:
                     peer_ip=peer_ip,
                 )
                 self.messages_parsed += 1
+                self.last_parsed_update_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             except Exception as parse_err:
                 self.messages_skipped += 1
                 self.last_skipped_reason = f"Failed to ingest {prefix}: {parse_err}"
