@@ -332,18 +332,18 @@ HORA-Q establishes strict RPKI time semantics:
 
 ---
 
-### Phase 10: Production Deployment & Verification
+### Phase 10: Production Architecture & Local Verification
 
-The complete HORA-Q platform is continuously validated and deployed across modern cloud infrastructure:
+The complete HORA-Q platform is architected for decoupled deployment and rapid local verification:
 
 ```
-[ Frontend: Cloudflare Pages ] ──HTTPS/CORS──> [ Backend: Render.com Web Service ]
-(React 18 + TypeScript + Vite)                 (FastAPI + Python 3.13 + SQLite WAL)
-https://horaq-frontends.pages.dev/             https://a3-ps005-tc416.onrender.com/
+[ Frontend: Operator Console SPA ] ──HTTP/CORS──> [ Backend: Telemetry Engine ]
+(React 19 + TypeScript + Vite)                    (FastAPI + Python 3.13 + SQLite WAL)
+Local Listener: http://localhost:5173             Local Listener: http://localhost:8000
 ```
 
-* **Test Suite**: 138 unit and integration tests passing in 30.85s (`python -m pytest`).
-* **Frontend Build**: Zero TypeScript errors, production bundle built in 3.27s (`tsc && vite build`).
+* **Test Suite**: 138 unit and integration tests passing in ~30s (`python -m pytest`).
+* **Frontend Build**: Zero TypeScript errors, production bundle built in 3.3s (`tsc && vite build`).
 * **Evidence Attestation**: 100% passing FIPS 204 post-quantum signature verification.
 
 ---

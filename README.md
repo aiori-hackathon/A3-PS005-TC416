@@ -4,11 +4,10 @@
 [![AIORI-3](https://img.shields.io/badge/AIORI--3-Track%202%20%7C%20PS--005-2563eb)](https://github.com/aiori-hackathon/A3-PS005-TC416)
 [![Team](https://img.shields.io/badge/Team-A3--PS005--TC416-334155)](https://github.com/aiori-hackathon/A3-PS005-TC416)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Cloudflare%20Pages-f38020)](https://horaq-frontends.pages.dev)
 
 **An explainable BGP control-plane monitoring prototype for detecting suspicious origin changes and more-specific prefix announcements, preserving trusted route baselines, and producing independently verifiable forensic evidence.**
 
-> **Evaluation recommendation:** Clone the repository, run the backend and frontend locally, reproduce the tests, and verify the sample evidence. The source code, documentation, and reproducible checks in this repository are the primary evaluation materials. A live cloud deployment is also accessible at https://horaq-frontends.pages.dev.
+> **Evaluation recommendation:** Clone the repository, run the backend and frontend locally, reproduce the tests, and verify the sample evidence. The source code, documentation, and reproducible checks in this repository are the primary evaluation materials.
 
 ---
 
