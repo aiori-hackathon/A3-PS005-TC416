@@ -271,7 +271,7 @@ Exit Code: 1
 
 In historical forensic investigations, monitors often fabricate timestamps using `time.time()` when raw dump timestamps are missing or unparsed. This corrupts incident timelines and creates non-reproducible benchmarks.
 
-In WP-03, HORA-Q implemented **Deterministic, Time-Honest Archival Replay** (`backend/horaq/replay.py`):
+HORA-Q implements **Deterministic, Time-Honest Archival Replay** (`backend/horaq/replay.py`):
 1. **Zero Clock Synthesis**: Missing or invalid timestamps immediately reject execution with `INCOMPLETE_DATA`. The current wall-clock is never substituted.
 2. **Deterministic Sequence Ordering**: Out-of-order records are rejected in strict mode (`INVALID_INPUT`) or sorted deterministically using the original record index as a tie-breaker.
 3. **Dataset Checksum Binding**: The exact SHA-256 checksum of the source dataset is computed and stamped into the replay report.
@@ -282,7 +282,7 @@ In WP-03, HORA-Q implemented **Deterministic, Time-Honest Archival Replay** (`ba
 
 During a widespread BGP hijacking event, hundreds of BGP UPDATE messages for the same hijacked prefix arrive across multiple collector vantage points. Naïve alerting systems either flood the operator with duplicate alerts or overwrite earlier evidence.
 
-In WP-05, HORA-Q introduced **Non-Destructive Incident Correlation**:
+HORA-Q incorporates **Non-Destructive Incident Correlation**:
 * **Stable Correlation Key**:
   $$\text{Key} = \text{Kind} : \text{Prefix} : \text{ObservedASN} : \text{BaselineASN} : \text{ParentPrefix} : \text{RuleVersion}$$
 * **Lifecycle Classifications**:
@@ -298,7 +298,7 @@ In WP-05, HORA-Q introduced **Non-Destructive Incident Correlation**:
 
 A pervasive flaw in network telemetry dashboards is conflating "quiet collector stream" with "route withdrawn." If a WebSocket disconnects or no updates arrive for 5 minutes, an undisciplined system might mark an active hijack as "resolved."
 
-In WP-06, HORA-Q enforced strict state separation:
+HORA-Q enforces strict state separation between collector transport health and route state:
 
 ```mermaid
 stateDiagram-v2
@@ -322,7 +322,7 @@ stateDiagram-v2
 
 RPKI ROA records change over time as network operators update their cryptographic objects. If a system validates a 2008 historical incident (e.g., YouTube/PTCL) against current 2026 RPKI caches, it generates completely false verdicts.
 
-In WP-07, HORA-Q established strict RPKI time semantics:
+HORA-Q establishes strict RPKI time semantics:
 * **Live Queries**: Explicitly labeled `CURRENT_LOOKUP_CONTEXT` with provider (`RIPEstat`) and query timestamp.
 * **Historical Replays**: Require a time-matched ROA snapshot where:
   $$T_{\text{snapshot}} \le T_{\text{event}}$$
@@ -351,3 +351,4 @@ https://horaq-frontends.pages.dev/             https://a3-ps005-tc416.onrender.c
 ## Conclusion & Google SOC Architectural Summary
 
 HORA-Q represents an engineering leap forward in open-source BGP security monitoring. By replacing fragile, unexplainable heuristics with deterministic state machines, candidate quarantine policies, multi-session corroboration, and post-quantum cryptographic notarization, HORA-Q provides network operators and security teams with an unshakeable ground truth for Internet routing integrity.
+

@@ -1,0 +1,27 @@
+{
+  "id": "ev-sample-unsigned-001",
+  "alert_id": "alert-a32de95b3305",
+  "schema_version": "1.0.0",
+  "record_hash": "ee992da3486ec099e60a5628191012b5e9bdccfead23cc53917cb1e5bf9ab9ef",
+  "signer_status": "UNSIGNED",
+  "created_at": "2026-10-24T10:22:02.413814Z",
+  "record": {
+    "alert_id": "alert-a32de95b3305",
+    "baseline_asn": "AS13335",
+    "collector": "rrc00",
+    "context": {
+      "baseline_first_seen": "2026-10-24T10:22:02.379585Z",
+      "baseline_last_seen": "2026-10-24T10:22:02.379585Z",
+      "baseline_observation_count": 1
+    },
+    "explanation": "Observation for prefix '1.1.1.0/24' announced with origin AS99999, differing from stored reference baseline origin AS13335. Potential causes: Unauthorized route hijack / spoofing, legitimate multi-homing or ASN migration, upstream transit misconfiguration, or route leak.",
+    "observed_asn": "AS99999",
+    "parent_prefix": null,
+    "prefix": "1.1.1.0/24",
+    "rule": "ORIGIN_AS_DIFFERENCE_RULE",
+    "scenario": "demo-origin-conflict",
+    "schema_version": "1.0.0",
+    "severity": "HIGH",
+    "timestamp": "2026-10-24T10:22:02.413782Z"
+  }
+}

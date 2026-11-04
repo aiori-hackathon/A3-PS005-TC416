@@ -18,14 +18,14 @@ python -m pytest backend/tests -v
 
 ### Module Breakdown Matrix
 
-| Test Module | Tests | Primary Invariants & Work Packages Verified |
+| Test Module | Tests | Primary Invariants & Security Specifications Verified |
 | :--- | :---: | :--- |
 | [`test_api.py`](../backend/tests/test_api.py) | **21** | REST API status codes; observations endpoint & schema; Pydantic validation; Demo Mode protection; unauthorized seed barrier; authorized seeding; per-peer withdrawal endpoints; recovery transitions; `/incidents` & `/incidents/{id}` API. |
 | [`test_detection.py`](../backend/tests/test_detection.py) | **15** | Origin conflict detection; subprefix containment; candidate baseline quarantine; peer diversity invariant; per-peer withdrawal recovery; duplicate withdrawal idempotency. |
 | [`test_evidence.py`](../backend/tests/test_evidence.py) | **14** | RFC 8785 canonical key ordering; surrogate pair sorting; SHA-256 tamper detection; byte parity with CLI verifier; unsigned vs signed separation. |
 | [`test_crypto.py`](../backend/tests/test_crypto.py) | **12** | ML-DSA-65 FIPS 204 dimensions; transparent provider status; persistent authority key lifecycle; refusal of classical substitution; corrupted key rejection. |
 | [`test_normalization.py`](../backend/tests/test_normalization.py) | **15** | Host-bit zeroing (IPv4 & IPv6); ASN validation (rejects AS0, negative numbers, ASDOT, >32-bit values); ISO 8601 timestamp parsing. |
-| [`test_collector.py`](../backend/tests/test_collector.py) | **15** | AS-Path parsing; terminal AS-Set unwrapping/skipping; withdrawal-only UPDATE ingestion (WP-01); pure subscription builder; `ris_message_id` extraction. |
+| [`test_collector.py`](../backend/tests/test_collector.py) | **15** | AS-Path parsing; terminal AS-Set unwrapping/skipping; withdrawal-only UPDATE ingestion ; pure subscription builder; `ris_message_id` extraction. |
 | [`test_peer_identity_wp02.py`](../backend/tests/test_peer_identity_wp02.py) | **6** | Peer session derivation ($C:AS:IP$); separation of sessions vs ASNs vs collectors; set-based corroboration; candidate quarantine under repeated single-session updates. |
 | [`test_replay_deterministic_wp03.py`](../backend/tests/test_replay_deterministic_wp03.py) | **6** | Zero clock synthesis; rejection of missing/invalid timestamps (`INCOMPLETE_DATA`); strict out-of-order rejection (`INVALID_INPUT`); deterministic sorting with tie-breaking; dataset SHA-256 binding. |
 | [`test_evidence_provenance_wp04.py`](../backend/tests/test_evidence_provenance_wp04.py) | **4** | Schema v1.1.0 provenance manifest; transaction reordering binding raw `observation_id` and `supporting_observation_ids`; rule version `2.0.0`; backward compatibility for v1.0.0. |

@@ -1,0 +1,97 @@
+{
+  "test_name": "RIPE_RIS_LIVE_INGESTION",
+  "timestamp_utc": "2026-10-25T11:03:30.518741+00:00",
+  "target_url": "wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416",
+  "duration_seconds": 12.22,
+  "telemetry": {
+    "enabled": true,
+    "running": false,
+    "connected": false,
+    "url": "wss://ris-live.ripe.net/v1/ws/?client=horaq-tc416",
+    "messages_received": 113,
+    "messages_parsed": 195,
+    "messages_skipped": 0,
+    "withdrawals_received": 0,
+    "as_set_handled": 0,
+    "as_set_skipped": 0,
+    "reconnect_count": 0,
+    "last_message_at": "2026-10-25T11:03:20.498039Z",
+    "last_skipped_reason": null,
+    "last_error": null
+  },
+  "samples_captured": [
+    {
+      "raw_sample_id": 1,
+      "type": "ris_message",
+      "peer": "80.249.211.237",
+      "host": "rrc03.ripe.net",
+      "path": [
+        199938,
+        3462,
+        3462,
+        17408,
+        57976
+      ],
+      "announcements_count": 1,
+      "withdrawals_count": 0
+    },
+    {
+      "raw_sample_id": 2,
+      "type": "ris_message",
+      "peer": "2001:7f8:1:0:a500:19:9938:1",
+      "host": "rrc03.ripe.net",
+      "path": [
+        199938,
+        34696,
+        205697,
+        29269
+      ],
+      "announcements_count": 1,
+      "withdrawals_count": 0
+    },
+    {
+      "raw_sample_id": 3,
+      "type": "ris_message",
+      "peer": "2001:7f8:1::a500:6461:1",
+      "host": "rrc03.ripe.net",
+      "path": [
+        6461,
+        29632,
+        139216
+      ],
+      "announcements_count": 1,
+      "withdrawals_count": 0
+    },
+    {
+      "raw_sample_id": 4,
+      "type": "ris_message",
+      "peer": "2001:7f8:13::a520:9650:1",
+      "host": "rrc03.ripe.net",
+      "path": [
+        209650,
+        34927,
+        263444,
+        22381,
+        28209
+      ],
+      "announcements_count": 1,
+      "withdrawals_count": 0
+    },
+    {
+      "raw_sample_id": 5,
+      "type": "ris_message",
+      "peer": "2001:7f8:1::a500:6461:1",
+      "host": "rrc03.ripe.net",
+      "path": [
+        6461,
+        33891,
+        50673,
+        34872,
+        215887
+      ],
+      "announcements_count": 1,
+      "withdrawals_count": 0
+    }
+  ],
+  "verdict": "VERIFIED"
+}

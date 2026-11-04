@@ -1,0 +1,100 @@
+# HORA-Q — UI/UX Screenshot Audit & Page Inventory
+
+> **Project**: HORA-Q (Explainable BGP Origin & Subprefix Anomaly Monitor)  
+> **Hackathon**: AIORI-3 | Track 2 Cyber Security (PS-005) | Team **A3-PS005-TC416**  
+> **Repository**: `https://github.com/aiori-hackathon/A3-PS005-TC416`  
+> **Directory**: `audit/screenshots/`  
+> **Standard**: 12 canonical 16:9 desktop captures (1920×1080)  
+
+---
+
+## Page Inventory & Verification
+
+| # | Page / Modal | File Name | Primary Features Audited |
+|---|---|---|---|
+| **01** | **Overview Dashboard** | [`01_overview.png`](screenshots/01_overview.png) | System status card, 2x2 stats grid, 6-Stage Interactive Evaluation Controller, Live Activity table, plain English concept guide. |
+| **02** | **Security Alerts Center** | [`02_alerts.png`](screenshots/02_alerts.png) | Triage counter banner (`Critical Threats`, `Review Required`), severity filters, Plain English summary callouts, `Investigate`/`Evidence` action buttons. |
+| **03** | **Evidence Modal (Attestation)** | [`03_evidence_modal.png`](screenshots/03_evidence_modal.png) | 4-stage Cryptographic Notarization Pipeline (`Ingest` ➔ `Canonicalize (RFC 8785)` ➔ `Digest (SHA-256)` ➔ `Sign (ML-DSA-65)`), full canonical payload inspector. |
+| **04** | **Evidence Tamper Verification**| [`04_tamper_verification.png`](screenshots/04_tamper_verification.png) | In-memory mutation simulator (`HIGH ➔ LOW`, `AS64505 ➔ AS0`), live SHA-256 hash mismatch alert (`Tamper detected`), side-by-side field diff, CLI verification copy helper. |
+| **05** | **Route Baselines Table** | [`05_baselines.png`](screenshots/05_baselines.png) | Established prefix-to-origin trust store, observation counts, first-seen and last-seen timestamps, non-poisoning baseline policy badge, peer counts, and `Timeline` CTA. |
+| **06** | **Scenario Runner** | [`06_scenarios.png`](screenshots/06_scenarios.png) | Full test suite scenarios (`Normal Route Baseline`, `Origin Conflict`, `Subprefix Infiltration`, `Traffic Shift Migration`, `Withdrawal Recovery`), 1-click execution triggers with instant execution logs. |
+| **07** | **Cryptographic Audit Ledger** | [`07_audit_ledger.png`](screenshots/07_audit_ledger.png) | Immutable 12-column audit log, RFC 8785 SHA-256 digests, verification badges, JSON export action. |
+| **08** | **RPKI / ROA Inspector** | [`08_rpki_inspector.png`](screenshots/08_rpki_inspector.png) | Live RIPEstat ROA lookup tool, prefix and ASN query inputs, validity state mapping (`VALID`, `INVALID`, `UNKNOWN`), max-length compliance checks. |
+| **09** | **Route Injection Tool** | [`09_inject_route.png`](screenshots/09_inject_route.png) | Custom BGP wire telemetry injector, CIDR normalization preview, collector selection, real-time pipeline ingestion trigger. |
+| **10** | **System Settings & Health** | [`10_settings.png`](screenshots/10_settings.png) | SQLite WAL mode configuration, RIS Live WebSocket subscription status, Post-Quantum ML-DSA-65 engine diagnostics, log levels. |
+| **11** | **Forensic Investigation Drawer** | [`11_forensic_drawer.png`](screenshots/11_forensic_drawer.png) | In-depth incident workspace: Confirmed Telemetry Facts vs Hypotheses, Detection Rule Explainability & Confidence, Per-Peer Withdrawal Recovery Matrix, Live Cryptographic Verification, and CLI command. |
+| **12** | **Baseline Provenance Timeline** | [`12_baseline_timeline.png`](screenshots/12_baseline_timeline.png) | Route baseline history audit trail from `baseline_history`: append-only transition log, Anti-Poisoning & Peer Diversity Thresholds, actor attribution, and transition reasons. |
+
+---
+
+## Screen-by-Screen Visual Walkthrough
+
+### 1. Overview Dashboard
+- **File**: [01_overview.png](screenshots/01_overview.png)
+- **Description**: Displays the primary health status, active protected IP prefixes, tier-1 BGP peers, and the 6-stage interactive evaluation walkthrough allowing instant execution of baseline seeding, origin hijack, subprefix injection, RPKI validation, post-quantum signing, and withdrawal recovery.
+
+---
+
+### 2. Security Alerts Center
+- **File**: [02_alerts.png](screenshots/02_alerts.png)
+- **Description**: Live list of active threats with high-visibility Plain English summaries on each card, clarifying the impact (e.g. traffic redirection risk) for non-networking evaluators, alongside `Investigate` and `Evidence` action triggers.
+
+---
+
+### 3. Cryptographic Evidence Modal
+- **File**: [03_evidence_modal.png](screenshots/03_evidence_modal.png)
+- **Description**: Displays the complete 4-stage notarization pipeline, RFC 8785 canonical key ordering, SHA-256 digest, and NIST FIPS 204 ML-DSA-65 signature provider status.
+
+---
+
+### 4. Evidence Tamper Verification Sandbox
+- **File**: [04_tamper_verification.png](screenshots/04_tamper_verification.png)
+- **Description**: Demonstrates real-time tamper detection when incident values are mutated in memory, proving that forged evidence cannot pass SHA-256 integrity verification.
+
+---
+
+### 5. Route Baselines Table
+- **File**: [05_baselines.png](screenshots/05_baselines.png)
+- **Description**: The system's baseline memory mapping legitimate IP prefixes to authorized origin ASNs with observation timestamps, multi-peer counts, non-poisoning guarantees, and direct access to the Provenance Timeline.
+
+---
+
+### 6. Scenario Runner
+- **File**: [06_scenarios.png](screenshots/06_scenarios.png)
+- **Description**: Interactive test workbench for triggering deterministic synthetic and replay scenarios with expected vs. actual alert counts.
+
+---
+
+### 7. Cryptographic Audit Ledger
+- **File**: [07_audit_ledger.png](screenshots/07_audit_ledger.png)
+- **Description**: Chronological ledger of all security incidents, each sealed with a SHA-256 fingerprint for tamper-evident compliance.
+
+---
+
+### 8. RPKI / ROA Inspector
+- **File**: [08_rpki_inspector.png](screenshots/08_rpki_inspector.png)
+- **Description**: Interactive tool to validate IP prefixes and ASNs against RIPEstat and cryptographic Route Origin Authorizations.
+
+---
+
+### 9. Route Injection Tool
+- **File**: [09_inject_route.png](screenshots/09_inject_route.png)
+- **Description**: Manual route injection interface to test boundary conditions, host-bit normalization, and custom AS paths.
+
+---
+
+### 10. System Settings & Engine Health
+- **File**: [10_settings.png](screenshots/10_settings.png)
+- **Description**: Diagnostics dashboard displaying database status, WebSocket collector health, and post-quantum cryptographic provider details.
+
+---
+
+### 11. Forensic Investigation Workspace
+- **File**: [11_forensic_drawer.png](screenshots/11_forensic_drawer.png)
+- **Description**: Forensic investigation drawer displaying deterministic measurements (observed prefix, rogue origin, baseline origin, parent prefix scope, telemetry vantage point), detection rule explainability & confidence, the Per-Peer Withdrawal Recovery Matrix, alternative operational hypotheses, and live cryptographic verification against NIST FIPS 204 ML-DSA-65.
+
+---
+
+### 12. Baseline Provenance Timeline
+- **File**: [12_baseline_timeline.png](screenshots/12_baseline_timeline.png)
+- **Description**: Append-only provenance history drawer reading from `baseline_history` in SQLite. Displays state transitions (`[NONE] ➔ PROMOTED`), decision reasons, peer counts, observation counts, triggering observation IDs, and anti-poisoning corroboration invariants.

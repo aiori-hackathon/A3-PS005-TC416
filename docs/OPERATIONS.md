@@ -8,23 +8,23 @@
 
 ## 1. Operational Architecture & Deployment Topology
 
-HORA-Q operates as a decoupled, cloud-native telemetry pipeline consisting of an asynchronous FastAPI backend service, an SQLite WAL operational datastore, and a client-side React 19 / TypeScript Single Page Application (SPA).
+HORA-Q operates as a decoupled, enterprise telemetry pipeline consisting of an asynchronous FastAPI backend service, an SQLite WAL operational datastore, and a client-side React 19 / TypeScript Single Page Application (SPA).
 
 ```
   +---------------------------------------------------------------------------------+
-  |                                 Public Internet                                 |
+  |                               Enterprise Network / Host                         |
   +---------------------------------------------------------------------------------+
             |                                                      |
-            | HTTPS / WSS                                          | HTTPS / Assets
+            | HTTP / REST (Port 8000)                              | HTTP (Port 5173)
             v                                                      v
   +-------------------------------------+                +--------------------------+
-  |        Render Web Service           |                |     Cloudflare Pages     |
-  |  https://a3-ps005-tc416.onrender.com|                | https://horaq-frontends. |
-  |                                     |                | pages.dev                |
+  |        Backend Service              |                |     Frontend Web Console |
+  |      (FastAPI / Python 3.13)        |                |  (React 19 / TypeScript) |
+  |                                     |                |                          |
   |  +-------------------------------+  |   JSON / CORS  |                          |
-  |  |  FastAPI (Uvicorn / Py 3.13)  |<-+----------------| React 19 + Vite Frontend |
-  |  +-------------------------------+  |                | In-Browser FIPS 204      |
-  |  |  Post-Quantum ML-DSA-65 Signer|  |                | Evidence Verification    |
+  |  |  FastAPI (Uvicorn Listener)   |<-+----------------| In-Browser FIPS 204      |
+  |  +-------------------------------+  |                | Evidence Verification    |
+  |  |  Post-Quantum ML-DSA-65 Signer|  |                | & Telemetry Dashboard    |
   |  +-------------------------------+  |                +--------------------------+
   |  |  SQLite 3 (WAL Mode + Pragma) |  |                             ^
   |  +-------------------------------+  |                             |
@@ -44,93 +44,79 @@ HORA-Q operates as a decoupled, cloud-native telemetry pipeline consisting of an
 
 ## 2. Environment Variables & Runtime Configuration
 
-The backend configuration is managed strictly through Pydantic Settings (`backend/horaq/config.py`). All configuration parameters can be passed via environment variables, container environment injection, or a local `.env` file:
+Backend configuration is managed strictly through Pydantic Settings (`backend/horaq/config.py`). All configuration parameters can be passed via environment variables or a local `.env` file:
 
 | Environment Variable | Default Value | Production Recommended | Description |
 | :--- | :--- | :--- | :--- |
-| `PORT` | `8000` | `10000` (Render) / `8000` | HTTP port for FastAPI Uvicorn listener. |
+| `PORT` | `8000` | `8000` | HTTP port for FastAPI Uvicorn listener. |
 | `HORAQ_DATABASE` | `horaq.db` | `/data/horaq.db` | Path to persistent SQLite database file. Mount on a persistent volume in containerized environments. |
 | `HORAQ_SIGNING_KEY` | `horaq_authority_key.json` | `/data/horaq_authority_key.json` | Path to persistent NIST FIPS 204 ML-DSA-65 authority key. Must be preserved across container restarts to prevent key invalidation. |
 | `HORAQ_DEMO_MODE` | `false` | `true` | Enables public evaluation demo protections (blocks unauthenticated database wipes and administrative route seeding). |
 | `HORAQ_ADMIN_TOKEN` | `""` | Strong entropy secret | Secret bearer token required for administrative baseline seeding (`POST /api/v1/baselines/seed`) and database resets when Demo Mode is active. |
 | `HORAQ_LIVE_COLLECTOR` | `false` | `false` (Eval) / `true` (Live) | Controls the background RIPE RIS WebSocket collector task. Default `false` guarantees deterministic evaluation. |
 | `HORAQ_RIS_URL` | `wss://ris-live.ripe.net/v1/stream/` | `wss://ris-live.ripe.net/v1/stream/` | Upstream WebSocket stream endpoint for live BGP UPDATE telemetry. |
-| `HORAQ_CORS_ORIGINS` | `*` | `https://horaq-frontends.pages.dev,http://localhost:5173` | Comma-separated list of allowed frontend origins. Supports wildcard patterns like `https://*.pages.dev`. |
-| `PYTHON_VERSION` | `3.13.0` | `3.13.0` | Python runtime version for container builders (Render / Railway / Docker). |
+| `HORAQ_CORS_ORIGINS` | `*` | `http://localhost:5173` | Comma-separated list of allowed frontend origins. |
+| `PYTHON_VERSION` | `3.13.0` | `3.13.0` | Python runtime version for container builders. |
 
 ---
 
-## 3. Production Deployment Guide
+## 3. Local Execution & Containerized Deployment
 
-### 3.1 Backend Deployment on Render.com
+### 3.1 Local Development Quickstart
 
-Render provides managed containerized hosting with continuous Git deployment from GitHub.
-
-1. **Create Web Service**:
-   - In the Render Dashboard, select **New +** $\to$ **Web Service**.
-   - Connect the repository: `https://github.com/aiori-hackathon/A3-PS005-TC416`.
-   - Branch: `main` (or active release branch).
-2. **Build & Runtime Configuration**:
-   - **Environment**: `Python 3`
-   - **Build Command**: `pip install -r backend/requirements.txt`
-   - **Start Command**: `uvicorn backend.horaq.main:app --host 0.0.0.0 --port $PORT`
-3. **Environment Variables**:
-   ```ini
-   PYTHON_VERSION = 3.13.0
-   HORAQ_DEMO_MODE = true
-   HORAQ_ADMIN_TOKEN = <generate-secure-random-token>
-   HORAQ_CORS_ORIGINS = https://horaq-frontends.pages.dev,https://*.pages.dev,http://localhost:5173
-   HORAQ_LIVE_COLLECTOR = false
+1. **Backend Service**:
+   ```bash
+   cd D:\HORA-Q
+   pip install -r backend/requirements.txt
+   uvicorn backend.horaq.main:app --host 0.0.0.0 --port 8000 --reload
    ```
-4. **Health Check Path**:
-   - Set Health Check Path to `/health`.
-5. **Handling Free-Tier Spin Down**:
-   - Render free instances spin down after 15 minutes of inactivity. The initial HTTP request may experience a 30–50 second cold-start delay. The frontend includes automatic retry and timeout handling for cold starts.
+   *Health Check*: Navigate to `http://localhost:8000/health` to confirm `status: "ok"`.
+
+2. **Frontend Console**:
+   ```bash
+   cd D:\HORA-Q\frontend
+   npm install
+   npm run dev
+   ```
+   *Access Console*: Open `http://localhost:5173` in your browser.
 
 ---
 
-### 3.2 Frontend Deployment on Cloudflare Pages
+### 3.2 Containerized Production Deployment (Docker / Podman)
 
-Cloudflare Pages provides global edge CDN distribution with zero cold-start latency.
+For production deployment on enterprise servers or Kubernetes:
 
-1. **Connect Repository**:
-   - In Cloudflare Dashboard, navigate to **Workers & Pages** $\to$ **Create an application** $\to$ **Pages** $\to$ **Connect to Git**.
-   - Select `vssankardev-lang/horaq-frontend` (or repository containing `frontend/`).
-2. **Build Settings**:
-   - **Framework Preset**: `Vite`
-   - **Build Command**: `npm run build`
-   - **Build Output Directory**: `dist`
-   - **Root Directory**: `frontend` (or `/` if deploying dedicated frontend repo).
-3. **Environment Variables**:
-   ```ini
-   VITE_API_URL = https://a3-ps005-tc416.onrender.com
-   NODE_VERSION = 20
-   ```
-4. **Edge Header Configuration (`_headers`)**:
-   Ensure `frontend/public/_headers` includes security headers:
-   ```http
-   /*
-     X-Content-Type-Options: nosniff
-     X-Frame-Options: DENY
-     Referrer-Policy: strict-origin-when-cross-origin
-     Access-Control-Allow-Origin: *
-   ```
+```dockerfile
+# Backend Containerfile
+FROM python:3.13-slim
+WORKDIR /app
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/ ./backend/
+COPY verify_evidence.py .
+VOLUME ["/data"]
+ENV HORAQ_DATABASE=/data/horaq.db
+ENV HORAQ_SIGNING_KEY=/data/horaq_authority_key.json
+ENV PORT=8000
+EXPOSE 8000
+CMD ["uvicorn", "backend.horaq.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
 
----
+```dockerfile
+# Frontend Containerfile (Nginx Reverse Proxy)
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
 
-### 3.3 CORS Resolution & Troubleshooting
-
-If the frontend displays:
-`Access to fetch at 'https://...onrender.com/api/v1/overview' from origin 'https://...pages.dev' has been blocked by CORS policy`
-
-1. **Root Cause**: The backend's `HORAQ_CORS_ORIGINS` setting did not match the requesting Cloudflare Pages URL or preview domain.
-2. **Resolution**:
-   - In Render Dashboard $\to$ Environment, update `HORAQ_CORS_ORIGINS`:
-     ```ini
-     HORAQ_CORS_ORIGINS = https://horaq-frontends.pages.dev,https://*.pages.dev,http://localhost:5173
-     ```
-   - Trigger a manual deploy or restart the service to apply changes.
-   - Alternatively, setting `HORAQ_CORS_ORIGINS = *` permits all origins during hackathon evaluation.
+FROM nginx:alpine
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+```
 
 ---
 
