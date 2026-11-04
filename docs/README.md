@@ -5,6 +5,7 @@
 **Engineering Persona**: Google SOC / Security Operations Engineering  
 **Evaluation Model**: Standalone Local Execution & Independent CLI Verification  
 - **Source Code Repository**: [https://github.com/aiori-hackathon/A3-PS005-TC416](https://github.com/aiori-hackathon/A3-PS005-TC416)  
+- **Live Cloud Deployment**: [https://horaq-frontends.pages.dev](https://horaq-frontends.pages.dev) (Cloudflare Pages UI)  
 - **Local Operator Console**: `http://localhost:5173` (React 19 / TypeScript / Vite SPA)  
 - **Local Telemetry & Verification API**: `http://localhost:8000` (FastAPI / Uvicorn Python 3.13)  
 

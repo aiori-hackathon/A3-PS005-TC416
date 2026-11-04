@@ -61,3 +61,6 @@ Thumbs.db
 .env.*.local
 *authority_key.json
 horaq_authority_key.json
+
+# Archive files
+*.zip
