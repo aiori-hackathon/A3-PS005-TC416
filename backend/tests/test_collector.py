@@ -15,7 +15,7 @@ import os
 import tempfile
 import pytest
 
-from horaq.collector import parse_ris_message, RISLiveCollector, get_collector_telemetry
+from horaq.collector import build_ris_subscription, parse_ris_message, RISLiveCollector, get_collector_telemetry
 from horaq.database import db_session, init_db
 
 
@@ -360,4 +360,115 @@ def test_live_collector_peer_metadata_and_withdrawals():
     finally:
         if os.path.exists(db_path):
             os.remove(db_path)
+
+
+def test_build_ris_subscription_wp01():
+    """WP-01: Verify subscription payload requests UPDATE without 'require: announcements' filter."""
+    sub = build_ris_subscription()
+    assert sub["type"] == "ris_subscribe"
+    assert sub["data"]["type"] == "UPDATE"
+    assert "require" not in sub["data"], "require filter must be omitted so withdrawal-only UPDATEs are received"
+
+
+def test_parse_withdrawal_only_without_path_or_announcements_wp01():
+    """WP-01: Withdrawal-only UPDATE lacking 'path' and 'announcements' fields is accepted."""
+    msg = {
+        "type": "ris_message",
+        "data": {
+            "timestamp": 1698240200.0,
+            "peer": "193.0.0.10",
+            "peer_asn": "1234",
+            "host": "rrc00",
+            "withdrawals": ["10.0.0.0/8"],
+        },
+    }
+    res = parse_ris_message(msg)
+    assert res["valid"] is True
+    assert len(res["withdrawals"]) == 1
+    assert res["withdrawals"][0] == "10.0.0.0/8"
+    assert len(res["announcements"]) == 0
+    assert len(res["withdrawal_records"]) == 1
+    assert res["withdrawal_records"][0]["peer_as"] == "1234"
+    assert res["withdrawal_records"][0]["peer_ip"] == "193.0.0.10"
+
+
+def test_parse_mixed_update_wp01():
+    """WP-01: Mixed UPDATE with both announcements and withdrawals processes both sides."""
+    msg = {
+        "type": "ris_message",
+        "id": "ris-msg-42",
+        "data": {
+            "timestamp": 1698240210.0,
+            "peer": "193.0.0.11",
+            "peer_asn": "5678",
+            "host": "rrc01",
+            "path": [5678, 65000],
+            "announcements": [{"prefixes": ["198.51.100.0/24"]}],
+            "withdrawals": ["203.0.113.0/24"],
+        },
+    }
+    res = parse_ris_message(msg)
+    assert res["valid"] is True
+    assert len(res["withdrawals"]) == 1
+    assert res["withdrawals"][0] == "203.0.113.0/24"
+    assert len(res["announcements"]) == 1
+    assert res["announcements"][0]["prefix"] == "198.51.100.0/24"
+    assert res["announcements"][0]["origin_asn"] == 65000
+    assert res["announcements"][0]["metadata"]["ris_message_id"] == "ris-msg-42"
+    assert res["withdrawal_records"][0]["ris_message_id"] == "ris-msg-42"
+
+
+def test_parse_empty_update_wp01():
+    """WP-01: Empty UPDATE containing neither announcements nor withdrawals is skipped explicitly."""
+    msg = {
+        "type": "ris_message",
+        "data": {
+            "timestamp": 1698240220.0,
+            "host": "rrc00",
+            "announcements": [],
+            "withdrawals": [],
+        },
+    }
+    res = parse_ris_message(msg)
+    assert res["valid"] is False
+    assert "Empty UPDATE" in res["skipped_reason"]
+
+
+def test_collector_handles_mixed_update_pipeline_wp01():
+    """WP-01: Live collector pipeline processes both withdrawals and announcements from mixed UPDATE."""
+    fd, db_path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    init_db(db_path)
+
+    try:
+        collector = RISLiveCollector(db_path=db_path)
+        mixed_msg = json.dumps({
+            "type": "ris_message",
+            "id": "msg-mixed-99",
+            "data": {
+                "timestamp": 1698240230.0,
+                "peer": "193.0.0.99",
+                "peer_asn": "9999",
+                "host": "rrc00",
+                "path": [9999, 64512],
+                "announcements": [{"prefixes": ["192.0.2.0/24"]}],
+                "withdrawals": ["198.51.100.0/24"],
+            },
+        })
+        collector._handle_message(mixed_msg)
+        assert collector.withdrawals_received == 1
+        assert collector.messages_parsed == 1
+
+        with db_session(db_path) as conn:
+            obs_ann = conn.execute("SELECT * FROM observations WHERE prefix = '192.0.2.0/24';").fetchone()
+            assert obs_ann is not None
+            assert obs_ann["origin_asn"] == "AS64512"
+
+            obs_wdr = conn.execute("SELECT * FROM observations WHERE prefix = '198.51.100.0/24' AND origin_asn = 'WITHDRAWAL';").fetchone()
+            assert obs_wdr is not None
+            assert obs_wdr["peer_as"] == "9999"
+    finally:
+        if os.path.exists(db_path):
+            os.remove(db_path)
+
 

@@ -28,6 +28,21 @@ logger = logging.getLogger("horaq.collector")
 _active_collector: Optional["RISLiveCollector"] = None
 
 
+def build_ris_subscription() -> Dict[str, Any]:
+    """Construct RIPE RIS Live subscription message.
+
+    Subscribes to BGP UPDATE messages without a 'require: announcements' filter,
+    ensuring withdrawal-only UPDATEs are received alongside announcements and mixed UPDATEs
+    (adheres to WP-01 and RIPE RIS Live specification).
+    """
+    return {
+        "type": "ris_subscribe",
+        "data": {
+            "type": "UPDATE",
+        },
+    }
+
+
 def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
     """Parse a RIPE RIS Live JSON message and extract route announcements and withdrawals.
 
@@ -60,11 +75,12 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             "skipped_reason": "Malformed 'data' field in RIS message",
         }
 
-    # Extract peer, collector host, and timestamp metadata from RIPE RIS Live payload
+    # Extract peer, collector host, timestamp, and message ID metadata
     peer_ip = str(data.get("peer") or "").strip() or None
     peer_as = str(data.get("peer_asn") or "").strip() or None
     collector_host = str(data.get("host") or "ripe-ris-live").strip()
     ts = data.get("timestamp")
+    ris_msg_id = str(msg.get("id") or data.get("id") or "").strip() or None
 
     path = data.get("path")
     if peer_as is None and path and isinstance(path, list) and len(path) > 0 and isinstance(path[0], (int, str)):
@@ -85,6 +101,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
                     "peer_ip": peer_ip,
                     "collector": collector_host,
                     "timestamp": ts,
+                    "ris_message_id": ris_msg_id,
                 })
 
     announcements_data = data.get("announcements", [])
@@ -99,6 +116,18 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
             "as_set_handled": 0,
             "as_set_skipped": 0,
             "skipped_reason": "BGP withdrawal update (no route announcements)",
+        }
+
+    # If empty update with neither announcements nor withdrawals
+    if not announcements_data and not withdrawals:
+        return {
+            "valid": False,
+            "announcements": [],
+            "withdrawals": [],
+            "withdrawal_records": [],
+            "as_set_handled": 0,
+            "as_set_skipped": 0,
+            "skipped_reason": "Empty UPDATE: contains neither announcements nor withdrawals",
         }
 
     if not path or not isinstance(path, list) or len(path) == 0:
@@ -192,6 +221,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
                 "peer_as": peer_as,
                 "peer_ip": peer_ip,
                 "collector": collector_host,
+                "ris_message_id": ris_msg_id,
                 "metadata": {
                     "peer": peer_ip,
                     "peer_ip": peer_ip,
@@ -202,6 +232,7 @@ def parse_ris_message(msg: Dict[str, Any]) -> Dict[str, Any]:
                     "path_length": len(path),
                     "terminal_as_set": is_as_set,
                     "as_set_members": as_set_members,
+                    "ris_message_id": ris_msg_id,
                 },
             })
 
@@ -320,14 +351,8 @@ class RISLiveCollector:
                     self.last_error = None
                     logger.info("Connected to RIPE RIS Live feed.")
 
-                    # Send subscription request for BGP UPDATE messages
-                    sub_msg = {
-                        "type": "ris_subscribe",
-                        "data": {
-                            "type": "UPDATE",
-                            "require": "announcements",
-                        },
-                    }
+                    # Send subscription request for BGP UPDATE messages (WP-01 pure helper)
+                    sub_msg = build_ris_subscription()
                     await ws.send(json.dumps(sub_msg))
 
                     while self.is_running:
