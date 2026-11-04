@@ -162,16 +162,6 @@ def init_db(db_path: str) -> None:
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
-
-            CREATE INDEX IF NOT EXISTS idx_obs_prefix_time ON observations (prefix, observed_at);
-            CREATE INDEX IF NOT EXISTS idx_obs_peer_session ON observations (peer_session);
-            CREATE INDEX IF NOT EXISTS idx_obs_collector ON observations (collector);
-            CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts (created_at DESC);
-            CREATE INDEX IF NOT EXISTS idx_alerts_kind ON alerts (kind);
-            CREATE INDEX IF NOT EXISTS idx_evidence_alert ON evidence (alert_id);
-            CREATE INDEX IF NOT EXISTS idx_baseline_history_prefix ON baseline_history (prefix, created_at DESC);
-            CREATE INDEX IF NOT EXISTS idx_incidents_key ON incidents (correlation_key);
-            CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents (status);
             """)
 
             # Safe column additions for pre-existing databases (additive & idempotent)
@@ -255,6 +245,18 @@ def init_db(db_path: str) -> None:
                 conn.execute("ALTER TABLE alerts ADD COLUMN collector_count INTEGER DEFAULT 1;")
             except sqlite3.OperationalError:
                 pass
+
+            conn.executescript("""
+            CREATE INDEX IF NOT EXISTS idx_obs_prefix_time ON observations (prefix, observed_at);
+            CREATE INDEX IF NOT EXISTS idx_obs_peer_session ON observations (peer_session);
+            CREATE INDEX IF NOT EXISTS idx_obs_collector ON observations (collector);
+            CREATE INDEX IF NOT EXISTS idx_alerts_time ON alerts (created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_alerts_kind ON alerts (kind);
+            CREATE INDEX IF NOT EXISTS idx_evidence_alert ON evidence (alert_id);
+            CREATE INDEX IF NOT EXISTS idx_baseline_history_prefix ON baseline_history (prefix, created_at DESC);
+            CREATE INDEX IF NOT EXISTS idx_incidents_key ON incidents (correlation_key);
+            CREATE INDEX IF NOT EXISTS idx_incidents_status ON incidents (status);
+            """)
 
 
 def reset_database(db_path: str) -> None:
